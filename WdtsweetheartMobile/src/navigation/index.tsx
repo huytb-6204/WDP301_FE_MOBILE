@@ -8,6 +8,8 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import OTPPasswordScreen from '../screens/auth/OTPPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import WelcomeSplashScreen from '../screens/auth/WelcomeSplashScreen';
+import WelcomeChoiceScreen from '../screens/auth/WelcomeChoiceScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -15,7 +17,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const RootNavigator = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="WelcomeSplash" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="WelcomeSplash" component={WelcomeSplashScreen} />
+        <Stack.Screen name="WelcomeChoice" component={WelcomeChoiceScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />

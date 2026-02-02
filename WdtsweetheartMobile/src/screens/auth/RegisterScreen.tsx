@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
+  Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -13,10 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { register as registerApi } from '../../services/api/auth';
-
-const bannerImage = {
-  uri: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/Pet-Daycare-img.jpg',
-};
+import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
 
 const phoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[0|6-9]|9[0-4|6-9])[0-9]{7}$/;
 
@@ -27,6 +25,7 @@ const RegisterScreen = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -47,6 +46,7 @@ const RegisterScreen = () => {
     if (!/[~!@#$%^&*]/.test(password)) return 'Mật khẩu phải có ít nhất một ký tự đặc biệt! (~!@#$%^&*)';
     if (!confirmPassword.trim()) return 'Vui lòng xác nhận mật khẩu!';
     if (password !== confirmPassword) return 'Mật khẩu xác nhận không khớp!';
+    if (!agreed) return 'Vui lòng đồng ý với điều khoản!';
     return null;
   };
 
@@ -83,69 +83,105 @@ const RegisterScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <BackArrow width={18} height={18} color={colors.secondary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Đăng ký</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
-          <Image source={bannerImage} style={styles.banner} />
-          <Text style={styles.title}>Đăng ký</Text>
-          <Text style={styles.subtitle}>Bạn chưa có tài khoản?</Text>
+          <Text style={styles.cardTitle}>Tạo tài khoản</Text>
+          <Text style={styles.cardSubtitle}>Điền đầy đủ thông tin để đăng ký</Text>
 
           <View style={styles.form}>
-            <TextInput
-              placeholder="Họ tên*"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-            />
-            <TextInput
-              placeholder="Email*"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextInput
-              placeholder="Số điện thoại*"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-            <TextInput
-              placeholder="Mật khẩu*"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            <TextInput
-              placeholder="Xác nhận mật khẩu*"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-            />
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Họ và tên</Text>
+              <TextInput
+                placeholder="Nguyễn Văn A"
+                placeholderTextColor="#9aa0a6"
+                style={styles.input}
+                value={fullName}
+                onChangeText={setFullName}
+              />
+            </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {success ? <Text style={styles.success}>{success}</Text> : null}
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                placeholder="example@email.com"
+                placeholderTextColor="#9aa0a6"
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
 
-            <TouchableOpacity onPress={handleSubmit} style={styles.submit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Đăng ký</Text>}
-            </TouchableOpacity>
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Số điện thoại</Text>
+              <TextInput
+                placeholder="0909 123 456"
+                placeholderTextColor="#9aa0a6"
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Mật khẩu</Text>
+              <TextInput
+                placeholder="Nhập mật khẩu"
+                placeholderTextColor="#9aa0a6"
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Xác nhận mật khẩu</Text>
+              <TextInput
+                placeholder="Nhập lại mật khẩu"
+                placeholderTextColor="#9aa0a6"
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            </View>
           </View>
-
-          <Text style={styles.footerText}>
-            Bạn đã có tài khoản?{' '}
-            <Text style={styles.footerLink} onPress={() => navigation.navigate('Login' as never)}>
-              Đăng nhập
-            </Text>
-          </Text>
         </View>
+
+        <TouchableOpacity style={styles.checkboxRow} onPress={() => setAgreed((prev) => !prev)}>
+          <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
+            {agreed ? <Text style={styles.checkboxIcon}>✓</Text> : null}
+          </View>
+          <Text style={styles.checkboxText}>
+            Tôi đồng ý với <Text style={styles.checkboxLink}>Điều khoản dịch vụ</Text> và{' '}
+            <Text style={styles.checkboxLink}>Chính sách bảo mật</Text>
+          </Text>
+        </TouchableOpacity>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {success ? <Text style={styles.success}>{success}</Text> : null}
+
+        <TouchableOpacity onPress={handleSubmit} style={styles.primaryBtn} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Tạo tài khoản</Text>}
+        </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          Đã có tài khoản?{' '}
+          <Text style={styles.footerLink} onPress={() => navigation.navigate('Login' as never)}>
+            Đăng nhập
+          </Text>
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,38 +190,74 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: colors.softPink,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: colors.secondary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 36,
   },
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 20,
   },
   card: {
-    backgroundColor: '#e67e20',
-    borderRadius: 20,
-    padding: 16,
-  },
-  banner: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
+    backgroundColor: colors.softPink,
+    borderRadius: 28,
+    padding: 20,
     marginBottom: 16,
   },
-  title: {
-    fontSize: 26,
+  cardTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.secondary,
     textAlign: 'center',
-    marginBottom: 6,
   },
-  subtitle: {
-    color: '#fff',
+  cardSubtitle: {
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: 20,
+    marginTop: 6,
+    marginBottom: 16,
   },
   form: {
     gap: 12,
+  },
+  inputWrap: {
+    gap: 6,
+  },
+  inputLabel: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   input: {
     backgroundColor: '#fff',
@@ -193,36 +265,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#eee',
     color: colors.secondary,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxIcon: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  checkboxText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 12,
+  },
+  checkboxLink: {
+    color: colors.primary,
+    fontWeight: '600',
   },
   error: {
-    color: colors.secondary,
+    color: colors.primary,
     textAlign: 'center',
+    marginBottom: 6,
   },
   success: {
-    color: '#fff',
+    color: colors.secondary,
     textAlign: 'center',
+    marginBottom: 6,
   },
-  submit: {
-    marginTop: 10,
-    backgroundColor: colors.secondary,
+  primaryBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
     paddingVertical: 14,
-    borderRadius: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  submitText: {
+  primaryText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '600',
+    fontSize: 16,
   },
   footerText: {
     textAlign: 'center',
-    color: '#fff',
-    marginTop: 12,
+    color: colors.text,
+    fontSize: 12,
   },
   footerLink: {
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    color: colors.primary,
+    fontWeight: '600',
   },
 });
 

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { resetPassword } from '../../services/api/auth';
+import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
 
 const ResetPasswordScreen = () => {
   const navigation = useNavigation();
@@ -57,39 +60,59 @@ const ResetPasswordScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Text style={styles.title}>Đặt lại mật khẩu</Text>
-          <Text style={styles.subtitle}>Nhập mật khẩu mới cho tài khoản của bạn.</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <BackArrow width={18} height={18} color={colors.secondary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Đặt lại mật khẩu</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-          <View style={styles.form}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.illustration}>
+          <Text style={styles.illustrationIcon}>🔐</Text>
+        </View>
+
+        <Text style={styles.title}>Tạo mật khẩu mới</Text>
+        <Text style={styles.subtitle}>Mật khẩu mới phải khác với mật khẩu cũ</Text>
+
+        <View style={styles.card}>
+          <View style={styles.inputWrap}>
+            <Text style={styles.inputLabel}>Mật khẩu mới</Text>
             <TextInput
-              placeholder="Mật khẩu mới"
-              placeholderTextColor="#999"
+              placeholder="Nhập mật khẩu mới"
+              placeholderTextColor="#9aa0a6"
               style={styles.input}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
+          </View>
+          <View style={styles.inputWrap}>
+            <Text style={styles.inputLabel}>Xác nhận mật khẩu</Text>
             <TextInput
-              placeholder="Xác nhận mật khẩu"
-              placeholderTextColor="#999"
+              placeholder="Nhập lại mật khẩu mới"
+              placeholderTextColor="#9aa0a6"
               style={styles.input}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
             />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <TouchableOpacity onPress={handleSubmit} style={styles.submit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Đổi mật khẩu</Text>}
-            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.link}>Quay lại</Text>
-          </TouchableOpacity>
         </View>
+
+        <View style={styles.requirements}>
+          <Text style={styles.requirementsTitle}>Mật khẩu phải có:</Text>
+          <Text style={styles.requirementsItem}>• Ít nhất 8 ký tự</Text>
+          <Text style={styles.requirementsItem}>• Chứa chữ hoa và chữ thường</Text>
+          <Text style={styles.requirementsItem}>• Ít nhất 1 số hoặc ký tự đặc biệt</Text>
+        </View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <TouchableOpacity onPress={handleSubmit} style={styles.primaryBtn} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Cập nhật mật khẩu</Text>}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -98,61 +121,123 @@ const ResetPasswordScreen = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 6 : 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: colors.softPink,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: colors.secondary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 36,
   },
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 20,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+  illustration: {
+    width: 120,
+    height: 120,
+    borderRadius: 28,
+    backgroundColor: colors.softOrange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  illustrationIcon: {
+    fontSize: 48,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.secondary,
     textAlign: 'center',
-    marginBottom: 8,
+    color: colors.secondary,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
   },
   subtitle: {
-    color: colors.text,
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  form: {
-    gap: 12,
+    color: colors.text,
     marginBottom: 16,
+  },
+  card: {
+    backgroundColor: colors.softPink,
+    borderRadius: 28,
+    padding: 20,
+    gap: 12,
+    marginBottom: 14,
+  },
+  inputWrap: {
+    gap: 6,
+  },
+  inputLabel: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 40,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#eee',
     color: colors.secondary,
+  },
+  requirements: {
+    marginBottom: 10,
+  },
+  requirementsTitle: {
+    color: colors.text,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  requirementsItem: {
+    color: colors.text,
+    fontSize: 12,
   },
   error: {
     color: colors.primary,
     textAlign: 'center',
+    marginBottom: 8,
   },
-  submit: {
+  primaryBtn: {
     backgroundColor: colors.primary,
+    borderRadius: 999,
     paddingVertical: 14,
-    borderRadius: 40,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  submitText: {
+  primaryText: {
     color: '#fff',
-    fontWeight: '700',
-  },
-  link: {
-    textAlign: 'center',
-    color: colors.secondary,
-    textDecorationLine: 'underline',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 

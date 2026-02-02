@@ -4,7 +4,6 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -12,13 +11,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
-import { login } from '../../services/api/auth';
+import { forgotPassword } from '../../services/api/auth';
 
-const LoginScreen = () => {
+const ForgotPasswordScreen = () => {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,21 +32,16 @@ const LoginScreen = () => {
       return;
     }
 
-    if (!password.trim()) {
-      setError('Vui lòng nhập mật khẩu!');
-      return;
-    }
-
     setLoading(true);
     try {
-      const user = await login(email.trim(), password, rememberPassword);
-      if (!user) {
-        setError('Đăng nhập thất bại!');
+      const res = await forgotPassword(email.trim());
+      if (res.success) {
+        navigation.navigate('OTPPassword' as never, { email: email.trim() } as never);
       } else {
-        navigation.navigate('Home' as never);
+        setError(res.message || 'Đã có lỗi xảy ra!');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!');
+      setError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra!');
     } finally {
       setLoading(false);
     }
@@ -59,12 +51,14 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
-          <Text style={styles.title}>Đăng nhập</Text>
-          <Text style={styles.subtitle}>Vui lòng nhập thông tin đăng nhập của bạn</Text>
+          <Text style={styles.title}>Quên mật khẩu</Text>
+          <Text style={styles.subtitle}>
+            Quên mật khẩu? Vui lòng nhập email để nhận mã OTP.
+          </Text>
 
           <View style={styles.form}>
             <TextInput
-              placeholder="Email"
+              placeholder="username@gmail.com"
               placeholderTextColor="#999"
               style={styles.input}
               value={email}
@@ -72,46 +66,16 @@ const LoginScreen = () => {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <TextInput
-              placeholder="Mật khẩu"
-              placeholderTextColor="#999"
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-
-            <View style={styles.rememberRow}>
-              <Switch
-                value={rememberPassword}
-                onValueChange={setRememberPassword}
-                trackColor={{ false: '#d9d9d9', true: colors.primary }}
-                thumbColor="#fff"
-              />
-              <Text style={styles.rememberText}>Nhớ mật khẩu</Text>
-            </View>
-
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <TouchableOpacity onPress={handleSubmit} style={styles.submit} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitText}>Đăng nhập</Text>
-              )}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Gửi mã OTP</Text>}
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword' as never)}>
-            <Text style={styles.link}>Quên mật khẩu?</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.link}>Quay lại đăng nhập</Text>
           </TouchableOpacity>
-
-          <Text style={styles.footerText}>
-            Bạn chưa có tài khoản?{' '}
-            <Text style={styles.footerLink} onPress={() => navigation.navigate('Register' as never)}>
-              Đăng ký ngay
-            </Text>
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -129,12 +93,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#e67e2026',
+    backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 28,
+    padding: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.secondary,
     textAlign: 'center',
@@ -143,29 +107,20 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   form: {
-    gap: 16,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
   },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 40,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.secondary,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  rememberText: {
-    color: colors.text,
   },
   error: {
     color: colors.primary,
@@ -186,16 +141,6 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     textDecorationLine: 'underline',
   },
-  footerText: {
-    textAlign: 'center',
-    color: colors.text,
-    marginTop: 10,
-  },
-  footerLink: {
-    color: colors.secondary,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
 });
 
-export default LoginScreen;
+export default ForgotPasswordScreen;

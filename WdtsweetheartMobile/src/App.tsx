@@ -1,12 +1,8 @@
 import React from 'react';
-import { SafeAreaView, Text } from 'react-native';
+import RootNavigator from './navigation';
 
 const App = () => {
-  return (
-    <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Wdtsweetheart Mobile</Text>
-    </SafeAreaView>
-  );
+  return <RootNavigator />;
 };
 
 export default App;

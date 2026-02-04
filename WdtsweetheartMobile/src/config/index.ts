@@ -7,8 +7,12 @@ import {
   ZALOPAY_DOMAIN,
 } from '@env';
 
+const fallbackApiBaseUrl = 'http://10.0.2.2:3000';
+const rawApiBaseUrl = API_BASE_URL || fallbackApiBaseUrl;
+const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '');
+
 export const env = {
-  apiBaseUrl: API_BASE_URL,
+  apiBaseUrl,
   openMapKey: OPENMAP_KEY,
   zalopayAppId: ZALOPAY_APPID,
   zalopayDomain: ZALOPAY_DOMAIN,

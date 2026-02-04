@@ -91,7 +91,7 @@ const RegisterScreen = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="always">
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Tạo tài khoản</Text>
           <Text style={styles.cardSubtitle}>Điền đầy đủ thông tin để đăng ký</Text>
@@ -105,6 +105,9 @@ const RegisterScreen = () => {
                 style={styles.input}
                 value={fullName}
                 onChangeText={setFullName}
+                keyboardType="default"
+                autoCapitalize="words"
+                autoCorrect={true}
               />
             </View>
 
@@ -118,6 +121,7 @@ const RegisterScreen = () => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
 
@@ -130,6 +134,7 @@ const RegisterScreen = () => {
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
+                autoCorrect={false}
               />
             </View>
 
@@ -142,6 +147,7 @@ const RegisterScreen = () => {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                keyboardType="default"
               />
             </View>
 
@@ -154,6 +160,7 @@ const RegisterScreen = () => {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
+                keyboardType="default"
               />
             </View>
           </View>

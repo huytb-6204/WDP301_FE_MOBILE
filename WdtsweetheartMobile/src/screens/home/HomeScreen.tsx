@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Image,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -12,6 +13,8 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowRight,
   CheckCircle,
@@ -32,6 +35,7 @@ import {
 import { colors } from '../../theme/colors';
 import { ProductCard } from '../../components/ui';
 import type { ProductItem } from '../../types';
+import type { RootStackParamList } from '../../navigation/types';
 
 const heroImage = {
   uri: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/h1-slider-imgs.png',
@@ -111,6 +115,7 @@ const blogItems = [
 
 const HomeScreen = () => {
   const [cartCount] = useState(3);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const featured = useMemo<ProductItem[]>(
     () => [
@@ -170,9 +175,13 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.logoText}>Teddy Pet</Text>
           </View>
-          <TouchableOpacity style={styles.menuButton}>
+          <Pressable
+            onPress={() => navigation.navigate('ProductList')}
+            style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
+            android_ripple={{ color: 'rgba(255, 98, 98, 0.18)', borderless: false }}
+          >
             <Menu size={22} color={colors.secondary} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.searchRow}>
@@ -423,6 +432,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.softPink,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  menuButtonPressed: {
+    opacity: 0.85,
   },
   menuText: {
     fontSize: 20,

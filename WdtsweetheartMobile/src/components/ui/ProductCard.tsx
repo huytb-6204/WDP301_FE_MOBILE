@@ -50,6 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     paddingBottom: 16,
+    minHeight: 290,
   },
   imageWrap: {
     margin: 12,
@@ -81,6 +82,7 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: 16,
+    paddingBottom: 28,
   },
   ratingRow: {
     flexDirection: 'row',

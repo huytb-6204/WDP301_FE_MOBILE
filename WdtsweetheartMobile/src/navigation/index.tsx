@@ -26,7 +26,11 @@ const RootNavigator = () => {
         <Stack.Screen name="OTPPassword" component={OTPPasswordScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="ProductList" component={ProductListScreen} />
+        <Stack.Screen
+          name="ProductList"
+          component={ProductListScreen}
+          options={{ animation: 'slide_from_right', animationDuration: 300 }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

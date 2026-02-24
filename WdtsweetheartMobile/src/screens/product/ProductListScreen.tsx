@@ -255,7 +255,10 @@ const ProductListScreen = () => {
           <View style={styles.grid}>
             {filteredProducts.map((item) => (
               <View key={item.id} style={styles.gridItem}>
-                <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+                <Pressable
+                  onPress={() => navigation.navigate('ProductDetail', { product: item })}
+                  style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+                >
                   <View style={styles.cardImageWrap}>
                     {item.primaryImage ? (
                       <Image source={{ uri: item.primaryImage }} style={styles.cardImage} />

@@ -13,3 +13,7 @@ export type Product = {
 export const getProducts = async () => {
   return apiGet<Product[]>('/api/v1/client/product');
 };
+
+export const getProductDetail = async (productId: string) => {
+  return apiGet<Product>(`/api/v1/client/product/${productId}`);
+};

@@ -3,6 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/home/HomeScreen';
 import ProductListScreen from '../screens/product/ProductListScreen';
+import ProductDetailScreen from '../screens/product/ProductDetailScreen';
+import CartScreen from '../screens/cart/CartScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
@@ -29,6 +31,16 @@ const RootNavigator = () => {
         <Stack.Screen
           name="ProductList"
           component={ProductListScreen}
+          options={{ animation: 'slide_from_right', animationDuration: 300 }}
+        />
+        <Stack.Screen
+          name="ProductDetail"
+          component={ProductDetailScreen}
+          options={{ animation: 'slide_from_right', animationDuration: 300 }}
+        />
+        <Stack.Screen
+          name="Cart"
+          component={CartScreen}
           options={{ animation: 'slide_from_right', animationDuration: 300 }}
         />
       </Stack.Navigator>

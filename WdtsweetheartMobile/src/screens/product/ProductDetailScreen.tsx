@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useCart } from '../../context/CartContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -22,6 +23,7 @@ type ProductDetailScreenRouteProp = RouteProp<RootStackParamList, 'ProductDetail
 type ProductDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProductDetailScreen = () => {
+ const { addToCart } = useCart();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
   const route = useRoute<ProductDetailScreenRouteProp>();
   const product = route.params.product as any; // Có thể ép kiểu về UIProduct của bạn
@@ -33,7 +35,8 @@ const ProductDetailScreen = () => {
   const totalPrice = formatPrice(product.priceValue * quantity);
 
   const handleAddToCart = () => {
-    alert(`Thêm ${quantity} sản phẩm vào giỏ`);
+    addToCart(product, quantity);
+    alert(`Đã thêm ${quantity} sản phẩm vào giỏ!`);
   };
 
   const handleBuyNow = () => {
@@ -48,6 +51,7 @@ const ProductDetailScreen = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
         <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)}>
+            
           <Heart
             size={24}
             color={isFavorite ? colors.primary : colors.text}

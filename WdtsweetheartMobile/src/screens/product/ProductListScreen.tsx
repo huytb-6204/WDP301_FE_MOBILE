@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -27,7 +26,6 @@ import {
   Star,
   X,
 } from 'lucide-react-native';
-import { useCart } from '../../context/CartContext';
 import { colors } from '../../theme/colors';
 import { useProducts } from '../../hooks/useProducts';
 import { formatPrice } from '../../utils';
@@ -90,7 +88,8 @@ const ProductListScreen = () => {
   const [priceFilter, setPriceFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const { cartCount, addToCart } = useCart();
+  const [cartCount] = useState(2);
+
   const products = useMemo<UIProduct[]>(() => {
     return (data || []).map((item, index) => {
       const priceValue = item.priceNew ?? item.priceOld ?? 0;
@@ -256,11 +255,7 @@ const ProductListScreen = () => {
           <View style={styles.grid}>
             {filteredProducts.map((item) => (
               <View key={item.id} style={styles.gridItem}>
-                {/* 1. THÊM SỰ KIỆN CHUYỂN TRANG CHI TIẾT */}
-                <Pressable 
-                  style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-                  onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                >
+                <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
                   <View style={styles.cardImageWrap}>
                     {item.primaryImage ? (
                       <Image source={{ uri: item.primaryImage }} style={styles.cardImage} />
@@ -294,18 +289,9 @@ const ProductListScreen = () => {
                         <Text style={styles.originalPriceText}>{item.originalPrice}</Text>
                       ) : null}
                     </View>
-                    
-                    {/* 2. ĐỔI VIEW THÀNH PRESSABLE ĐỂ BẤM THÊM GIỎ ĐƯỢC */}
-                    <Pressable 
-                      style={styles.cardButton}
-                      onPress={() => {
-                        addToCart(item, 1);
-                        alert('Đã thêm vào giỏ!');
-                      }}
-                    >
+                    <View style={styles.cardButton}>
                       <Text style={styles.cardButtonText}>Thêm giỏ</Text>
-                    </Pressable>
-                    
+                    </View>
                   </View>
                 </Pressable>
               </View>
@@ -314,20 +300,14 @@ const ProductListScreen = () => {
         )}
       </ScrollView>
 
-      {/* Đổi Pressable thành TouchableOpacity và thêm zIndex: 999 */}
-      {/* FAB đứng độc lập, nằm ngoài ScrollView và có zIndex/elevation cao */}
-      <TouchableOpacity 
-        style={[styles.fab, { zIndex: 999, elevation: 10 }]} 
-        onPress={() => navigation.navigate('Cart')}
-        activeOpacity={0.8}
-      >
+      <Pressable style={styles.fab}>
         <ShoppingCart size={22} color="#fff" />
         {cartCount > 0 ? (
           <View style={styles.fabBadge}>
             <Text style={styles.fabBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
           </View>
         ) : null}
-      </TouchableOpacity>
+      </Pressable>
 
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <View style={styles.modalWrap}>

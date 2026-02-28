@@ -300,7 +300,7 @@ const ProductListScreen = () => {
         )}
       </ScrollView>
 
-      <Pressable style={styles.fab}>
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('Cart')}>
         <ShoppingCart size={22} color="#fff" />
         {cartCount > 0 ? (
           <View style={styles.fabBadge}>

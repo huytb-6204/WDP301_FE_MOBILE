@@ -8,4 +8,6 @@ export type RootStackParamList = {
   ResetPassword: undefined;
   Home: undefined;
   ProductList: undefined;
+  Cart: undefined;
+  Payment: undefined;
 };

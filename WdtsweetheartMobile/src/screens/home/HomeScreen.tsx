@@ -36,6 +36,7 @@ import { colors } from '../../theme/colors';
 import { ProductCard } from '../../components/ui';
 import type { ProductItem } from '../../types';
 import type { RootStackParamList } from '../../navigation/types';
+import { useCart } from '../../context/CartContext';
 
 const heroImage = {
   uri: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/h1-slider-imgs.png',
@@ -114,7 +115,7 @@ const blogItems = [
 ];
 
 const HomeScreen = () => {
-  const [cartCount] = useState(3);
+  const { cartCount } = useCart();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const featured = useMemo<ProductItem[]>(
@@ -193,7 +194,7 @@ const HomeScreen = () => {
               style={styles.searchInput}
             />
           </View>
-          <TouchableOpacity style={styles.cartButton}>
+          <TouchableOpacity style={styles.cartButton} onPress={() => navigation.navigate('Cart')}>
             <ShoppingCart size={18} color={colors.primary} />
             {cartCount > 0 ? (
               <View style={styles.cartBadge}>
@@ -221,9 +222,23 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.heroImageWrap}>
-            <Image source={heroImage} style={styles.heroImage} />
-            <View style={styles.heroHeart}>
-              <Heart size={18} color="#fff" />
+            <View style={styles.heroImageCard}>
+              <View style={styles.heroImageInner}>
+                <Image source={heroImage} style={styles.heroImage} />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)']}
+                  style={styles.heroImageGradient}
+                />
+                <View style={styles.heroImageFooter}>
+                  <Text style={styles.heroImageFooterText}>Spa & Grooming</Text>
+                  <View style={styles.heroImagePill}>
+                    <Text style={styles.heroImagePillText}>-20%</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.heroHeart} activeOpacity={0.9}>
+                <Heart size={18} color="#fff" />
+              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -555,12 +570,60 @@ const styles = StyleSheet.create({
   },
   heroImageWrap: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
+  },
+  heroImageCard: {
+    width: '100%',
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  heroImageInner: {
+    borderRadius: 24,
+    overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
-    height: 170,
-    borderRadius: 24,
+    height: 180,
+  },
+  heroImageGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 90,
+  },
+  heroImageFooter: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroImageFooterText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  heroImagePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  heroImagePillText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 11,
   },
   heroHeart: {
     position: 'absolute',
@@ -572,9 +635,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  heroHeartText: {
-    fontSize: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   section: {
     paddingHorizontal: 20,

@@ -10,7 +10,7 @@ export type RootStackParamList = {
   ResetPassword: undefined;
   Home: undefined;
   ProductList: undefined;
-  ProductDetail: { product: any };
+  ProductDetail: { productSlug: string; product?: any };
   Cart: undefined;
-  Checkout: { items: CartItem[] };
+  Checkout: undefined;
 };

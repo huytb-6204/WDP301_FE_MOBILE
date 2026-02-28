@@ -9,6 +9,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import ProductListScreen from '../screens/product/ProductListScreen';
 import ProductDetailScreen from '../screens/product/ProductDetailScreen';
 import CartScreen from '../screens/cart/CartScreen';
+import CheckoutScreen from '../screens/checkout/CheckoutScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
@@ -47,6 +48,11 @@ const RootNavigator = () => {
           <Stack.Screen
             name="Cart"
             component={CartScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="Checkout"
+            component={CheckoutScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
         </Stack.Navigator>

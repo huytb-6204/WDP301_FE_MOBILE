@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,24 @@ import { useCart } from '../../context/CartContext';
 
 const CartScreen = () => {
   const navigation = useNavigation<any>();
-  const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();
+  const {
+    cartItems,
+    cartDetailItems,
+    cartDetailLoading,
+    cartDetailError,
+    fetchCartDetail,
+    updateQuantity,
+    removeFromCart,
+    cartTotal,
+    cartDetailTotal,
+  } = useCart();
+
+  useEffect(() => {
+    fetchCartDetail();
+  }, [cartItems]);
+
+  const displayItems = cartDetailItems.length > 0 ? cartDetailItems : cartItems;
+  const displayTotal = cartDetailItems.length > 0 ? cartDetailTotal : cartTotal;
 
   // Component hiển thị từng món hàng trong giỏ
   const renderItem = ({ item }: { item: any }) => (
@@ -69,7 +86,7 @@ const CartScreen = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      {cartItems.length === 0 ? (
+      {displayItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconCircle}>
             <ShoppingBag size={48} color={colors.primary} />
@@ -86,7 +103,7 @@ const CartScreen = () => {
       ) : (
         <>
           <FlatList
-            data={cartItems}
+            data={displayItems}
             keyExtractor={(item) => item.product.id.toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
@@ -96,8 +113,13 @@ const CartScreen = () => {
           <View style={styles.bottomBar}>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-              <Text style={styles.totalPrice}>{formatPrice(cartTotal)}</Text>
+              <Text style={styles.totalPrice}>{formatPrice(displayTotal)}</Text>
             </View>
+            {cartDetailLoading ? (
+              <Text style={styles.cartMeta}>Đang đồng bộ giá & tồn kho...</Text>
+            ) : cartDetailError ? (
+              <Text style={styles.cartMetaError}>{cartDetailError}</Text>
+            ) : null}
             <TouchableOpacity 
               style={styles.checkoutBtn}
               onPress={() => navigation.navigate('Checkout')} 
@@ -239,6 +261,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.primary,
+  },
+  cartMeta: {
+    fontSize: 12,
+    color: '#777',
+    marginBottom: 10,
+  },
+  cartMetaError: {
+    fontSize: 12,
+    color: '#D64545',
+    marginBottom: 10,
   },
   checkoutBtn: {
     backgroundColor: colors.primary,

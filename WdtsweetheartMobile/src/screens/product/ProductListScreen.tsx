@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -29,13 +29,15 @@ import {
 import { colors } from '../../theme/colors';
 import { useProducts } from '../../hooks/useProducts';
 import { formatPrice } from '../../utils';
-import { StatusMessage } from '../../components/common';
+import { StatusMessage, Toast } from '../../components/common';
 import type { RootStackParamList } from '../../navigation/types';
 import type { ProductItem } from '../../types';
+import { useCart } from '../../context/CartContext';
 
 type UIProduct = ProductItem & {
   priceValue: number;
   originalPrice?: string;
+  slug?: string;
 };
 
 type SortOption = {
@@ -88,7 +90,17 @@ const ProductListScreen = () => {
   const [priceFilter, setPriceFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [cartCount] = useState(2);
+  const { addToCart, cartCount } = useCart();
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastVisible(false), 1400);
+  };
 
   const products = useMemo<UIProduct[]>(() => {
     return (data || []).map((item, index) => {
@@ -100,6 +112,7 @@ const ProductListScreen = () => {
 
       return {
         id: item._id,
+        slug: item.slug,
         title: item.name,
         price: formatPrice(priceValue),
         primaryImage: item.images?.[0] || '',
@@ -255,7 +268,15 @@ const ProductListScreen = () => {
           <View style={styles.grid}>
             {filteredProducts.map((item) => (
               <View key={item.id} style={styles.gridItem}>
-                <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('ProductDetail', {
+                      productSlug: item.slug || item.id,
+                      product: item,
+                    })
+                  }
+                  style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+                >
                   <View style={styles.cardImageWrap}>
                     {item.primaryImage ? (
                       <Image source={{ uri: item.primaryImage }} style={styles.cardImage} />
@@ -289,9 +310,19 @@ const ProductListScreen = () => {
                         <Text style={styles.originalPriceText}>{item.originalPrice}</Text>
                       ) : null}
                     </View>
-                    <View style={styles.cardButton}>
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation?.();
+                        addToCart(item, 1);
+                        showToast('Đã thêm sản phẩm vào giỏ hàng');
+                      }}
+                      style={({ pressed }) => [
+                        styles.cardButton,
+                        pressed && styles.cardButtonPressed,
+                      ]}
+                    >
                       <Text style={styles.cardButtonText}>Thêm giỏ</Text>
-                    </View>
+                    </Pressable>
                   </View>
                 </Pressable>
               </View>
@@ -300,7 +331,9 @@ const ProductListScreen = () => {
         )}
       </ScrollView>
 
-      <Pressable style={styles.fab}>
+      <Toast visible={toastVisible} message={toastMessage} />
+
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('Cart')}>
         <ShoppingCart size={22} color="#fff" />
         {cartCount > 0 ? (
           <View style={styles.fabBadge}>
@@ -445,6 +478,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
+    paddingTop: 8,
     paddingBottom: 120,
   },
   header: {
@@ -452,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F1F1',
     backgroundColor: '#fff',
@@ -472,7 +506,7 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     marginHorizontal: 20,
-    marginTop: 16,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f3f5',
@@ -490,7 +524,7 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     paddingLeft: 20,
-    marginTop: 16,
+    marginTop: 12,
   },
   categoryChip: {
     paddingHorizontal: 16,
@@ -520,7 +554,7 @@ const styles = StyleSheet.create({
   },
   sortRow: {
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -638,6 +672,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingVertical: 10,
     alignItems: 'center',
+  },
+  cardButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
   cardButtonText: {
     color: '#fff',

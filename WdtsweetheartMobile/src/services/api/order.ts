@@ -1,0 +1,34 @@
+import { apiPostRaw } from './client';
+
+export type CreateOrderItem = {
+  productId: string;
+  quantity: number;
+  variant?: Array<{ attrId: string; value: string; label?: string }>;
+};
+
+export type CreateOrderPayload = {
+  fullName: string;
+  phone: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  note?: string;
+  coupon?: string;
+  shippingMethod: string;
+  paymentMethod: 'money' | 'zalopay' | 'vnpay' | 'COD' | 'ZALOPAY' | 'VNPAY';
+  items: CreateOrderItem[];
+};
+
+export type CreateOrderResponse = {
+  code: 'success' | 'error';
+  message: string;
+  orderCode?: string;
+  phone?: string;
+};
+
+export const createOrder = async (payload: CreateOrderPayload) => {
+  return apiPostRaw<CreateOrderResponse, CreateOrderPayload>(
+    '/api/v1/client/order/create',
+    payload
+  );
+};

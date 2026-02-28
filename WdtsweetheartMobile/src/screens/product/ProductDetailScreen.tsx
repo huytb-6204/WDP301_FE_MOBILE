@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   SafeAreaView,
@@ -15,6 +15,9 @@ import type { RouteProp } from '@react-navigation/native';
 import { ArrowLeft, Heart, ShoppingCart, Star } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
+import { env } from '../../config';
+import { getProductDetail, type Product } from '../../services/api/product';
+import { Toast } from '../../components/common';
 
 // Import thêm hàm formatPrice của bạn
 import { formatPrice } from '../../utils'; 
@@ -22,24 +25,114 @@ import { formatPrice } from '../../utils';
 type ProductDetailScreenRouteProp = RouteProp<RootStackParamList, 'ProductDetail'>;
 type ProductDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+type UIProduct = {
+  id: string;
+  title: string;
+  price: string;
+  primaryImage: string;
+  secondaryImage?: string;
+  rating: number;
+  isSale: boolean;
+  priceValue: number;
+  originalPrice?: string;
+};
+
+const toAbsoluteUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const trimmed = url.replace(/^\/+/, '');
+  return `${env.apiBaseUrl}/${trimmed}`;
+};
+
+const mapToUIProduct = (item: Product): UIProduct => {
+  const priceValue = item.priceNew ?? item.priceOld ?? 0;
+  const originalPrice =
+    item.priceOld && item.priceNew && item.priceOld > item.priceNew
+      ? formatPrice(item.priceOld)
+      : undefined;
+
+  return {
+    id: item._id,
+    title: item.name,
+    price: formatPrice(priceValue),
+    primaryImage: toAbsoluteUrl(item.images?.[0]),
+    secondaryImage: toAbsoluteUrl(item.images?.[1] || item.images?.[0]),
+    rating: 5,
+    isSale: !!originalPrice,
+    priceValue,
+    originalPrice,
+  };
+};
+
 const ProductDetailScreen = () => {
- const { addToCart } = useCart();
+  const { addToCart } = useCart();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
   const route = useRoute<ProductDetailScreenRouteProp>();
-  const product = route.params.product as any; // Có thể ép kiểu về UIProduct của bạn
-  
+  const { productSlug, product: initialProduct } = route.params;
+
+  const [product, setProduct] = useState<UIProduct | null>(() => {
+    if (!initialProduct) return null;
+    return {
+      ...initialProduct,
+      primaryImage: toAbsoluteUrl(initialProduct.primaryImage),
+      secondaryImage: toAbsoluteUrl(initialProduct.secondaryImage),
+    } as UIProduct;
+  });
+  const [loading, setLoading] = useState(!initialProduct);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Tính tổng tiền dựa trên giá trị (dạng số) nhân với số lượng
-  const totalPrice = formatPrice(product.priceValue * quantity);
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastVisible(false), 1400);
+  };
+
+  useEffect(() => {
+    let active = true;
+    const fetchDetail = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const detail = await getProductDetail(productSlug);
+        if (active) {
+          setProduct(mapToUIProduct(detail.productDetail));
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Không thể tải sản phẩm');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDetail();
+    return () => {
+      active = false;
+    };
+  }, [productSlug]);
+
+  const totalPrice = useMemo(() => {
+    if (!product) return formatPrice(0);
+    return formatPrice(product.priceValue * quantity);
+  }, [product, quantity]);
 
   const handleAddToCart = () => {
+    if (!product) return;
     addToCart(product, quantity);
-    alert(`Đã thêm ${quantity} sản phẩm vào giỏ!`);
+    showToast(`Đã thêm ${quantity} sản phẩm vào giỏ`);
   };
 
   const handleBuyNow = () => {
+    if (!product) return;
     alert(`Tiến hành thanh toán ${totalPrice}`);
   };
 
@@ -60,7 +153,18 @@ const ProductDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {loading ? (
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>Đang tải sản phẩm...</Text>
+        </View>
+      ) : error || !product ? (
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>
+            {error || 'Không tìm thấy thông tin sản phẩm'}
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Image Section */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: product.primaryImage }} style={styles.mainImage} />
@@ -155,6 +259,7 @@ const ProductDetailScreen = () => {
           </View>
         </View>
       </ScrollView>
+      )}
 
       {/* Action Buttons */}
       <View style={styles.actionBar}>
@@ -169,6 +274,8 @@ const ProductDetailScreen = () => {
           <Text style={styles.buyNowPrice}>{totalPrice}</Text>
         </TouchableOpacity>
       </View>
+
+      <Toast visible={toastVisible} message={toastMessage} />
     </SafeAreaView>
   );
 };
@@ -176,14 +283,16 @@ const ProductDetailScreen = () => {
 const styles = StyleSheet.create({
   // ... (giữ nguyên các style cũ của bạn từ đầu đến addToCartText) ...
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
-  scrollContent: { paddingBottom: 100 },
+  statusContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  statusText: { fontSize: 14, color: colors.text, textAlign: 'center' },
+  scrollContent: { paddingTop: 8, paddingBottom: 100 },
   imageContainer: { position: 'relative', width: '100%', height: 350, backgroundColor: colors.softPink },
   mainImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   saleBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   saleBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  thumbnailRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 16, gap: 8 },
+  thumbnailRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   thumbnail: { width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.softPink, borderWidth: 2, borderColor: 'transparent' },
   thumbnailActive: { borderColor: colors.primary },
   thumbnailImage: { width: '100%', height: '100%', resizeMode: 'cover' },

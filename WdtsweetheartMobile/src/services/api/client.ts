@@ -60,3 +60,20 @@ export const apiPost = async <T, B = unknown>(path: string, body: B): Promise<Ap
 
   return json;
 };
+
+export const apiPostRaw = async <T, B = unknown>(path: string, body: B): Promise<T> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = await parseJsonSafely<T>(res);
+
+  if (!json || !res.ok) {
+    throw new Error((json as any)?.message || `Request failed (${res.status})`);
+  }
+
+  return json as T;
+};

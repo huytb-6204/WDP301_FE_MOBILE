@@ -1,3 +1,5 @@
+import type { CartItem } from '../context/CartContext';
+
 export type RootStackParamList = {
   WelcomeSplash: undefined;
   WelcomeChoice: undefined;
@@ -8,4 +10,7 @@ export type RootStackParamList = {
   ResetPassword: undefined;
   Home: undefined;
   ProductList: undefined;
+  ProductDetail: { productSlug: string; product?: any };
+  Cart: undefined;
+  Checkout: undefined;
 };

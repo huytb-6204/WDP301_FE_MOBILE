@@ -6,10 +6,40 @@ import {
   ZALOPAY_APPID,
   ZALOPAY_DOMAIN,
 } from '@env';
+import { NativeModules, Platform } from 'react-native';
 
-const fallbackApiBaseUrl = 'http://10.0.2.2:3000';
-const rawApiBaseUrl = API_BASE_URL || fallbackApiBaseUrl;
-const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '');
+const API_PORT = '3000';
+
+const normalizeUrl = (url: string) => url.replace(/\/+$/, '');
+
+const readMetroHost = () => {
+  const scriptURL = (NativeModules as any)?.SourceCode?.scriptURL as string | undefined;
+  if (!scriptURL) return null;
+
+  const match = scriptURL.match(/^https?:\/\/([^/:]+)/i);
+  return match?.[1] || null;
+};
+
+const buildAutoApiBaseUrl = () => {
+  const metroHost = readMetroHost();
+  const isAndroidEmulator =
+    Platform.OS === 'android' && (!metroHost || metroHost === '10.0.2.2' || metroHost === 'localhost');
+
+  if (isAndroidEmulator) {
+    return `http://10.0.2.2:${API_PORT}`;
+  }
+
+  if (metroHost) {
+    return `http://${metroHost}:${API_PORT}`;
+  }
+
+  return `http://localhost:${API_PORT}`;
+};
+
+const envApiBaseUrl = API_BASE_URL?.trim();
+const shouldAutoResolve = !envApiBaseUrl || envApiBaseUrl.toLowerCase() === 'auto';
+const rawApiBaseUrl = shouldAutoResolve ? buildAutoApiBaseUrl() : envApiBaseUrl;
+const apiBaseUrl = normalizeUrl(rawApiBaseUrl);
 
 export const env = {
   apiBaseUrl,

@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Linking,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, MapPin, Package, Wallet } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';

@@ -27,10 +27,12 @@ import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { useCart } from '../../context/CartContext';
 import { useProducts } from '../../hooks/useProducts';
+import { useBlogs } from '../../hooks/useBlogs';
 import { formatPrice } from '../../utils';
 import { tokenStorage } from '../../services/auth/token';
 import { getProfile, type ProfileUser } from '../../services/api/dashboard';
 import { logout as logoutApi } from '../../services/api/auth';
+import { StatusMessage } from '../../components/common';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type HomeMainTab = 'home' | 'product' | 'service' | 'blog' | 'profile';
@@ -49,24 +51,6 @@ const tabs: TabItem[] = [
   { key: 'profile', label: 'Profile', icon: UserRound },
 ];
 
-const blogMock = [
-  {
-    id: 'b1',
-    title: 'Cách chăm sóc thú cưng vào mùa nóng',
-    date: '03/2026',
-  },
-  {
-    id: 'b2',
-    title: '5 dấu hiệu thú cưng cần đi khám',
-    date: '03/2026',
-  },
-  {
-    id: 'b3',
-    title: 'Routine vệ sinh cho chó mèo tại nhà',
-    date: '02/2026',
-  },
-];
-
 const homeVisuals = {
   heroPets: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/h1-slider-imgs.png',
   promo1: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-1.jpg',
@@ -79,6 +63,7 @@ const HomeScreen = () => {
   const isFocused = useIsFocused();
   const { cartCount } = useCart();
   const { data: products } = useProducts();
+  const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
   const [activeTab, setActiveTab] = useState<HomeMainTab>('home');
   const [profile, setProfile] = useState<ProfileUser | null>(null);
@@ -87,6 +72,14 @@ const HomeScreen = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const productPreview = useMemo(() => (products || []).slice(0, 4), [products]);
+  const blogPreview = useMemo(() => (blogs || []).slice(0, 3), [blogs]);
+
+  const formatBlogDate = (value?: string) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('vi-VN');
+  };
 
   const loadProfile = useCallback(async () => {
     setProfileError(null);
@@ -248,13 +241,45 @@ const HomeScreen = () => {
 
   const renderBlogTab = () => (
     <View style={styles.sectionStack}>
-      {blogMock.map((item) => (
-        <View key={item.id} style={styles.blogCard}>
-          <Text style={styles.blogDate}>{item.date}</Text>
-          <Text style={styles.blogTitle}>{item.title}</Text>
-          <Text style={styles.blogDesc}>Nội dung blog chi tiết sẽ được kết nối API ở phase tiếp theo.</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Bài viết mới</Text>
+        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('BlogList')}>
+          <Text style={styles.inlineActionText}>Xem tất cả</Text>
+          <ArrowRight size={14} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {blogsLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={styles.loadingText}>Đang tải bài viết...</Text>
         </View>
-      ))}
+      ) : blogsError ? (
+        <View style={styles.statusWrap}>
+          <StatusMessage message={blogsError} actionText="Thử lại" onAction={refetchBlogs} />
+        </View>
+      ) : blogPreview.length === 0 ? (
+        <View style={styles.emptyBlog}>
+          <Text style={styles.emptyBlogText}>Chưa có bài viết nào.</Text>
+          <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('BlogList')}>
+            <Text style={styles.primaryButtonText}>Khám phá blog</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        blogPreview.map((item) => (
+          <TouchableOpacity
+            key={item._id}
+            style={styles.blogCard}
+            onPress={() => navigation.navigate('BlogDetail', { slug: item.slug, blog: item })}
+          >
+            <Text style={styles.blogDate}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
+            <Text style={styles.blogTitle}>{item.name}</Text>
+            <Text style={styles.blogDesc} numberOfLines={2}>
+              {item.excerpt || item.expert || item.description || 'Xem chi tiết bài viết'}
+            </Text>
+          </TouchableOpacity>
+        ))
+      )}
     </View>
   );
 
@@ -519,6 +544,16 @@ const styles = StyleSheet.create({
   blogDate: { color: colors.primary, fontSize: 11, fontWeight: '700' },
   blogTitle: { color: colors.secondary, fontSize: 15, fontWeight: '700' },
   blogDesc: { color: colors.text, fontSize: 12, lineHeight: 18 },
+  statusWrap: { paddingHorizontal: 12 },
+  emptyBlog: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#fff',
+    padding: 12,
+    gap: 8,
+  },
+  emptyBlogText: { color: colors.text, fontSize: 12 },
   loadingWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 40, gap: 8 },
   loadingText: { color: colors.text, fontSize: 13 },
   rowButtons: { flexDirection: 'row', gap: 8, marginTop: 6 },

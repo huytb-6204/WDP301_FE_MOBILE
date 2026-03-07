@@ -331,8 +331,11 @@ const ProductListScreen = () => {
         )}
       </ScrollView>
 
+<<<<<<< HEAD
       <Toast visible={toastVisible} message={toastMessage} />
 
+=======
+>>>>>>> Quan
       <Pressable style={styles.fab} onPress={() => navigation.navigate('Cart')}>
         <ShoppingCart size={22} color="#fff" />
         {cartCount > 0 ? (

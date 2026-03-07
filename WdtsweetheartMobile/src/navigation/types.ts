@@ -13,4 +13,6 @@ export type RootStackParamList = {
   ProductDetail: { productSlug: string; product?: any };
   Cart: undefined;
   Checkout: undefined;
+  Booking: undefined;
+  MyBookings: undefined;
 };

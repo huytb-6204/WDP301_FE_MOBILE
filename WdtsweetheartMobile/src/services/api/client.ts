@@ -77,3 +77,31 @@ export const apiPostRaw = async <T, B = unknown>(path: string, body: B): Promise
 
   return json as T;
 };
+
+export const apiGetRaw = async <T>(path: string): Promise<T> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, { headers });
+  const json = await parseJsonSafely<T>(res);
+
+  if (!json || !res.ok) {
+    throw new Error((json as any)?.message || `Request failed (${res.status})`);
+  }
+
+  return json as T;
+};
+
+export const apiPatchRaw = async <T, B = unknown>(path: string, body: B): Promise<T> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const json = await parseJsonSafely<T>(res);
+
+  if (!json || !res.ok) {
+    throw new Error((json as any)?.message || `Request failed (${res.status})`);
+  }
+
+  return json as T;
+};

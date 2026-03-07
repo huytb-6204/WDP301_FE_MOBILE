@@ -10,13 +10,15 @@ import ProductListScreen from '../screens/product/ProductListScreen';
 import ProductDetailScreen from '../screens/product/ProductDetailScreen';
 import CartScreen from '../screens/cart/CartScreen';
 import CheckoutScreen from '../screens/checkout/CheckoutScreen';
+import BookingScreen from '../screens/booking/BookingScreen';
+import MyBookingsScreen from '../screens/booking/MyBookingsScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import OTPPasswordScreen from '../screens/auth/OTPPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import WelcomeSplashScreen from '../screens/auth/WelcomeSplashScreen';
-import WelcomeChoiceScreen from '../screens/auth/WelcomeChoiceScreen';
+import WelcomeChoiceScreen from '../screens/cart/WelcomeChoiceScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -53,6 +55,16 @@ const RootNavigator = () => {
           <Stack.Screen
             name="Checkout"
             component={CheckoutScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="Booking"
+            component={BookingScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="MyBookings"
+            component={MyBookingsScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
         </Stack.Navigator>

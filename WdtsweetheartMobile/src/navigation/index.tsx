@@ -13,6 +13,7 @@ import BlogDetailScreen from '../screens/blog/BlogDetailScreen';
 import CartScreen from '../screens/cart/CartScreen';
 import CheckoutScreen from '../screens/checkout/CheckoutScreen';
 import PaymentScreen from '../screens/checkout/PaymentScreen';
+import OrderSuccessScreen from '../screens/checkout/OrderSuccessScreen';
 import BookingScreen from '../screens/booking/BookingScreen';
 import MyBookingsScreen from '../screens/booking/MyBookingsScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -68,6 +69,11 @@ const RootNavigator = () => {
           <Stack.Screen
             name="Checkout"
             component={CheckoutScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="OrderSuccess"
+            component={OrderSuccessScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
           <Stack.Screen

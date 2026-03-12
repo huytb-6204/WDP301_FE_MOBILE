@@ -1,15 +1,8 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-} from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Trash2, ShoppingBag } from 'lucide-react-native';
+import { ArrowLeft, ShoppingBag, Trash2 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { formatPrice } from '../../utils';
 import { useCart } from '../../context/CartContext';
@@ -29,7 +22,11 @@ const CartScreen = () => {
   } = useCart();
 
   useEffect(() => {
-    fetchCartDetail();
+    // Debounce đồng bộ để tránh giật khi bấm +/- liên tục.
+    const timer = setTimeout(() => {
+      fetchCartDetail();
+    }, 250);
+    return () => clearTimeout(timer);
   }, [cartItems, fetchCartDetail]);
 
   const displayItems = cartDetailItems.length > 0 ? cartDetailItems : cartItems;
@@ -43,7 +40,8 @@ const CartScreen = () => {
         <Text style={styles.itemTitle} numberOfLines={2}>
           {item.product.title}
         </Text>
-        <Text style={styles.itemPrice}>{formatPrice(item.product.priceValue)}</Text>
+        <Text style={styles.itemPrice}>{formatPrice(item.product.priceValue * item.quantity)}</Text>
+        <Text style={styles.itemSubPrice}>{formatPrice(item.product.priceValue)} / sản phẩm</Text>
 
         <View style={styles.actionRow}>
           <View style={styles.quantityControl}>
@@ -62,10 +60,7 @@ const CartScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => removeFromCart(item.product.id)}
-          >
+          <TouchableOpacity style={styles.deleteButton} onPress={() => removeFromCart(item.product.id)}>
             <Trash2 size={18} color="#FF4D4D" />
           </TouchableOpacity>
         </View>
@@ -112,14 +107,11 @@ const CartScreen = () => {
               <Text style={styles.totalPrice}>{formatPrice(displayTotal)}</Text>
             </View>
             {cartDetailLoading ? (
-              <Text style={styles.cartMeta}>Đang đồng bộ giá & tồn kho...</Text>
+              <Text style={styles.cartMeta}>Đang đồng bộ giá và tồn kho...</Text>
             ) : cartDetailError ? (
               <Text style={styles.cartMetaError}>{cartDetailError}</Text>
             ) : null}
-            <TouchableOpacity
-              style={styles.checkoutBtn}
-              onPress={() => navigation.navigate('Checkout')}
-            >
+            <TouchableOpacity style={styles.checkoutBtn} onPress={() => navigation.navigate('Checkout')}>
               <Text style={styles.checkoutText}>Tiến hành đặt hàng</Text>
             </TouchableOpacity>
           </View>
@@ -191,6 +183,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
     marginTop: 4,
+  },
+  itemSubPrice: {
+    fontSize: 12,
+    color: colors.text,
+    marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',

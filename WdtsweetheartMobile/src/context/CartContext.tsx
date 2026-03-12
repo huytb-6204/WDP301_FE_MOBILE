@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode, useCallback } from 'react';
 import { env } from '../config';
 import { getCartDetail, type CartListResponse } from '../services/api/cart';
 
@@ -47,14 +47,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartDetailError, setCartDetailError] = useState<string | null>(null);
   const [shippingOptions, setShippingOptions] = useState<CartListResponse['shippingOptions']>(null);
 
-  const toAbsoluteUrl = (url?: string) => {
+  const toAbsoluteUrl = useCallback((url?: string) => {
     if (!url) return '';
     if (/^https?:\/\//i.test(url)) return url;
     const trimmed = url.replace(/^\/+/, '');
     return `${env.apiBaseUrl}/${trimmed}`;
-  };
+  }, [env.apiBaseUrl]);
 
-  const mapCartDetailToUI = (detail: CartListResponse['cart']) => {
+  const mapCartDetailToUI = useCallback((detail: CartListResponse['cart']) => {
     return (detail || []).map((item: any) => {
       const priceValue = item?.detail?.priceNew ?? item?.detail?.priceOld ?? 0;
       return {
@@ -72,7 +72,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         quantity: item.quantity,
       } as CartItem;
     });
-  };
+  }, [toAbsoluteUrl]);
 
   // Thêm sản phẩm vào giỏ
   const addToCart = (product: UIProduct, quantity: number) => {
@@ -116,7 +116,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setShippingOptions(null);
   };
 
-  const fetchCartDetail = async (
+  const fetchCartDetail = useCallback(async (
     userAddress?: { latitude: number; longitude: number }
   ): Promise<CartListResponse | null> => {
     if (cartItems.length === 0) {
@@ -144,7 +144,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setCartDetailLoading(false);
     }
-  };
+  }, [cartItems, mapCartDetailToUI]);
 
   // Tính tổng tiền & tổng số lượng (Tự động tính lại khi cartItems thay đổi)
   const cartTotal = useMemo(() => {

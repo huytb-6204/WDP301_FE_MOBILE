@@ -44,11 +44,11 @@ type TabItem = {
 };
 
 const tabs: TabItem[] = [
-  { key: 'home', label: 'Home', icon: House },
-  { key: 'product', label: 'Product', icon: ShoppingBag },
-  { key: 'service', label: 'Service', icon: PawPrint },
-  { key: 'blog', label: 'Blog', icon: BookOpen },
-  { key: 'profile', label: 'Profile', icon: UserRound },
+  { key: 'home', label: 'Trang chủ', icon: House },
+  { key: 'product', label: 'Sản phẩm', icon: ShoppingBag },
+  { key: 'service', label: 'Dịch vụ', icon: PawPrint },
+  { key: 'blog', label: 'Bài viết', icon: BookOpen },
+  { key: 'profile', label: 'Tài khoản', icon: UserRound },
 ];
 
 const homeVisuals = {
@@ -153,7 +153,7 @@ const HomeScreen = () => {
         <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('service')}>
           <ImageBackground source={{ uri: homeVisuals.promo1 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
             <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Spa & Grooming</Text>
+              <Text style={styles.promoTitle}>Spa & Cắt tỉa</Text>
               <Text style={styles.promoSub}>Đặt lịch nhanh trong 1 chạm</Text>
             </View>
           </ImageBackground>
@@ -161,7 +161,7 @@ const HomeScreen = () => {
         <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('product')}>
           <ImageBackground source={{ uri: homeVisuals.promo2 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
             <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Pet Shop</Text>
+              <Text style={styles.promoTitle}>Cửa hàng thú cưng</Text>
               <Text style={styles.promoSub}>Khám phá sản phẩm nổi bật</Text>
             </View>
           </ImageBackground>

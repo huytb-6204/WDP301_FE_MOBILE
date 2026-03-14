@@ -30,10 +30,10 @@ const OrderSuccessScreen = () => {
         if (res.code === 'success' && res.order) {
           setOrder(res.order);
         } else {
-          setError(res.message || 'Khong tim thay don hang.');
+          setError(res.message || 'Không tìm thấy đơn hàng.');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Khong the tai thong tin don hang.');
+        setError(err instanceof Error ? err.message : 'Không thể tải thông tin đơn hàng.');
       } finally {
         setLoading(false);
       }
@@ -44,7 +44,7 @@ const OrderSuccessScreen = () => {
 
   const paymentLabel = useMemo(() => {
     if (!order?.paymentMethod) return '-';
-    if (order.paymentMethod === 'money') return 'Thanh toan khi nhan hang';
+    if (order.paymentMethod === 'money') return 'Thanh toán khi nhận hàng';
     return order.paymentMethod.toUpperCase();
   }, [order?.paymentMethod]);
 
@@ -55,7 +55,7 @@ const OrderSuccessScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <ArrowLeft size={20} color={colors.secondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Dat hang thanh cong</Text>
+          <Text style={styles.headerTitle}>Đặt hàng thành công</Text>
           <View style={styles.iconSpacer} />
         </View>
       </LinearGradient>
@@ -63,38 +63,38 @@ const OrderSuccessScreen = () => {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.muted}>Dang tai...</Text>
+          <Text style={styles.muted}>Đang tải...</Text>
         </View>
       ) : error || !order ? (
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error || 'Khong co du lieu don hang.'}</Text>
+          <Text style={styles.errorText}>{error || 'Không có dữ liệu đơn hàng.'}</Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Home')}>
             <House size={16} color="#fff" />
-            <Text style={styles.primaryBtnText}>Ve trang chu</Text>
+            <Text style={styles.primaryBtnText}>Về trang chủ</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.successCard}>
             <CheckCircle2 size={32} color="#22C55E" />
-            <Text style={styles.successTitle}>Dat hang thanh cong</Text>
-            <Text style={styles.successText}>Cam on ban. Don hang cua ban da duoc tiep nhan va dang cho xu ly.</Text>
+            <Text style={styles.successTitle}>Đặt hàng thành công</Text>
+            <Text style={styles.successText}>Cảm ơn bạn. Đơn hàng của bạn đã được tiếp nhận và đang chờ xử lý.</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.sectionTitleRow}>
               <ReceiptText size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Thong tin don hang</Text>
+              <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
             </View>
-            <Text style={styles.rowText}>Ma don: {order.code}</Text>
-            <Text style={styles.rowText}>Ngay tao: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
-            <Text style={styles.rowText}>Phuong thuc thanh toan: {paymentLabel}</Text>
+            <Text style={styles.rowText}>Mã đơn: {order.code}</Text>
+            <Text style={styles.rowText}>Ngày tạo: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
+            <Text style={styles.rowText}>Phương thức thanh toán: {paymentLabel}</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.sectionTitleRow}>
               <Package size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Chi tiet san pham</Text>
+              <Text style={styles.sectionTitle}>Chi tiết sản phẩm</Text>
             </View>
             {order.items.map((item, index) => (
               <View key={`${item.productId}-${index}`} style={styles.summaryRow}>
@@ -110,26 +110,26 @@ const OrderSuccessScreen = () => {
           <View style={styles.card}>
             <View style={styles.sectionTitleRow}>
               <CheckCircle2 size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Thanh toan</Text>
+              <Text style={styles.sectionTitle}>Thanh toán</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.muted}>Tam tinh</Text>
+              <Text style={styles.muted}>Tạm tính</Text>
               <Text style={styles.summaryValue}>{formatPrice(order.subTotal || 0)}</Text>
             </View>
             {order.discount ? (
               <View style={styles.summaryRow}>
-                <Text style={styles.muted}>Giam gia</Text>
+                <Text style={styles.muted}>Giảm giá</Text>
                 <Text style={styles.discountValue}>-{formatPrice(order.discount)}</Text>
               </View>
             ) : null}
             <View style={styles.summaryRow}>
               <Text style={styles.muted}>
-                Phi van chuyen{order.shipping?.carrierName ? ` (${order.shipping.carrierName})` : ''}
+                Phí vận chuyển{order.shipping?.carrierName ? ` (${order.shipping.carrierName})` : ''}
               </Text>
               <Text style={styles.summaryValue}>{formatPrice(order.shipping?.fee || 0)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Tong cong</Text>
+              <Text style={styles.totalLabel}>Tổng cộng</Text>
               <Text style={styles.totalValue}>{formatPrice(order.total || 0)}</Text>
             </View>
           </View>
@@ -137,17 +137,17 @@ const OrderSuccessScreen = () => {
           <View style={styles.card}>
             <View style={styles.sectionTitleRow}>
               <UserRound size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Thong tin nhan hang</Text>
+              <Text style={styles.sectionTitle}>Thông tin nhận hàng</Text>
             </View>
-            <Text style={styles.rowText}>Ho ten: {order.fullName}</Text>
-            <Text style={styles.rowText}>So dien thoai: {order.phone}</Text>
-            <Text style={styles.rowText}>Dia chi: {order.address}</Text>
-            {order.note ? <Text style={styles.noteText}>Ghi chu: "{order.note}"</Text> : null}
+            <Text style={styles.rowText}>Họ tên: {order.fullName}</Text>
+            <Text style={styles.rowText}>Số điện thoại: {order.phone}</Text>
+            <Text style={styles.rowText}>Địa chỉ: {order.address}</Text>
+            {order.note ? <Text style={styles.noteText}>Ghi chú: "{order.note}"</Text> : null}
           </View>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('Home')}>
             <House size={16} color="#fff" />
-            <Text style={styles.primaryBtnText}>Ve trang chu</Text>
+            <Text style={styles.primaryBtnText}>Về trang chủ</Text>
           </TouchableOpacity>
         </ScrollView>
       )}

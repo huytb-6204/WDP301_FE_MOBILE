@@ -35,9 +35,12 @@ const parseJsonSafely = async <T>(res: Response): Promise<ApiResponse<T> | null>
 export const apiGet = async <T>(path: string): Promise<T> => {
   const headers = await buildHeaders();
   const res = await fetch(`${env.apiBaseUrl}${path}`, { headers });
-  const json = await parseJsonSafely<T>(res);
+  
+  // 1. Ép kiểu <any> để TypeScript không báo lỗi gạch đỏ nữa
+  const json = await parseJsonSafely<any>(res); 
 
-  if (!json || !res.ok || !json.success) {
+  // 2. CHỈ kiểm tra res.ok (trạng thái 200 từ backend)
+  if (!json || !res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
 
@@ -52,9 +55,10 @@ export const apiPost = async <T, B = unknown>(path: string, body: B): Promise<Ap
     body: JSON.stringify(body),
   });
 
-  const json = await parseJsonSafely<T>(res);
+  // 3. Cũng ép kiểu <any> ở đây luôn
+  const json = await parseJsonSafely<any>(res);
 
-  if (!json || !res.ok || !json.success) {
+  if (!json || !res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
 

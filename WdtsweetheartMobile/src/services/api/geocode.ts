@@ -11,7 +11,7 @@ type NominatimResponseItem = {
 export const geocodeAddress = async (address: string): Promise<GeocodeResult> => {
   const query = address.trim();
   if (!query) {
-    throw new Error('Vui long nhap dia chi de tinh phi giao hang.');
+    throw new Error('Vui lòng nhập địa chỉ để tính phí giao hàng.');
   }
 
   // Bias geocoding to Vietnam for better shipping matching.
@@ -25,21 +25,21 @@ export const geocodeAddress = async (address: string): Promise<GeocodeResult> =>
   });
 
   if (!res.ok) {
-    throw new Error('Khong the chuyen dia chi thanh toa do. Vui long thu lai.');
+    throw new Error('Không thể chuyển địa chỉ thành tọa độ. Vui lòng thử lại.');
   }
 
   const data = (await res.json()) as NominatimResponseItem[];
   const first = data?.[0];
 
   if (!first?.lat || !first?.lon) {
-    throw new Error('Khong tim thay toa do tu dia chi da nhap.');
+    throw new Error('Không tìm thấy tọa độ từ địa chỉ đã nhập.');
   }
 
   const latitude = Number(first.lat);
   const longitude = Number(first.lon);
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error('Toa do tra ve khong hop le.');
+    throw new Error('Tọa độ trả về không hợp lệ.');
   }
 
   return { latitude, longitude };

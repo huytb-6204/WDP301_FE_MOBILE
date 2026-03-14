@@ -44,7 +44,7 @@ const getShippingMethodValue = (option?: ShippingOption | null) => {
 };
 
 const getShippingTitle = (option: ShippingOption, idx: number) =>
-  option.carrier_name || option.carrier_short_name || option.carrier || `Goi ${idx + 1}`;
+  option.carrier_name || option.carrier_short_name || option.carrier || `Gói ${idx + 1}`;
 
 const getShippingFee = (option: ShippingOption) => Number(option.fee ?? option.total_fee ?? 0);
 
@@ -110,7 +110,7 @@ const CheckoutScreen = () => {
       setCoords(selected);
       return selected;
     }
-    if (!address.trim()) throw new Error('Vui long nhap dia chi.');
+    if (!address.trim()) throw new Error('Vui lòng nhập địa chỉ.');
     const next = await geocodeAddress(address.trim());
     setCoords(next);
     return next;
@@ -125,7 +125,7 @@ const CheckoutScreen = () => {
       setShippingMethod(first ? getShippingMethodValue(first) : '');
     } catch (error) {
       if (!silent) {
-        Alert.alert('Khong the tinh phi ship', error instanceof Error ? error.message : 'Vui long thu lai.');
+        Alert.alert('Không thể tính phí ship', error instanceof Error ? error.message : 'Vui lòng thử lại.');
       }
     } finally {
       setLoadingShip(false);
@@ -149,15 +149,15 @@ const CheckoutScreen = () => {
 
   const handleSubmit = async () => {
     if (items.length === 0) {
-      Alert.alert('Gio hang trong', 'Vui long them san pham truoc khi thanh toan.');
+      Alert.alert('Giỏ hàng trống', 'Vui lòng thêm sản phẩm trước khi thanh toán.');
       return;
     }
     if (!currentAddress && (!fullName.trim() || !phone.trim() || !address.trim())) {
-      Alert.alert('Thieu thong tin', 'Vui long nhap ho ten, so dien thoai va dia chi.');
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ tên, số điện thoại và địa chỉ.');
       return;
     }
     if (!shippingMethod) {
-      Alert.alert('Chua chon van chuyen', 'Vui long tinh va chon phuong thuc van chuyen.');
+      Alert.alert('Chưa chọn vận chuyển', 'Vui lòng tính và chọn phương thức vận chuyển.');
       return;
     }
 
@@ -166,7 +166,7 @@ const CheckoutScreen = () => {
       try {
         finalCoords = await resolveCoords();
       } catch (error) {
-        Alert.alert('Loi dia chi', error instanceof Error ? error.message : 'Vui long thu lai.');
+        Alert.alert('Lỗi địa chỉ', error instanceof Error ? error.message : 'Vui lòng thử lại.');
         return;
       }
     }
@@ -192,7 +192,7 @@ const CheckoutScreen = () => {
       });
 
       if (res.code !== 'success' || !res.orderCode || !res.phone) {
-        Alert.alert('Khong the dat hang', res.message || 'Vui long thu lai.');
+        Alert.alert('Không thể đặt hàng', res.message || 'Vui lòng thử lại.');
         return;
       }
 
@@ -208,7 +208,7 @@ const CheckoutScreen = () => {
 
       navigation.replace('OrderSuccess', { orderCode: res.orderCode, phone: res.phone });
     } catch (error) {
-      Alert.alert('Loi dat hang', error instanceof Error ? error.message : 'Vui long thu lai.');
+      Alert.alert('Lỗi đặt hàng', error instanceof Error ? error.message : 'Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -218,7 +218,7 @@ const CheckoutScreen = () => {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.muted}>Dang tai thong tin thanh toan...</Text>
+        <Text style={styles.muted}>Đang tải thông tin thanh toán...</Text>
       </SafeAreaView>
     );
   }
@@ -230,13 +230,13 @@ const CheckoutScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <ArrowLeft size={20} color={colors.secondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Thanh toan</Text>
+          <Text style={styles.headerTitle}>Thanh toán</Text>
           <View style={styles.iconSpacer} />
         </View>
 
         <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>Xac nhan thong tin giao hang</Text>
-          <Text style={styles.bannerText}>Giao dien mobile duoc lam lai theo flow trang web cua ban.</Text>
+          <Text style={styles.bannerTitle}>Xác nhận thông tin giao hàng</Text>
+          <Text style={styles.bannerText}>Giao diện mobile được làm lại theo flow trang web của bạn.</Text>
         </View>
       </LinearGradient>
 
@@ -245,9 +245,9 @@ const CheckoutScreen = () => {
           <View style={styles.accountRow}>
             <View style={styles.avatar}><User size={18} color={colors.primary} /></View>
             <View style={styles.flex}>
-              <Text style={styles.labelTop}>Tai khoan dat hang</Text>
-              <Text style={styles.strong}>{profile?.fullName || fullName || 'Khach hang'}</Text>
-              <Text style={styles.muted}>{profile?.phone || phone || 'Chua cap nhat so dien thoai'}</Text>
+              <Text style={styles.labelTop}>Tài khoản đặt hàng</Text>
+              <Text style={styles.strong}>{profile?.fullName || fullName || 'Khách hàng'}</Text>
+              <Text style={styles.muted}>{profile?.phone || phone || 'Chưa cập nhật số điện thoại'}</Text>
             </View>
             <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
               <LogOut size={16} color="#D64545" />
@@ -258,7 +258,7 @@ const CheckoutScreen = () => {
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <MapPin size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Thong tin nhan hang</Text>
+            <Text style={styles.sectionTitle}>Thông tin nhận hàng</Text>
           </View>
 
           {addresses.map((item) => {
@@ -280,14 +280,14 @@ const CheckoutScreen = () => {
               {selectedAddressId === 'new' ? <View style={styles.radioDot} /> : null}
             </View>
             <Text style={[styles.newAddressText, selectedAddressId === 'new' && styles.newAddressTextActive]}>
-              Su dung dia chi khac
+              Sử dụng địa chỉ khác
             </Text>
           </Pressable>
 
           {selectedAddressId === 'new' ? (
             <View style={styles.formBlock}>
-              <TextInput value={fullName} onChangeText={setFullName} placeholder="Ho va ten" style={styles.input} />
-              <TextInput value={phone} onChangeText={setPhone} placeholder="So dien thoai" keyboardType="phone-pad" style={styles.input} />
+              <TextInput value={fullName} onChangeText={setFullName} placeholder="Họ và tên" style={styles.input} />
+              <TextInput value={phone} onChangeText={setPhone} placeholder="Số điện thoại" keyboardType="phone-pad" style={styles.input} />
               <TextInput
                 value={address}
                 onChangeText={(value) => {
@@ -295,7 +295,7 @@ const CheckoutScreen = () => {
                   setCoords(null);
                   setShippingMethod('');
                 }}
-                placeholder="Dia chi chi tiet"
+                placeholder="Địa chỉ chi tiết"
                 multiline
                 style={[styles.input, styles.textarea]}
               />
@@ -309,20 +309,20 @@ const CheckoutScreen = () => {
 
           <TouchableOpacity style={styles.primaryBtn} onPress={() => calculateShipping(false)} disabled={loadingShip}>
             {loadingShip ? <ActivityIndicator color="#fff" /> : <Truck size={16} color="#fff" />}
-            <Text style={styles.primaryBtnText}>Tinh phi giao hang</Text>
+            <Text style={styles.primaryBtnText}>Tính phí giao hàng</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
           <Pressable style={styles.noteHeader} onPress={() => setShowNote((prev) => !prev)}>
             <View style={[styles.checkbox, showNote && styles.checkboxActive]}>{showNote ? <Check size={12} color="#fff" /> : null}</View>
-            <Text style={styles.sectionTitle}>Them ghi chu don hang</Text>
+            <Text style={styles.sectionTitle}>Thêm ghi chú đơn hàng</Text>
           </Pressable>
           {showNote ? (
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="Vi du: goi truoc khi giao..."
+              placeholder="Ví dụ: gọi trước khi giao..."
               multiline
               style={[styles.input, styles.textarea, styles.noteInput]}
             />
@@ -332,7 +332,7 @@ const CheckoutScreen = () => {
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <Truck size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Phuong thuc van chuyen</Text>
+            <Text style={styles.sectionTitle}>Phương thức vận chuyển</Text>
           </View>
           {shippingTyped.length > 0 ? (
             shippingTyped.map((option, idx) => {
@@ -344,26 +344,26 @@ const CheckoutScreen = () => {
                     <Text style={styles.optionTitle}>
                       {getShippingTitle(option, idx)} {option.service ? `(${option.service})` : ''}
                     </Text>
-                    <Text style={styles.muted}>Giao hang du kien tu doi tac van chuyen</Text>
+                    <Text style={styles.muted}>Giao hàng dự kiến từ đối tác vận chuyển</Text>
                   </View>
                   <Text style={active ? styles.priceActive : styles.priceNormal}>{formatPrice(getShippingFee(option))}</Text>
                 </TouchableOpacity>
               );
             })
           ) : (
-            <Text style={styles.muted}>Nhap dia chi hoac chon dia chi da luu de tai phuong thuc van chuyen.</Text>
+            <Text style={styles.muted}>Nhập địa chỉ hoặc chọn địa chỉ đã lưu để tải phương thức vận chuyển.</Text>
           )}
         </View>
 
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <Wallet size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Phuong thuc thanh toan</Text>
+            <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           </View>
           {[
-            { key: 'money', label: 'Thanh toan khi nhan hang (COD)' },
-            { key: 'zalopay', label: 'Vi dien tu ZaloPay' },
-            { key: 'vnpay', label: 'Cong thanh toan VNPAY' },
+            { key: 'money', label: 'Thanh toán khi nhận hàng (COD)' },
+            { key: 'zalopay', label: 'Ví điện tử ZaloPay' },
+            { key: 'vnpay', label: 'Cổng thanh toán VNPAY' },
           ].map((option) => {
             const active = paymentMethod === option.key;
             return (
@@ -378,7 +378,7 @@ const CheckoutScreen = () => {
         <View style={styles.card}>
           <View style={styles.sectionTitleRow}>
             <Package size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Tom tat don hang</Text>
+            <Text style={styles.sectionTitle}>Tóm tắt đơn hàng</Text>
           </View>
           {items.map((item) => (
             <View key={item.product.id} style={styles.summaryRow}>
@@ -388,15 +388,15 @@ const CheckoutScreen = () => {
           ))}
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.muted}>Tam tinh</Text>
+            <Text style={styles.muted}>Tạm tính</Text>
             <Text style={styles.summaryValue}>{formatPrice(subTotal)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.muted}>Phi van chuyen</Text>
-            <Text style={styles.summaryValue}>{shippingFee === 0 ? 'Mien phi' : formatPrice(shippingFee)}</Text>
+            <Text style={styles.muted}>Phí vận chuyển</Text>
+            <Text style={styles.summaryValue}>{shippingFee === 0 ? 'Miễn phí' : formatPrice(shippingFee)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Tong cong</Text>
+            <Text style={styles.totalLabel}>Tổng cộng</Text>
             <Text style={styles.totalValue}>{formatPrice(total)}</Text>
           </View>
         </View>
@@ -404,11 +404,11 @@ const CheckoutScreen = () => {
 
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.labelTop}>Tong thanh toan</Text>
+          <Text style={styles.labelTop}>Tổng thanh toán</Text>
           <Text style={styles.bottomTotal}>{formatPrice(total)}</Text>
         </View>
         <TouchableOpacity style={[styles.submitBtn, submitting && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={submitting}>
-          <Text style={styles.submitText}>{submitting ? 'Dang xu ly...' : 'Dat hang ngay'}</Text>
+          <Text style={styles.submitText}>{submitting ? 'Đang xử lý...' : 'Đặt hàng ngay'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

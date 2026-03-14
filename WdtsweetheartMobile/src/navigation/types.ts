@@ -15,6 +15,7 @@ export type RootStackParamList = {
   BlogDetail: { slug: string; blog?: any };
   Cart: undefined;
   Checkout: undefined;
+  OrderSuccess: { orderCode: string; phone: string };
   Payment: undefined;
   Booking: undefined;
   MyBookings: undefined;

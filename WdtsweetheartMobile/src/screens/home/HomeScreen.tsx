@@ -22,6 +22,7 @@ import {
   CalendarCheck,
   ShoppingCart,
   ArrowRight,
+  Heart,
 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
@@ -44,11 +45,11 @@ type TabItem = {
 };
 
 const tabs: TabItem[] = [
-  { key: 'home', label: 'Home', icon: House },
-  { key: 'product', label: 'Product', icon: ShoppingBag },
-  { key: 'service', label: 'Service', icon: PawPrint },
-  { key: 'blog', label: 'Blog', icon: BookOpen },
-  { key: 'profile', label: 'Profile', icon: UserRound },
+  { key: 'home', label: 'Trang chu', icon: House },
+  { key: 'product', label: 'San pham', icon: ShoppingBag },
+  { key: 'service', label: 'Dich vu', icon: PawPrint },
+  { key: 'blog', label: 'Bai viet', icon: BookOpen },
+  { key: 'profile', label: 'Tai khoan', icon: UserRound },
 ];
 
 const homeVisuals = {
@@ -58,10 +59,12 @@ const homeVisuals = {
   badge: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/rate-group-img.png',
 };
 
+const showcaseCategory = ['THUC AN', 'DO CHOI', 'PHU KIEN', 'VE SINH'];
+
 const HomeScreen = () => {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
-  const { cartCount } = useCart();
+  const { cartCount, addToCart } = useCart();
   const { data: products } = useProducts();
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
@@ -96,7 +99,7 @@ const HomeScreen = () => {
       setProfile(user);
     } catch (err) {
       setProfile(null);
-      setProfileError(err instanceof Error ? err.message : 'Không thể tải hồ sơ');
+      setProfileError(err instanceof Error ? err.message : 'Khong the tai ho so');
     } finally {
       setProfileLoading(false);
     }
@@ -115,10 +118,75 @@ const HomeScreen = () => {
       setProfile(null);
       setProfileError(null);
     } catch (err) {
-      setProfileError(err instanceof Error ? err.message : 'Đăng xuất thất bại');
+      setProfileError(err instanceof Error ? err.message : 'Dang xuat that bai');
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const renderShowcaseProduct = (item: (typeof productPreview)[number], index: number) => {
+    const priceValue = item.priceNew ?? item.priceOld ?? 0;
+    const hasSale = !!(item.priceOld && item.priceNew && item.priceOld > item.priceNew);
+    const badgeText =
+      index === 0 ? 'Ban chay' : hasSale && item.priceOld
+        ? `-${Math.round(((item.priceOld - (item.priceNew || 0)) / item.priceOld) * 100)}%`
+        : null;
+
+    return (
+      <TouchableOpacity
+        key={item._id}
+        style={styles.showcaseCard}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('ProductDetail', { productSlug: item.slug })}
+      >
+        <View style={styles.showcaseImageWrap}>
+          <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/300' }} style={styles.showcaseImage} />
+          {badgeText ? (
+            <View style={[styles.showcaseBadge, index === 0 ? styles.showcaseBadgePink : styles.showcaseBadgeOrange]}>
+              <Text style={styles.showcaseBadgeText}>{badgeText}</Text>
+            </View>
+          ) : null}
+          <View style={styles.showcaseHeart}>
+            <Heart size={16} color="#fb7185" />
+          </View>
+        </View>
+
+        <View style={styles.showcaseBody}>
+          <Text style={styles.showcaseCategory}>{showcaseCategory[index] || 'SAN PHAM'}</Text>
+          <Text style={styles.showcaseTitle} numberOfLines={3}>
+            {item.name}
+          </Text>
+          <View style={styles.showcasePriceRow}>
+            <Text style={styles.showcasePrice}>{formatPrice(priceValue)}</Text>
+            {hasSale && item.priceOld ? (
+              <Text style={styles.showcaseOldPrice}>{formatPrice(item.priceOld)}</Text>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            style={styles.showcaseAddBtn}
+            onPress={() =>
+              addToCart(
+                {
+                  id: item._id,
+                  title: item.name,
+                  price: formatPrice(priceValue),
+                  primaryImage: item.images?.[0] || '',
+                  secondaryImage: item.images?.[1] || item.images?.[0] || '',
+                  rating: 5,
+                  isSale: hasSale,
+                  priceValue,
+                  originalPrice: item.priceOld ? formatPrice(item.priceOld) : undefined,
+                },
+                1
+              )
+            }
+          >
+            <ShoppingCart size={14} color={colors.primary} />
+            <Text style={styles.showcaseAddText}>Them</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   const renderHomeTab = () => (
@@ -127,7 +195,7 @@ const HomeScreen = () => {
         <View style={styles.heroRow}>
           <View>
             <Text style={styles.heroTitle}>Teddy Pet Mobile</Text>
-            <Text style={styles.heroDesc}>Chăm sóc thú cưng trọn vẹn trong một chạm.</Text>
+            <Text style={styles.heroDesc}>Cham soc thu cung tron ven trong mot cham.</Text>
             <Image source={{ uri: homeVisuals.badge }} style={styles.heroRating} resizeMode="contain" />
           </View>
           <View style={styles.heroMediaWrap}>
@@ -141,10 +209,10 @@ const HomeScreen = () => {
         <View style={styles.heroActionRow}>
           <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Booking')}>
             <CalendarCheck size={16} color="#fff" />
-            <Text style={styles.primaryButtonText}>Đặt lịch</Text>
+            <Text style={styles.primaryButtonText}>Dat lich</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Cart')}>
-            <Text style={styles.secondaryButtonText}>Giỏ hàng</Text>
+            <Text style={styles.secondaryButtonText}>Gio hang</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -153,16 +221,16 @@ const HomeScreen = () => {
         <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('service')}>
           <ImageBackground source={{ uri: homeVisuals.promo1 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
             <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Spa & Grooming</Text>
-              <Text style={styles.promoSub}>Đặt lịch nhanh trong 1 chạm</Text>
+              <Text style={styles.promoTitle}>Spa & Cat tia</Text>
+              <Text style={styles.promoSub}>Dat lich nhanh trong 1 cham</Text>
             </View>
           </ImageBackground>
         </TouchableOpacity>
         <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('product')}>
           <ImageBackground source={{ uri: homeVisuals.promo2 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
             <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Pet Shop</Text>
-              <Text style={styles.promoSub}>Khám phá sản phẩm nổi bật</Text>
+              <Text style={styles.promoTitle}>Cua hang thu cung</Text>
+              <Text style={styles.promoSub}>Kham pha san pham noi bat</Text>
             </View>
           </ImageBackground>
         </TouchableOpacity>
@@ -185,15 +253,11 @@ const HomeScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickItem} onPress={() => setActiveTab('profile')}>
             <UserRound size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Tài khoản</Text>
+            <Text style={styles.quickText}>Tài khoản </Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
-  );
 
-  const renderProductTab = () => (
-    <View style={styles.sectionStack}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
         <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
@@ -201,21 +265,29 @@ const HomeScreen = () => {
           <ArrowRight size={14} color={colors.primary} />
         </TouchableOpacity>
       </View>
-      {productPreview.map((item) => (
-        <TouchableOpacity
-          key={item._id}
-          style={styles.productRow}
-          onPress={() => navigation.navigate('ProductDetail', { productSlug: item.slug })}
-        >
-          <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/96' }} style={styles.productImage} />
-          <View style={styles.productMeta}>
-            <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.productPrice}>{formatPrice(item.priceNew ?? item.priceOld)}</Text>
-          </View>
+
+      <View style={styles.showcaseGrid}>
+        {productPreview.map(renderShowcaseProduct)}
+      </View>
+    </View>
+  );
+
+  const renderProductTab = () => (
+    <View style={styles.sectionStack}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>San pham noi bat</Text>
+        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
+          <Text style={styles.inlineActionText}>Xem tat ca</Text>
+          <ArrowRight size={14} color={colors.primary} />
         </TouchableOpacity>
-      ))}
+      </View>
+
+      <View style={styles.showcaseGrid}>
+        {productPreview.map(renderShowcaseProduct)}
+      </View>
+
       <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('ProductList')}>
-        <Text style={styles.primaryButtonText}>Mở danh sách sản phẩm</Text>
+        <Text style={styles.primaryButtonText}>Mo danh sach san pham</Text>
       </TouchableOpacity>
     </View>
   );
@@ -223,17 +295,17 @@ const HomeScreen = () => {
   const renderServiceTab = () => (
     <View style={styles.sectionStack}>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Dịch vụ chính</Text>
-        <Text style={styles.cardText}>Spa, grooming, khám sức khỏe, huấn luyện và chăm sóc định kỳ.</Text>
+        <Text style={styles.cardTitle}>Dich vu chinh</Text>
+        <Text style={styles.cardText}>Spa, grooming, kham suc khoe, huan luyen va cham soc dinh ky.</Text>
         <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
-          <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
+          <Text style={styles.primaryButtonText}>Dat lich dich vu</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
-        <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
+        <Text style={styles.cardTitle}>Lich hen cua ban</Text>
+        <Text style={styles.cardText}>Theo doi toan bo lich da dat va trang thai xu ly.</Text>
         <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-          <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
+          <Text style={styles.secondaryButtonText}>Xem lich cua toi</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -242,9 +314,9 @@ const HomeScreen = () => {
   const renderBlogTab = () => (
     <View style={styles.sectionStack}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Bài viết mới</Text>
+        <Text style={styles.sectionTitle}>Bai viet moi</Text>
         <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('BlogList')}>
-          <Text style={styles.inlineActionText}>Xem tất cả</Text>
+          <Text style={styles.inlineActionText}>Xem tat ca</Text>
           <ArrowRight size={14} color={colors.primary} />
         </TouchableOpacity>
       </View>
@@ -252,17 +324,17 @@ const HomeScreen = () => {
       {blogsLoading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Đang tải bài viết...</Text>
+          <Text style={styles.loadingText}>Dang tai bai viet...</Text>
         </View>
       ) : blogsError ? (
         <View style={styles.statusWrap}>
-          <StatusMessage message={blogsError} actionText="Thử lại" onAction={refetchBlogs} />
+          <StatusMessage message={blogsError} actionText="Thu lai" onAction={refetchBlogs} />
         </View>
       ) : blogPreview.length === 0 ? (
         <View style={styles.emptyBlog}>
-          <Text style={styles.emptyBlogText}>Chưa có bài viết nào.</Text>
+          <Text style={styles.emptyBlogText}>Chua co bai viet nao.</Text>
           <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('BlogList')}>
-            <Text style={styles.primaryButtonText}>Khám phá blog</Text>
+            <Text style={styles.primaryButtonText}>Kham pha blog</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -275,7 +347,7 @@ const HomeScreen = () => {
             <Text style={styles.blogDate}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
             <Text style={styles.blogTitle}>{item.name}</Text>
             <Text style={styles.blogDesc} numberOfLines={2}>
-              {item.excerpt || item.expert || item.description || 'Xem chi tiết bài viết'}
+              {item.excerpt || item.expert || item.description || 'Xem chi tiet bai viet'}
             </Text>
           </TouchableOpacity>
         ))
@@ -288,7 +360,7 @@ const HomeScreen = () => {
       return (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Đang tải hồ sơ...</Text>
+          <Text style={styles.loadingText}>Dang tai ho so...</Text>
         </View>
       );
     }
@@ -297,15 +369,15 @@ const HomeScreen = () => {
       return (
         <View style={styles.sectionStack}>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Bạn chưa đăng nhập</Text>
-            <Text style={styles.cardText}>Đăng nhập để xem hồ sơ và quản lý lịch hẹn.</Text>
+            <Text style={styles.cardTitle}>Ban chua dang nhap</Text>
+            <Text style={styles.cardText}>Dang nhap de xem ho so va quan ly lich hen.</Text>
             {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
             <View style={styles.rowButtons}>
               <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.primaryButtonText}>Đăng nhập</Text>
+                <Text style={styles.primaryButtonText}>Dang nhap</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.secondaryButtonText}>Đăng ký</Text>
+                <Text style={styles.secondaryButtonText}>Dang ky</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -318,14 +390,14 @@ const HomeScreen = () => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{profile.fullName}</Text>
           <Text style={styles.cardText}>Email: {profile.email}</Text>
-          <Text style={styles.cardText}>SĐT: {profile.phone || 'Chưa cập nhật'}</Text>
+          <Text style={styles.cardText}>SDT: {profile.phone || 'Chua cap nhat'}</Text>
         </View>
         <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-          <Text style={styles.secondaryButtonText}>Lịch hẹn của tôi</Text>
+          <Text style={styles.secondaryButtonText}>Lich hen cua toi</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={isLoggingOut}>
           {isLoggingOut ? <ActivityIndicator color="#fff" /> : <LogOut size={16} color="#fff" />}
-          <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
+          <Text style={styles.logoutText}>{isLoggingOut ? 'Dang dang xuat...' : 'Dang xuat'}</Text>
         </TouchableOpacity>
         {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
       </View>
@@ -502,20 +574,111 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.secondary, fontSize: 17, fontWeight: '700' },
   inlineAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   inlineActionText: { color: colors.primary, fontWeight: '600', fontSize: 12 },
-  productRow: {
+  showcaseGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  showcaseCard: {
+    width: '47%',
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f1f1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  showcaseImageWrap: {
+    height: 160,
+    backgroundColor: '#f5f5f5',
+    position: 'relative',
+  },
+  showcaseImage: {
+    width: '100%',
+    height: '100%',
+  },
+  showcaseBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  showcaseBadgePink: {
+    backgroundColor: '#fb7185',
+  },
+  showcaseBadgeOrange: {
+    backgroundColor: colors.primary,
+  },
+  showcaseBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  showcaseHeart: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  showcaseBody: {
+    padding: 12,
+  },
+  showcaseCategory: {
+    color: '#7f8aa3',
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  showcaseTitle: {
+    color: colors.secondary,
+    fontWeight: '600',
+    fontSize: 13,
+    lineHeight: 20,
+    minHeight: 58,
+  },
+  showcasePriceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    padding: 8,
+    gap: 6,
+    marginTop: 6,
   },
-  productImage: { width: 64, height: 64, borderRadius: 10, backgroundColor: colors.softPink },
-  productMeta: { flex: 1, gap: 4 },
-  productName: { color: colors.secondary, fontWeight: '600', fontSize: 14 },
-  productPrice: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  showcasePrice: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  showcaseOldPrice: {
+    color: '#98a4ba',
+    fontSize: 11,
+    textDecorationLine: 'line-through',
+  },
+  showcaseAddBtn: {
+    marginTop: 12,
+    backgroundColor: '#f7ecdf',
+    borderRadius: 999,
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  showcaseAddText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
   primaryButtonFull: {
     borderRadius: 999,
     minHeight: 42,

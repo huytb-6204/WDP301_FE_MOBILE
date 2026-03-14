@@ -330,8 +330,6 @@ const ProductListScreen = () => {
           </View>
         )}
       </ScrollView>
-
- HEAD
       <Toast visible={toastVisible} message={toastMessage} />
 
 

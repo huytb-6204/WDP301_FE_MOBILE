@@ -12,12 +12,16 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import { forgotPassword } from '../../services/api/auth';
+import type { RootStackParamList } from '../../navigation/types';
 import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
 
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
 const ForgotPasswordScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Navigation>();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +43,7 @@ const ForgotPasswordScreen = () => {
     try {
       const res = await forgotPassword(email.trim());
       if (res.success) {
-        navigation.navigate('OTPPassword' as never, { email: email.trim() } as never);
+        navigation.navigate('OTPPassword', { email: email.trim() });
       } else {
         setError(res.message || 'Đã có lỗi xảy ra!');
       }

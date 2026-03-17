@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  API_LAN_HOST,
   OPENMAP_KEY,
   VNPAY_TMN_CODE,
   VNPAY_URL,
@@ -21,6 +22,11 @@ const readMetroHost = () => {
 };
 
 const buildAutoApiBaseUrl = () => {
+  const lanHost = API_LAN_HOST?.trim();
+  if (lanHost) {
+    return `http://${lanHost}:${API_PORT}`;
+  }
+
   const metroHost = readMetroHost();
   const isAndroidEmulator =
     Platform.OS === 'android' && (!metroHost || metroHost === '10.0.2.2' || metroHost === 'localhost');

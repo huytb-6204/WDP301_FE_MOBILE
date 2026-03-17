@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
+import { env } from '../../config';
 import { login } from '../../services/api/auth';
 import type { RootStackParamList } from '../../navigation/types';
 import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
@@ -56,7 +57,8 @@ const LoginScreen = () => {
         navigation.navigate('Home');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!');
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!';
+      setError(`${message} (API: ${env.apiBaseUrl})`);
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { ArrowLeft, Heart, ShoppingCart, Star } from 'lucide-react-native';
 import { useCart } from '../../context/CartContext';
+import { useFavorites } from '../../context/FavoritesContext';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { env } from '../../config';
@@ -25,6 +26,7 @@ type ProductDetailScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 
 type UIProduct = {
   id: string;
+  slug?: string;
   title: string;
   price: string;
   primaryImage: string;
@@ -51,6 +53,7 @@ const mapToUIProduct = (item: Product): UIProduct => {
 
   return {
     id: item._id,
+    slug: item.slug,
     title: item.name,
     price: formatPrice(priceValue),
     primaryImage: toAbsoluteUrl(item.images?.[0]),
@@ -64,6 +67,7 @@ const mapToUIProduct = (item: Product): UIProduct => {
 
 const ProductDetailScreen = () => {
   const { addToCart, replaceCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
   const route = useRoute<ProductDetailScreenRouteProp>();
   const { productSlug, product: initialProduct } = route.params;
@@ -79,7 +83,6 @@ const ProductDetailScreen = () => {
   const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,6 +139,8 @@ const ProductDetailScreen = () => {
     navigation.navigate('Checkout');
   };
 
+  const favoriteActive = product ? isFavorite(product.id) : false;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -143,11 +148,11 @@ const ProductDetailScreen = () => {
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
-        <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)}>
+        <TouchableOpacity onPress={() => product && toggleFavorite(product)} disabled={!product}>
           <Heart
             size={24}
-            color={isFavorite ? colors.primary : colors.text}
-            fill={isFavorite ? colors.primary : 'none'}
+            color={favoriteActive ? colors.primary : colors.text}
+            fill={favoriteActive ? colors.primary : 'none'}
           />
         </TouchableOpacity>
       </View>
@@ -158,9 +163,7 @@ const ProductDetailScreen = () => {
         </View>
       ) : error || !product ? (
         <View style={styles.statusContainer}>
-          <Text style={styles.statusText}>
-            {error || 'Không tìm thấy thông tin sản phẩm'}
-          </Text>
+          <Text style={styles.statusText}>{error || 'Không tìm thấy thông tin sản phẩm'}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -204,9 +207,7 @@ const ProductDetailScreen = () => {
 
             <View style={styles.priceContainer}>
               <Text style={styles.currentPrice}>{product.price}</Text>
-              {product.originalPrice && (
-                <Text style={styles.originalPrice}>{product.originalPrice}</Text>
-              )}
+              {product.originalPrice && <Text style={styles.originalPrice}>{product.originalPrice}</Text>}
             </View>
 
             <View style={styles.descriptionContainer}>
@@ -214,9 +215,9 @@ const ProductDetailScreen = () => {
               <Text style={styles.description}>
                 {product.title} là sản phẩm chất lượng cao, được chọn lọc kỹ lưỡng để mang lại
                 những trải nghiệm tốt nhất cho thú cưng của bạn. Sản phẩm được sản xuất từ các
-                nguyên liệu an toàn, không độc hại.{'\n\n'}
-                • Chất lượng đảm bảo{'\n'}
-                • Giá cả hợp lý{'\n'}
+                nguyên liệu an toàn, không độc hại.{"\n\n"}
+                • Chất lượng đảm bảo{"\n"}
+                • Giá cả hợp lý{"\n"}
                 • Giao hàng nhanh chóng
               </Text>
             </View>

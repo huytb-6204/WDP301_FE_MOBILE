@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+﻿import React, { useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -27,6 +27,7 @@ import {
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { useCart } from '../../context/CartContext';
+import { useFavorites } from '../../context/FavoritesContext';
 import { useProducts } from '../../hooks/useProducts';
 import { useBlogs } from '../../hooks/useBlogs';
 import { formatPrice } from '../../utils';
@@ -65,6 +66,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
   const { cartCount, addToCart } = useCart();
+  const { favoriteIds, favorites, toggleFavorite } = useFavorites();
   const { data: products } = useProducts();
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
@@ -74,7 +76,14 @@ const HomeScreen = () => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const productPreview = useMemo(() => (products || []).slice(0, 4), [products]);
+  const productPreview = useMemo(() => {
+    const prioritized = [...(products || [])].sort((a, b) => {
+      const aPriority = favoriteIds.has(a._id) ? 1 : 0;
+      const bPriority = favoriteIds.has(b._id) ? 1 : 0;
+      return bPriority - aPriority;
+    });
+    return prioritized.slice(0, 4);
+  }, [products, favoriteIds]);
   const blogPreview = useMemo(() => (blogs || []).slice(0, 3), [blogs]);
 
   const formatBlogDate = (value?: string) => {
@@ -127,17 +136,31 @@ const HomeScreen = () => {
   const renderShowcaseProduct = (item: (typeof productPreview)[number], index: number) => {
     const priceValue = item.priceNew ?? item.priceOld ?? 0;
     const hasSale = !!(item.priceOld && item.priceNew && item.priceOld > item.priceNew);
+    const favoriteProduct = {
+      id: item._id,
+      slug: item.slug,
+      title: item.name,
+      price: formatPrice(priceValue),
+      primaryImage: item.images?.[0] || '',
+      secondaryImage: item.images?.[1] || item.images?.[0] || '',
+      rating: 5,
+      isSale: hasSale,
+      priceValue,
+      originalPrice: item.priceOld ? formatPrice(item.priceOld) : undefined,
+    };
     const badgeText =
-      index === 0 ? 'Bán chạy' : hasSale && item.priceOld
-        ? `-${Math.round(((item.priceOld - (item.priceNew || 0)) / item.priceOld) * 100)}%`
-        : null;
+      index === 0
+        ? 'Bán chạy'
+        : hasSale && item.priceOld
+          ? `-${Math.round(((item.priceOld - (item.priceNew || 0)) / item.priceOld) * 100)}%`
+          : null;
 
     return (
       <TouchableOpacity
         key={item._id}
         style={styles.showcaseCard}
         activeOpacity={0.9}
-        onPress={() => navigation.navigate('ProductDetail', { productSlug: item.slug })}
+        onPress={() => navigation.navigate('ProductDetail', { productSlug: item.slug, product: favoriteProduct })}
       >
         <View style={styles.showcaseImageWrap}>
           <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/300' }} style={styles.showcaseImage} />
@@ -146,9 +169,20 @@ const HomeScreen = () => {
               <Text style={styles.showcaseBadgeText}>{badgeText}</Text>
             </View>
           ) : null}
-          <View style={styles.showcaseHeart}>
-            <Heart size={16} color="#fb7185" />
-          </View>
+          <TouchableOpacity
+            style={[styles.showcaseHeart, favoriteIds.has(item._id) && styles.showcaseHeartActive]}
+            activeOpacity={0.85}
+            onPress={(event) => {
+              event.stopPropagation();
+              toggleFavorite(favoriteProduct);
+            }}
+          >
+            <Heart  // thay đổi icon tùy thích, có thể là Heart hoặc Star
+              size={16}
+              color="#fb7185"
+              fill={favoriteIds.has(item._id) ? '#fb7185' : 'none'}
+            />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.showcaseBody}>
@@ -162,25 +196,7 @@ const HomeScreen = () => {
               <Text style={styles.showcaseOldPrice}>{formatPrice(item.priceOld)}</Text>
             ) : null}
           </View>
-          <TouchableOpacity
-            style={styles.showcaseAddBtn}
-            onPress={() =>
-              addToCart(
-                {
-                  id: item._id,
-                  title: item.name,
-                  price: formatPrice(priceValue),
-                  primaryImage: item.images?.[0] || '',
-                  secondaryImage: item.images?.[1] || item.images?.[0] || '',
-                  rating: 5,
-                  isSale: hasSale,
-                  priceValue,
-                  originalPrice: item.priceOld ? formatPrice(item.priceOld) : undefined,
-                },
-                1
-              )
-            }
-          >
+          <TouchableOpacity style={styles.showcaseAddBtn} onPress={() => addToCart(favoriteProduct, 1)}>
             <ShoppingCart size={14} color={colors.primary} />
             <Text style={styles.showcaseAddText}>Thêm</Text>
           </TouchableOpacity>
@@ -191,6 +207,15 @@ const HomeScreen = () => {
 
   const renderHomeTab = () => (
     <View style={styles.sectionStack}>
+      {favorites.length > 0 ? (
+        <View style={styles.favoriteHint}>
+          <Heart size={14} color={colors.primary} fill={colors.primary} />
+          <Text style={styles.favoriteHintText}>
+            Đang ưu tiên hiển thị {favorites.length} sản phẩm yêu thích của bạn
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.heroCard}>
         <View style={styles.heroRow}>
           <View>
@@ -266,9 +291,7 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.showcaseGrid}>
-        {productPreview.map(renderShowcaseProduct)}
-      </View>
+      <View style={styles.showcaseGrid}>{productPreview.map(renderShowcaseProduct)}</View>
     </View>
   );
 
@@ -282,9 +305,7 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.showcaseGrid}>
-        {productPreview.map(renderShowcaseProduct)}
-      </View>
+      <View style={styles.showcaseGrid}>{productPreview.map(renderShowcaseProduct)}</View>
 
       <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('ProductList')}>
         <Text style={styles.primaryButtonText}>Mở danh sách sản phẩm</Text>
@@ -482,6 +503,23 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   content: { padding: 16, paddingBottom: 110 },
   sectionStack: { gap: 12 },
+  favoriteHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#fff4f6',
+    borderWidth: 1,
+    borderColor: '#ffd6de',
+  },
+  favoriteHintText: {
+    flex: 1,
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   heroCard: {
     borderRadius: 16,
     padding: 14,
@@ -631,6 +669,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  showcaseHeartActive: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#fb7185',
   },
   showcaseBody: {
     padding: 12,

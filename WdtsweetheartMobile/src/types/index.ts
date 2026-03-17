@@ -6,3 +6,4 @@ export type {
   Booking,
   CreateBookingPayload,
 } from './booking';
+export type { Service, ServiceCategory, PaginationResponse, ServiceListParams } from './service';

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BookOpen,
@@ -25,7 +25,7 @@ import {
   Heart,
 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
-import type { RootStackParamList } from '../../navigation/types';
+import type { RootStackParamList, HomeTabKey } from '../../navigation/types';
 import { useCart } from '../../context/CartContext';
 import { useProducts } from '../../hooks/useProducts';
 import { useBlogs } from '../../hooks/useBlogs';
@@ -36,7 +36,9 @@ import { logout as logoutApi } from '../../services/api/auth';
 import { StatusMessage } from '../../components/common';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
-type HomeMainTab = 'home' | 'product' | 'service' | 'blog' | 'profile';
+type HomeMainTab = HomeTabKey;
+
+type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
 type TabItem = {
   key: HomeMainTab;
@@ -63,12 +65,13 @@ const showcaseCategory = ['THỨC ĂN', 'ĐỒ CHƠI', 'PHỤ KIỆN', 'VỆ SIN
 
 const HomeScreen = () => {
   const navigation = useNavigation<Navigation>();
+  const route = useRoute<HomeRouteProp>();
   const isFocused = useIsFocused();
   const { cartCount, addToCart } = useCart();
   const { data: products } = useProducts();
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
-  const [activeTab, setActiveTab] = useState<HomeMainTab>('home');
+  const [activeTab, setActiveTab] = useState<HomeMainTab>(() => route.params?.initialTab ?? 'home');
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -110,6 +113,13 @@ const HomeScreen = () => {
       loadProfile();
     }
   }, [activeTab, isFocused, loadProfile]);
+
+  React.useEffect(() => {
+    if (route.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+      navigation.setParams({ initialTab: undefined });
+    }
+  }, [route.params?.initialTab, navigation]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -300,6 +310,9 @@ const HomeScreen = () => {
         <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
           <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('ServiceList')}>
+          <Text style={styles.secondaryButtonText}>Xem danh sách dịch vụ</Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
@@ -433,7 +446,7 @@ const HomeScreen = () => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
           return (
-            <TouchableOpacity key={tab.key} style={styles.tabItem} onPress={() => setActiveTab(tab.key)}>
+            <TouchableOpacity key={tab.key} style={styles.tabItem} onPress={() => handleTabPress(tab.key)}>
               <View style={[styles.tabIconWrap, active && styles.tabIconWrapActive]}>
                 <Icon size={18} color={active ? '#fff' : colors.secondary} />
               </View>

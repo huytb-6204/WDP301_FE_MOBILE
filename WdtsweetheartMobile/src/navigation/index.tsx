@@ -8,6 +8,8 @@ import { CartProvider } from '../context/CartContext';
 import HomeScreen from '../screens/home/HomeScreen';
 import ProductListScreen from '../screens/product/ProductListScreen';
 import ProductDetailScreen from '../screens/product/ProductDetailScreen';
+import ServiceListScreen from '../screens/service/ServiceListScreen';
+import ServiceDetailScreen from '../screens/service/ServiceDetailScreen';
 import BlogListScreen from '../screens/blog/BlogListScreen';
 import BlogDetailScreen from '../screens/blog/BlogDetailScreen';
 import CartScreen from '../screens/cart/CartScreen';
@@ -62,7 +64,16 @@ const RootNavigator = () => {
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
           <Stack.Screen
-            name="Cart"
+            name="ServiceList"
+            component={ServiceListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="ServiceDetail"
+            component={ServiceDetailScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen            name="Cart"
             component={CartScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />

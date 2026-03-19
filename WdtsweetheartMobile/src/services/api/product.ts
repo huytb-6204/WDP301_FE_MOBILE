@@ -48,8 +48,9 @@ export type GetProductsParams = {
 type ApiEnvelope<T> = {
   success?: boolean;
   message?: string;
-  data?: T | { recordList?: T };
+  data?: T | { recordList?: T; products?: T };
   recordList?: T;
+  products?: T;
   productDetail?: Product;
   attributeList?: unknown[];
   categories?: ProductCategory[];
@@ -73,10 +74,14 @@ const readList = <T>(payload: unknown): T[] => {
 
   const envelope = payload as ApiEnvelope<T[]>;
 
+  if (Array.isArray(envelope.products)) return envelope.products;
   if (Array.isArray(envelope.recordList)) return envelope.recordList;
   if (Array.isArray(envelope.data)) return envelope.data;
   if (envelope.data && typeof envelope.data === 'object' && Array.isArray((envelope.data as any).recordList)) {
     return (envelope.data as any).recordList as T[];
+  }
+  if (envelope.data && typeof envelope.data === 'object' && Array.isArray((envelope.data as any).products)) {
+    return (envelope.data as any).products as T[];
   }
   if (Array.isArray((payload as any).categories)) return (payload as any).categories as T[];
   if (Array.isArray((payload as any).brands)) return (payload as any).brands as T[];

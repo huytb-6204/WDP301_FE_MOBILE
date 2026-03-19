@@ -14,6 +14,8 @@ import PaymentScreen from '../screens/checkout/PaymentScreen';
 import OrderSuccessScreen from '../screens/checkout/OrderSuccessScreen';
 import BookingScreen from '../screens/booking/BookingScreen';
 import MyBookingsScreen from '../screens/booking/MyBookingsScreen';
+import BoardingHotelScreen from '../screens/boarding/BoardingHotelScreen';
+import MyBoardingBookingsScreen from '../screens/boarding/MyBoardingBookingsScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
@@ -87,6 +89,16 @@ const RootNavigator = () => {
             <Stack.Screen
               name="MyBookings"
               component={MyBookingsScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="BoardingHotel"
+              component={BoardingHotelScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="MyBoardingBookings"
+              component={MyBoardingBookingsScreen}
               options={{ animation: 'slide_from_right', animationDuration: 300 }}
             />
           </Stack.Navigator>

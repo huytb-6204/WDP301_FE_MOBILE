@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -35,6 +35,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import type { ProductItem } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { env } from '../../config';
 
 type UIProduct = ProductItem & {
   priceValue: number;
@@ -83,10 +84,17 @@ const priceOptions: PriceOption[] = [
   { key: 'above-500', label: 'Trên 500k', min: 500000, max: Number.MAX_SAFE_INTEGER },
 ];
 
+const toAbsoluteUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const trimmed = url.replace(/^\/+/, '');
+  return `${env.apiBaseUrl}/${trimmed}`;
+};
+
 const ProductListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { data, loading, error, refetch } = useProducts();
   const [keyword, setKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [sortBy, setSortBy] = useState<SortOption['value']>('newest');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -97,6 +105,11 @@ const ProductListScreen = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data, loading, error, refetch } = useProducts({
+    page: 1,
+    limit: 24,
+    keyword: debouncedKeyword || undefined,
+  });
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -104,6 +117,14 @@ const ProductListScreen = () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToastVisible(false), 1400);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword.trim());
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [keyword]);
 
   const products = useMemo<UIProduct[]>(() => {
     return (data || []).map((item, index) => {
@@ -118,8 +139,8 @@ const ProductListScreen = () => {
         slug: item.slug,
         title: item.name,
         price: formatPrice(priceValue),
-        primaryImage: item.images?.[0] || '',
-        secondaryImage: item.images?.[1] || item.images?.[0] || '',
+        primaryImage: toAbsoluteUrl(item.images?.[0]),
+        secondaryImage: toAbsoluteUrl(item.images?.[1] || item.images?.[0]),
         rating: 5 - (index % 2 === 0 ? 0 : 1),
         isSale: !!originalPrice,
         priceValue,
@@ -129,7 +150,7 @@ const ProductListScreen = () => {
   }, [data]);
 
   const filteredProducts = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase();
+    const normalized = debouncedKeyword.trim().toLowerCase();
     const activeCategoryMeta = categories.find((item) => item.key === activeCategory);
     const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
 
@@ -164,7 +185,7 @@ const ProductListScreen = () => {
     });
 
     return sorted;
-  }, [products, keyword, activeCategory, sortBy, priceFilter, favoriteIds]);
+  }, [products, debouncedKeyword, activeCategory, sortBy, priceFilter, favoriteIds]);
 
   const activeSortLabel = useMemo(
     () => sortOptions.find((item) => item.value === sortBy)?.label || 'Mới nhất',
@@ -975,3 +996,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProductListScreen;
+

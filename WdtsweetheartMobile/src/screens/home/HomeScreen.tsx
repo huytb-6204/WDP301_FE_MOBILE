@@ -35,6 +35,7 @@ import { tokenStorage } from '../../services/auth/token';
 import { getProfile, type ProfileUser } from '../../services/api/dashboard';
 import { logout as logoutApi } from '../../services/api/auth';
 import { StatusMessage } from '../../components/common';
+import { env } from '../../config';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type HomeMainTab = 'home' | 'product' | 'service' | 'blog' | 'profile';
@@ -62,12 +63,19 @@ const homeVisuals = {
 
 const showcaseCategory = ['THỨC ĂN', 'ĐỒ CHƠI', 'PHỤ KIỆN', 'VỆ SINH'];
 
+const toAbsoluteUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const trimmed = url.replace(/^\/+/, '');
+  return `${env.apiBaseUrl}/${trimmed}`;
+};
+
 const HomeScreen = () => {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
   const { cartCount, addToCart } = useCart();
   const { favoriteIds, favorites, toggleFavorite } = useFavorites();
-  const { data: products } = useProducts();
+  const { data: products } = useProducts({ page: 1, limit: 8 });
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
   const [activeTab, setActiveTab] = useState<HomeMainTab>('home');
@@ -77,7 +85,8 @@ const HomeScreen = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const productPreview = useMemo(() => {
-    const prioritized = [...(products || [])].sort((a, b) => {
+    const safeProducts = Array.isArray(products) ? products.slice() : [];
+    const prioritized = safeProducts.sort((a, b) => {
       const aPriority = favoriteIds.has(a._id) ? 1 : 0;
       const bPriority = favoriteIds.has(b._id) ? 1 : 0;
       return bPriority - aPriority;
@@ -141,8 +150,8 @@ const HomeScreen = () => {
       slug: item.slug,
       title: item.name,
       price: formatPrice(priceValue),
-      primaryImage: item.images?.[0] || '',
-      secondaryImage: item.images?.[1] || item.images?.[0] || '',
+      primaryImage: toAbsoluteUrl(item.images?.[0]),
+      secondaryImage: toAbsoluteUrl(item.images?.[1] || item.images?.[0]),
       rating: 5,
       isSale: hasSale,
       priceValue,
@@ -315,12 +324,34 @@ const HomeScreen = () => {
 
   const renderServiceTab = () => (
     <View style={styles.sectionStack}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
+        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
+          <Text style={styles.inlineActionText}>Xem tất cả</Text>
+          <ArrowRight size={14} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.showcaseGrid}>{productPreview.map(renderShowcaseProduct)}</View>
+
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Dịch vụ chính</Text>
         <Text style={styles.cardText}>Spa, grooming, khám sức khỏe, huấn luyện và chăm sóc định kỳ.</Text>
         <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
           <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
         </TouchableOpacity>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Khách sạn thú cưng</Text>
+        <Text style={styles.cardText}>Tìm chuồng còn trống, đặt lưu trú và theo dõi thanh toán ngay trên app.</Text>
+        <View style={styles.rowButtons}>
+          <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
+            <Text style={styles.primaryButtonText}>Đặt phòng</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
+            <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>

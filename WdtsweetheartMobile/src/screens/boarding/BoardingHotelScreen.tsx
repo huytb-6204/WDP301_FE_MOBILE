@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, ChevronDown, Hotel, PawPrint, ShieldCheck } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Hotel, PawPrint, ShieldCheck } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
@@ -37,6 +37,7 @@ type Navigation = NativeStackNavigationProp<RootStackParamList, 'BoardingHotel'>
 const phoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])[0-9]{7}$/;
 const typeOptions = ['standard', 'vip'] as const;
 const sizeOptions = ['S', 'M', 'L', 'XL_XXL'] as const;
+const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 const formatDisplayDate = (date: Date) => {
   const d = `${date.getDate()}`.padStart(2, '0');
@@ -74,6 +75,8 @@ const toDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const parseDisplayDate = (value: string) => toDate(value) || new Date();
+
 const getStayDays = (checkInDate: string, checkOutDate: string) => {
   const start = toDate(checkInDate);
   const end = toDate(checkOutDate);
@@ -107,6 +110,9 @@ const BoardingHotelScreen = () => {
   const navigation = useNavigation<Navigation>();
   const [checkInDate, setCheckInDate] = useState(formatDisplayDate(addDays(new Date(), 1)));
   const [checkOutDate, setCheckOutDate] = useState(formatDisplayDate(addDays(new Date(), 2)));
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [dateField, setDateField] = useState<'checkIn' | 'checkOut'>('checkIn');
+  const [currentMonth, setCurrentMonth] = useState(parseDisplayDate(formatDisplayDate(addDays(new Date(), 1))));
   const [type, setType] = useState('');
   const [size, setSize] = useState('');
   const [allCages, setAllCages] = useState<BoardingCage[]>([]);
@@ -136,6 +142,23 @@ const BoardingHotelScreen = () => {
   const [toastVisible, setToastVisible] = useState(false);
 
   const stayDays = useMemo(() => getStayDays(checkInDate, checkOutDate), [checkInDate, checkOutDate]);
+  const monthMeta = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: Array<number | null> = [];
+
+    for (let i = 0; i < firstDay; i += 1) cells.push(null);
+    for (let day = 1; day <= daysInMonth; day += 1) cells.push(day);
+
+    return {
+      label: currentMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }),
+      year,
+      month,
+      cells,
+    };
+  }, [currentMonth]);
   const cages = useMemo(
     () => (type ? allCages.filter((item) => String(item.type || '').trim() === type) : allCages),
     [allCages, type]
@@ -221,6 +244,22 @@ const BoardingHotelScreen = () => {
 
   const togglePet = (id: string) => {
     setSelectedPetIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat(id)));
+  };
+
+  const openDatePicker = (field: 'checkIn' | 'checkOut') => {
+    setDateField(field);
+    setCurrentMonth(parseDisplayDate(field === 'checkIn' ? checkInDate : checkOutDate));
+    setShowDatePickerModal(true);
+  };
+
+  const handleSelectDate = (day: number) => {
+    const selected = formatDisplayDate(new Date(monthMeta.year, monthMeta.month, day));
+    if (dateField === 'checkIn') {
+      setCheckInDate(selected);
+    } else {
+      setCheckOutDate(selected);
+    }
+    setShowDatePickerModal(false);
   };
 
   const handleCreatePet = async () => {
@@ -353,11 +392,17 @@ const BoardingHotelScreen = () => {
           <View style={styles.row}>
             <View style={styles.fieldHalf}>
               <Text style={styles.label}>Nhận phòng</Text>
-              <TextInput value={checkInDate} onChangeText={setCheckInDate} placeholder="DD/MM/YYYY" style={styles.input} keyboardType="numbers-and-punctuation" />
+              <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('checkIn')}>
+                <Text style={styles.dateButtonText}>{checkInDate}</Text>
+                <ChevronDown size={16} color={colors.text} />
+              </TouchableOpacity>
             </View>
             <View style={styles.fieldHalf}>
               <Text style={styles.label}>Trả phòng</Text>
-              <TextInput value={checkOutDate} onChangeText={setCheckOutDate} placeholder="DD/MM/YYYY" style={styles.input} keyboardType="numbers-and-punctuation" />
+              <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('checkOut')}>
+                <Text style={styles.dateButtonText}>{checkOutDate}</Text>
+                <ChevronDown size={16} color={colors.text} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -534,6 +579,65 @@ const BoardingHotelScreen = () => {
         </View>
       </Modal>
 
+      <Modal visible={showDatePickerModal} animationType="fade" transparent onRequestClose={() => setShowDatePickerModal(false)}>
+        <View style={styles.centerModalBackdrop}>
+          <View style={styles.calendarModalCard}>
+            <Text style={styles.modalTitle}>
+              {dateField === 'checkIn' ? 'Chọn ngày nhận phòng' : 'Chọn ngày trả phòng'}
+            </Text>
+
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity
+                style={styles.calendarArrow}
+                onPress={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+              >
+                <ChevronLeft size={18} color={colors.secondary} />
+              </TouchableOpacity>
+              <Text style={styles.calendarTitle}>{monthMeta.label}</Text>
+              <TouchableOpacity
+                style={styles.calendarArrow}
+                onPress={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+              >
+                <ChevronRight size={18} color={colors.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.weekRow}>
+              {weekDays.map((day) => (
+                <Text key={day} style={styles.weekCell}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.daysGrid}>
+              {monthMeta.cells.map((day, index) => {
+                if (!day) {
+                  return <View key={`empty-${index}`} style={styles.dayCell} />;
+                }
+
+                const candidate = formatDisplayDate(new Date(monthMeta.year, monthMeta.month, day));
+                const isSelected = candidate === (dateField === 'checkIn' ? checkInDate : checkOutDate);
+
+                return (
+                  <TouchableOpacity
+                    key={`${monthMeta.month}-${day}`}
+                    style={[styles.dayCell, isSelected && styles.dayCellActive]}
+                    onPress={() => handleSelectDate(day)}
+                  >
+                    <Text style={[styles.dayCellText, isSelected && styles.dayCellTextActive]}>{day}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowDatePickerModal(false)}>
+              <Text style={styles.secondaryButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showCreatePetModal} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -612,6 +716,19 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     color: colors.secondary,
   },
+  dateButton: {
+    minHeight: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  dateButtonText: { color: colors.secondary, fontSize: 14, fontWeight: '500' },
   textArea: { minHeight: 78, textAlignVertical: 'top' },
   chipWrap: { gap: 8 },
   chip: {
@@ -728,6 +845,59 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   summaryLine: { color: colors.secondary, fontSize: 13, fontWeight: '600' },
+  centerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  calendarModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    padding: 16,
+    gap: 12,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  calendarArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTitle: { color: colors.secondary, fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
+  weekRow: { flexDirection: 'row' },
+  weekCell: {
+    flex: 1,
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 8,
+  },
+  dayCell: {
+    width: '14.2857%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  dayCellActive: { backgroundColor: colors.primary },
+  dayCellText: { color: colors.secondary, fontSize: 14, fontWeight: '600' },
+  dayCellTextActive: { color: '#fff' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: '#fff',

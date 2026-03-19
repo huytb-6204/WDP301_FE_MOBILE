@@ -82,6 +82,10 @@ export const getServiceDetail = async (id: string) => {
   return apiGet<Service>(`/api/v1/client/service/detail/${id}`);
 };
 
+export const getServiceBySlug = async (slug: string) => {
+  return apiGet<Service>(`/api/v1/client/service/slug/${slug}`);
+};
+
 export const getServiceCategories = async () => {
   return apiGet<ServiceCategory[]>('/api/v1/client/service/categories');
 };

@@ -109,3 +109,18 @@ export const apiPatchRaw = async <T, B = unknown>(path: string, body: B): Promis
 
   return json as T;
 };
+
+export const apiDeleteRaw = async <T>(path: string): Promise<T> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    headers,
+  });
+  const json = await parseJsonSafely<T>(res);
+
+  if (!json || !res.ok) {
+    throw new Error((json as any)?.message || `Request failed (${res.status})`);
+  }
+
+  return json as T;
+};

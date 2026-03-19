@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getServices, getServiceCategories, getServiceDetail } from '../services/api/service';
+import {
+  getServices,
+  getServiceCategories,
+  getServiceDetail,
+  getServiceBySlug,
+} from '../services/api/service';
 import { Service, ServiceCategory, ServiceListParams } from '../types/service';
 
 export const useServices = (params?: ServiceListParams) => {
@@ -91,6 +96,36 @@ export const useServiceDetail = (serviceId: string) => {
 
     fetchServiceDetail();
   }, [serviceId]);
+
+  return { data, loading, error };
+};
+
+export const useServiceBySlug = (slug: string) => {
+  const [data, setData] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) return;
+
+    const fetchService = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await getServiceBySlug(slug);
+        setData(result);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Không thể tải chi tiết dịch vụ';
+        console.error('Error fetching service detail:', errorMsg);
+        setError(errorMsg);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchService();
+  }, [slug]);
 
   return { data, loading, error };
 };

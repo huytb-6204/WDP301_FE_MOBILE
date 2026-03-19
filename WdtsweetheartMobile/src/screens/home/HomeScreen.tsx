@@ -77,8 +77,14 @@ const HomeScreen = () => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const productPreview = useMemo(() => (products || []).slice(0, 4), [products]);
-  const blogPreview = useMemo(() => (blogs || []).slice(0, 3), [blogs]);
+  const productPreview = useMemo(
+    () => (Array.isArray(products) ? products : []).slice(0, 4),
+    [products]
+  );
+  const blogPreview = useMemo(
+    () => (Array.isArray(blogs) ? blogs : []).slice(0, 3),
+    [blogs]
+  );
 
   const formatBlogDate = (value?: string) => {
     if (!value) return '';
@@ -132,6 +138,10 @@ const HomeScreen = () => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleTabPress = (tab: HomeMainTab) => {
+    setActiveTab(tab);
   };
 
   const renderShowcaseProduct = (item: (typeof productPreview)[number], index: number) => {
@@ -407,6 +417,27 @@ const HomeScreen = () => {
         </View>
         <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
           <Text style={styles.secondaryButtonText}>Lịch hẹn của tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('PetList')}>
+          <Text style={styles.secondaryButtonText}>Thú cưng của tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('AddressBook')}>
+          <Text style={styles.secondaryButtonText}>Sổ địa chỉ</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('OrderList')}>
+          <Text style={styles.secondaryButtonText}>Đơn hàng của tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('CouponList')}>
+          <Text style={styles.secondaryButtonText}>Mã giảm giá</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BreedList')}>
+          <Text style={styles.secondaryButtonText}>Giống thú cưng</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingCages')}>
+          <Text style={styles.secondaryButtonText}>Đặt phòng khách sạn</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingBookings')}>
+          <Text style={styles.secondaryButtonText}>Lịch sử đặt phòng</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={isLoggingOut}>
           {isLoggingOut ? <ActivityIndicator color="#fff" /> : <LogOut size={16} color="#fff" />}

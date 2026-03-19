@@ -24,8 +24,16 @@ export type Pet = {
   _id: string;
   name: string;
   type: 'dog' | 'cat';
-  weight?: number;
+  breed?: string;
+  weight: number;
+  age?: number;
+  color?: string;
   gender?: 'male' | 'female' | 'unknown';
+  notes?: string;
+  avatar?: string;
+  healthStatus?: 'accepted' | 'rejected' | string;
+  status?: 'active' | 'inactive' | string;
+  createdAt?: string;
 };
 
 export type Booking = {

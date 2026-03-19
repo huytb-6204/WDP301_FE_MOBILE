@@ -1,4 +1,4 @@
-import { apiGetRaw, apiPatchRaw, apiPostRaw } from './client';
+import { apiDeleteRaw, apiGetRaw, apiPatchRaw, apiPostRaw } from './client';
 import type { Booking, CreateBookingPayload, Pet, ServiceItem, TimeSlot } from '../../types';
 
 type CodeResponse<T> = {
@@ -16,8 +16,13 @@ type CodeResponse<T> = {
 type CreatePetPayload = {
   name: string;
   type: 'dog' | 'cat';
-  weight?: number;
+  breed?: string;
+  weight: number;
+  age?: number;
+  color?: string;
   gender?: 'male' | 'female' | 'unknown';
+  notes?: string;
+  avatar?: string;
 };
 
 const assertSuccess = <T>(res: CodeResponse<T>) => {
@@ -49,8 +54,26 @@ export const getMyPets = async () => {
   return assertSuccess(res);
 };
 
+export const getMyPet = async (id: string) => {
+  const res = await apiGetRaw<CodeResponse<Pet>>(`/api/v1/client/pet/my-pets/${id}`);
+  return assertSuccess(res);
+};
+
 export const createPet = async (payload: CreatePetPayload) => {
   const res = await apiPostRaw<CodeResponse<Pet>, CreatePetPayload>('/api/v1/client/pet/my-pets', payload);
+  return assertSuccess(res);
+};
+
+export const updateMyPet = async (id: string, payload: Partial<CreatePetPayload>) => {
+  const res = await apiPatchRaw<CodeResponse<Pet>, Partial<CreatePetPayload>>(
+    `/api/v1/client/pet/my-pets/${id}`,
+    payload
+  );
+  return assertSuccess(res);
+};
+
+export const deleteMyPet = async (id: string) => {
+  const res = await apiDeleteRaw<CodeResponse<undefined>>(`/api/v1/client/pet/my-pets/${id}`);
   return assertSuccess(res);
 };
 

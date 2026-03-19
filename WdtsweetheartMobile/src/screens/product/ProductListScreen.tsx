@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -18,6 +18,7 @@ import {
   Cat,
   ChevronDown,
   Dog,
+  Heart,
   PawPrint,
   Search,
   ShoppingCart,
@@ -38,7 +39,12 @@ import { StatusMessage, Toast } from '../../components/common';
 import type { RootStackParamList } from '../../navigation/types';
 import type { ProductItem } from '../../types';
 import { useCart } from '../../context/CartContext';
+<<<<<<< HEAD
 import type { ProductListParams } from '../../services/api/product';
+=======
+import { useFavorites } from '../../context/FavoritesContext';
+import { env } from '../../config';
+>>>>>>> Quan
 
 type UIProduct = ProductItem & {
   priceValue: number;
@@ -92,6 +98,7 @@ const priceOptions: PriceOption[] = [
   { key: 'above-500', label: 'Trên 500k', min: 500000, max: Number.MAX_SAFE_INTEGER },
 ];
 
+<<<<<<< HEAD
 const pickCategoryIcon = (value: string) => {
   const normalized = value.toLowerCase();
   if (normalized.includes('cho') || normalized.includes('dog')) return Dog;
@@ -99,12 +106,24 @@ const pickCategoryIcon = (value: string) => {
   if (normalized.includes('food') || normalized.includes('thuc') || normalized.includes('an')) return Bone;
   if (normalized.includes('phu') || normalized.includes('access')) return PawPrint;
   return Sparkles;
+=======
+const toAbsoluteUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const trimmed = url.replace(/^\/+/, '');
+  return `${env.apiBaseUrl}/${trimmed}`;
+>>>>>>> Quan
 };
 
 const ProductListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+<<<<<<< HEAD
   const { data: categoryData } = useProductCategories();
   const { data: brandData } = useProductBrands();
+=======
+  const [keyword, setKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+>>>>>>> Quan
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeBrand, setActiveBrand] = useState('all');
   const [keyword, setKeyword] = useState('');
@@ -113,9 +132,15 @@ const ProductListScreen = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const { addToCart, cartCount } = useCart();
+  const { favoriteIds, toggleFavorite } = useFavorites();
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data, loading, error, refetch } = useProducts({
+    page: 1,
+    limit: 24,
+    keyword: debouncedKeyword || undefined,
+  });
 
   const hasApiCategories = Array.isArray(categoryData) && categoryData.length > 0;
   const hasApiBrands = Array.isArray(brandData) && brandData.length > 0;
@@ -188,6 +213,14 @@ const ProductListScreen = () => {
     toastTimer.current = setTimeout(() => setToastVisible(false), 1400);
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword.trim());
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
   const products = useMemo<UIProduct[]>(() => {
     return (Array.isArray(data) ? data : []).map((item, index) => {
       const priceValue = item.priceNew ?? item.priceOld ?? 0;
@@ -201,8 +234,8 @@ const ProductListScreen = () => {
         slug: item.slug,
         title: item.name,
         price: formatPrice(priceValue),
-        primaryImage: item.images?.[0] || '',
-        secondaryImage: item.images?.[1] || item.images?.[0] || '',
+        primaryImage: toAbsoluteUrl(item.images?.[0]),
+        secondaryImage: toAbsoluteUrl(item.images?.[1] || item.images?.[0]),
         rating: 5 - (index % 2 === 0 ? 0 : 1),
         isSale: !!originalPrice,
         priceValue,
@@ -212,7 +245,7 @@ const ProductListScreen = () => {
   }, [data]);
 
   const filteredProducts = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase();
+    const normalized = debouncedKeyword.trim().toLowerCase();
     const activeCategoryMeta = categories.find((item) => item.key === activeCategory);
     const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
 
@@ -240,9 +273,14 @@ const ProductListScreen = () => {
     if (sortBy === 'price-high') {
       sorted.sort((a, b) => b.priceValue - a.priceValue);
     }
+    sorted.sort((a, b) => {
+      const aPriority = favoriteIds.has(a.id) ? 1 : 0;
+      const bPriority = favoriteIds.has(b.id) ? 1 : 0;
+      return bPriority - aPriority;
+    });
 
     return sorted;
-  }, [products, keyword, activeCategory, sortBy, priceFilter]);
+  }, [products, debouncedKeyword, activeCategory, sortBy, priceFilter, favoriteIds]);
 
   const activeSortLabel = useMemo(
     () => sortOptions.find((item) => item.value === sortBy)?.label || 'Mới nhất',
@@ -403,6 +441,23 @@ const ProductListScreen = () => {
                     ) : (
                       <View style={styles.cardImagePlaceholder} />
                     )}
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        toggleFavorite(item);
+                      }}
+                      style={({ pressed }) => [
+                        styles.favoriteButton,
+                        favoriteIds.has(item.id) && styles.favoriteButtonActive,
+                        pressed && styles.favoriteButtonPressed,
+                      ]}
+                    >
+                      <Heart // thay đổi icon tùy thích, có thể là Heart hoặc Star
+                        size={16}
+                        color={colors.primary}
+                        fill={favoriteIds.has(item.id) ? colors.primary : 'none'}
+                      />
+                    </Pressable>
                     {item.isSale ? (
                       <View style={styles.cardBadge}>
                         <Text style={styles.cardBadgeText}>SALE</Text>
@@ -432,7 +487,7 @@ const ProductListScreen = () => {
                     </View>
                     <Pressable
                       onPress={(event) => {
-                        event.stopPropagation?.();
+                        event.stopPropagation();
                         addToCart(item, 1);
                         showToast('Đã thêm sản phẩm vào giỏ hàng');
                       }}
@@ -451,7 +506,6 @@ const ProductListScreen = () => {
         )}
       </ScrollView>
       <Toast visible={toastVisible} message={toastMessage} />
-
 
       <Pressable style={styles.fab} onPress={() => navigation.navigate('Cart')}>
         <ShoppingCart size={22} color="#fff" />
@@ -560,10 +614,7 @@ const ProductListScreen = () => {
             </View>
 
             <View style={styles.sheetActions}>
-              <Pressable
-                style={styles.sheetApply}
-                onPress={() => setFilterOpen(false)}
-              >
+              <Pressable style={styles.sheetApply} onPress={() => setFilterOpen(false)}>
                 <Text style={styles.sheetApplyText}>Áp dụng</Text>
               </Pressable>
               <Pressable
@@ -808,6 +859,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: colors.border,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ffd6de',
+  },
+  favoriteButtonActive: {
+    backgroundColor: '#fff',
+    borderColor: colors.primary,
+  },
+  favoriteButtonPressed: {
+    transform: [{ scale: 0.96 }],
   },
   cardBadge: {
     position: 'absolute',
@@ -1127,3 +1198,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProductListScreen;
+

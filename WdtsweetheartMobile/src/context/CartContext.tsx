@@ -30,6 +30,7 @@ type CartContextType = {
     userAddress?: { latitude: number; longitude: number }
   ) => Promise<CartListResponse | null>;
   addToCart: (product: UIProduct, quantity: number) => void;
+  replaceCart: (product: UIProduct, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -89,6 +90,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       // Nếu chưa có -> thêm mới
       return [...prevItems, { product, quantity }];
     });
+  };
+
+  const replaceCart = (product: UIProduct, quantity: number) => {
+    setCartItems([{ product, quantity }]);
+    setCartDetailItems([]);
+    setShippingOptions(null);
   };
 
   // Xóa sản phẩm khỏi giỏ
@@ -172,6 +179,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         shippingOptions,
         fetchCartDetail,
         addToCart,
+        replaceCart,
         removeFromCart,
         updateQuantity,
         clearCart,

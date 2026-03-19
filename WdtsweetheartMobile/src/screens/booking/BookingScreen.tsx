@@ -76,6 +76,9 @@ const BookingScreen = () => {
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState<'dog' | 'cat'>('dog');
   const [petWeight, setPetWeight] = useState('');
+  const [petBreed, setPetBreed] = useState('');
+  const [petColor, setPetColor] = useState('');
+  const [petNotes, setPetNotes] = useState('');
   const [petGender, setPetGender] = useState<'male' | 'female' | 'unknown'>('unknown');
 
   const [error, setError] = useState<string | null>(null);
@@ -191,17 +194,28 @@ const BookingScreen = () => {
       return;
     }
 
+    if (!petWeight.trim() || Number(petWeight) <= 0) {
+      showToast('Vui lòng nhập cân nặng hợp lệ');
+      return;
+    }
+
     try {
       const res = await createPet({
         name: petName.trim(),
         type: petType,
-        weight: petWeight.trim() ? Number(petWeight) : undefined,
+        breed: petBreed.trim() || undefined,
+        weight: Number(petWeight),
+        color: petColor.trim() || undefined,
         gender: petGender,
+        notes: petNotes.trim() || undefined,
       });
       setPets((prev) => [res.data, ...prev]);
       setSelectedPetIds((prev) => [...prev, res.data._id]);
       setPetName('');
       setPetWeight('');
+      setPetBreed('');
+      setPetColor('');
+      setPetNotes('');
       setPetType('dog');
       setPetGender('unknown');
       setShowCreatePetModal(false);
@@ -278,7 +292,9 @@ const BookingScreen = () => {
                 >
                   <View style={styles.selectMain}>
                     <Text style={[styles.selectTitle, active && styles.selectTitleActive]}>{item.name}</Text>
-                    <Text style={styles.selectDesc}>{item.duration ? `${item.duration} phút` : 'Không rõ thời lượng'}</Text>
+                    <Text style={styles.selectDesc}>
+                      {item.duration ? `${item.duration} phút` : 'Không rõ thời lượng'}
+                    </Text>
                   </View>
                   <Text style={styles.selectPrice}>
                     {item.basePrice ? `${item.basePrice.toLocaleString()}đ` : 'Liên hệ'}
@@ -438,9 +454,14 @@ const BookingScreen = () => {
                       style={[styles.selectItem, active && styles.selectItemActive]}
                       onPress={() => togglePet(pet._id)}
                     >
-                      <Text style={[styles.selectTitle, active && styles.selectTitleActive]}>
-                        {pet.name} ({pet.type === 'dog' ? 'Chó' : 'Mèo'})
-                      </Text>
+                      <View style={styles.selectMain}>
+                        <Text style={[styles.selectTitle, active && styles.selectTitleActive]}>
+                          {pet.name} ({pet.type === 'dog' ? 'Chó' : 'Mèo'})
+                        </Text>
+                        <Text style={styles.selectDesc}>
+                          {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -458,6 +479,7 @@ const BookingScreen = () => {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Thêm thú cưng</Text>
             <TextInput style={styles.input} placeholder="Tên thú cưng" value={petName} onChangeText={setPetName} />
+            <TextInput style={styles.input} placeholder="Giống thú cưng" value={petBreed} onChangeText={setPetBreed} />
             <View style={styles.row}>
               <TouchableOpacity
                 style={[styles.chip, petType === 'dog' && styles.chipActive]}
@@ -474,10 +496,18 @@ const BookingScreen = () => {
             </View>
             <TextInput
               style={styles.input}
-              placeholder="Cân nặng (kg, tùy chọn)"
+              placeholder="Cân nặng (kg)"
               keyboardType="numeric"
               value={petWeight}
               onChangeText={setPetWeight}
+            />
+            <TextInput style={styles.input} placeholder="Màu lông" value={petColor} onChangeText={setPetColor} />
+            <TextInput
+              style={[styles.input, styles.inputArea]}
+              placeholder="Ghi chú thú cưng"
+              value={petNotes}
+              onChangeText={setPetNotes}
+              multiline
             />
             <View style={styles.row}>
               {(['unknown', 'male', 'female'] as const).map((gender) => (
@@ -616,6 +646,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    flex: 1,
+    alignItems: 'center',
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   chipText: { color: colors.text, fontSize: 12, fontWeight: '600' },

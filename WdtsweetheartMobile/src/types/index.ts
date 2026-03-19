@@ -6,3 +6,12 @@ export type {
   Booking,
   CreateBookingPayload,
 } from './booking';
+export type {
+  BoardingGateway,
+  BoardingPaymentMethod,
+  BoardingPet,
+  BoardingCage,
+  BoardingBooking,
+  BoardingBookingDetail,
+  CreateBoardingBookingPayload,
+} from './boarding';

@@ -19,4 +19,6 @@ export type RootStackParamList = {
   Payment: undefined;
   Booking: undefined;
   MyBookings: undefined;
+  BoardingHotel: undefined;
+  MyBoardingBookings: undefined;
 };

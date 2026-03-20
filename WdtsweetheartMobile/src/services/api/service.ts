@@ -1,5 +1,5 @@
 import { apiGet } from './client';
-import { Service, ServiceCategory, ServiceListParams } from '../../types/service';
+import { Service, ServiceCategory, ServiceListParams, ServiceReview } from '../../types/service';
 import { env } from '../../config';
 import { tokenStorage } from '../auth/token';
 
@@ -88,4 +88,12 @@ export const getServiceBySlug = async (slug: string) => {
 
 export const getServiceCategories = async () => {
   return apiGet<ServiceCategory[]>('/api/v1/client/service/categories');
+};
+
+export const getServiceReviews = async (serviceId: string) => {
+  return apiGet<{
+    reviews: ServiceReview[];
+    totalReviews: number;
+    averageRating: number;
+  }>(`/api/v1/client/service/${serviceId}/reviews`);
 };

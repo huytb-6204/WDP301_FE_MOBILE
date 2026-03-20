@@ -61,6 +61,8 @@ const homeVisuals = {
   promo1: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-1.jpg',
   promo2: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-2.jpg',
   badge: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/rate-group-img.png',
+  serviceCover: require('../../../assets/service-cover.jpg'),
+  hotelCover: require('../../../assets/hotel-cover.jpg'),
 };
 
 const showcaseCategory = ['THỨC ĂN', 'ĐỒ CHƠI', 'PHỤ KIỆN', 'VỆ SINH'];
@@ -338,44 +340,76 @@ const HomeScreen = () => {
 
   const renderServiceTab = () => (
     <View style={styles.sectionStack}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
-        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
-          <Text style={styles.inlineActionText}>Xem tất cả</Text>
-          <ArrowRight size={14} color={colors.primary} />
-        </TouchableOpacity>
+      <View style={styles.serviceHeroHeader}>
+        <Text style={styles.sectionEyebrow}>Teddy Pet</Text>
+        <Text style={styles.sectionTitleLarge}>Dịch vụ & Hotel</Text>
+        <Text style={styles.sectionSubtitle}>
+          Chăm sóc toàn diện cho thú cưng với dịch vụ spa chuyên nghiệp và khách sạn tiện nghi.
+        </Text>
       </View>
 
-      <View style={styles.showcaseGrid}>{productPreview.map(renderShowcaseProduct)}</View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Dịch vụ chính</Text>
-        <Text style={styles.cardText}>Spa, grooming, khám sức khỏe, huấn luyện và chăm sóc định kỳ.</Text>
-        <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
-          <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('ServiceList')}>
-          <Text style={styles.secondaryButtonText}>Xem danh sách dịch vụ</Text>
-        </TouchableOpacity>
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionBlockHeader}>
+          <Text style={styles.sectionBlockTitle}>Dịch vụ spa & grooming</Text>
+          <Text style={styles.sectionBlockTag}>Spa • Grooming • Khám sức khỏe</Text>
+        </View>
+        <ImageBackground
+          source={homeVisuals.serviceCover}
+          style={styles.heroCard}
+          imageStyle={styles.heroCardImage}
+        >
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroCardTitle}>Chăm sóc chuẩn 5 bước</Text>
+            <Text style={styles.heroCardText}>
+              Liệu trình chuyên sâu, phù hợp từng loại da và lông. Đặt lịch nhanh, theo dõi dễ dàng.
+            </Text>
+            <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
+              <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('ServiceList')}>
+              <Text style={styles.secondaryButtonText}>Danh sách dịch vụ</Text>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Khách sạn thú cưng</Text>
-        <Text style={styles.cardText}>Tìm chuồng còn trống, đặt lưu trú và theo dõi thanh toán ngay trên app.</Text>
-        <View style={styles.rowButtons}>
-          <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
-            <Text style={styles.primaryButtonText}>Đặt phòng</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
-            <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionBlockHeader}>
+          <Text style={styles.sectionBlockTitle}>Khách sạn thú cưng</Text>
+          <Text style={styles.sectionBlockTag}>Phòng riêng • Theo dõi 24/7</Text>
+        </View>
+        <ImageBackground
+          source={homeVisuals.hotelCover}
+          style={styles.heroCard}
+          imageStyle={styles.heroCardImage}
+        >
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroCardTitle}>Không gian lưu trú cao cấp</Text>
+            <Text style={styles.heroCardText}>
+              Chọn phòng phù hợp, đặt lịch lưu trú nhanh và kiểm tra tình trạng ngay trên app.
+            </Text>
+            <View style={styles.rowButtons}>
+              <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
+                <Text style={styles.primaryButtonText}>Đặt phòng</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
+                <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ImageBackground>
+      </View>
+
+      <View style={styles.sectionBlock}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
+          <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
+          <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
+            <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
           </TouchableOpacity>
         </View>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
-        <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-          <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -662,6 +696,72 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: colors.secondary, fontSize: 16, fontWeight: '700' },
   cardText: { color: colors.text, fontSize: 13, lineHeight: 20 },
+  serviceHeroHeader: {
+    paddingVertical: 8,
+    gap: 6,
+  },
+  sectionEyebrow: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  sectionTitleLarge: {
+    color: colors.secondary,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  sectionSubtitle: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  sectionBlock: {
+    gap: 10,
+  },
+  sectionBlockHeader: {
+    gap: 4,
+  },
+  sectionBlockTitle: {
+    color: colors.secondary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionBlockTag: {
+    color: colors.textLight,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroCard: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    minHeight: 220,
+    justifyContent: 'flex-end',
+  },
+  heroCardImage: {
+    borderRadius: 18,
+  },
+  heroOverlay: {
+    backgroundColor: 'rgba(16, 41, 55, 0.65)',
+    padding: 16,
+    gap: 8,
+  },
+  heroCardTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  heroCardText: {
+    color: '#f6f6f6',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   quickItem: {
     width: '48%',

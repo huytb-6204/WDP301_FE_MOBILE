@@ -1,8 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   FlatList,
   Pressable,
@@ -30,7 +29,7 @@ const ServiceListScreen = () => {
     ...params,
     categoryId: selectedCategory,
   });
-  const { data: categories, loading: categoriesLoading } = useServiceCategories();
+  const { data: categories } = useServiceCategories();
 
   // Debug: log data whenever it changes
   // React.useEffect(() => {
@@ -52,59 +51,85 @@ const ServiceListScreen = () => {
     return html.replace(/<[^>]*>/g, '').trim();
   };
 
-  const renderServiceCard = ({ item }: { item: Service }) => (
-    <Pressable
-      style={styles.card}
-      onPress={() => {
-        // Navigate to the service detail screen
-        navigation.navigate('ServiceDetail', { serviceId: item._id, service: item });
-      }}>
-      <View style={styles.cardImageContainer}>
-        {item.image ? (
-          <Image
-            source={{ uri: item.image }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.cardImagePlaceholder}>
-            <Text style={styles.cardImagePlaceholderText}>📷</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {item.name}
-        </Text>
-        {item.description && (
-          <Text style={styles.cardDescription} numberOfLines={2}>
-            {stripHtml(item.description)}
-          </Text>
-        )}
-        <View style={styles.cardFooter}>
-          <View style={styles.priceContainer}>
-            {item.price && (
-              <Text style={styles.cardPrice}>
-                {item.price?.toLocaleString('vi-VN')} đ
-              </Text>
-            )}
-            {item.priceOld != null && item.priceOld > (item.price ?? 0) && (
-              <Text style={styles.cardPriceOld}>
-                {item.priceOld.toLocaleString('vi-VN')} đ
-              </Text>
-            )}
-          </View>
-          {item.duration && (
-            <View style={styles.durationBadge}>
-              <Text style={styles.cardDuration}>
-                {item.duration} phút
-              </Text>
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories?.forEach((category) => map.set(category._id, category.name));
+    return map;
+  }, [categories]);
+
+  const filteredData = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase();
+    if (!keyword) return data;
+    return data.filter((item) => item.name.toLowerCase().includes(keyword));
+  }, [data, searchKeyword]);
+
+  const renderServiceCard = ({ item }: { item: Service }) => {
+    const categoryName =
+      typeof item.categoryId === 'string'
+        ? categoryMap.get(item.categoryId)
+        : item.categoryId?.name;
+
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={() => {
+          navigation.navigate('ServiceDetail', { serviceId: item._id, service: item });
+        }}>
+        <View style={styles.cardImageContainer}>
+          {item.image ? (
+            <Image
+              source={{ uri: item.image }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.cardImagePlaceholder}>
+              <Text style={styles.cardImagePlaceholderText}>📷</Text>
             </View>
           )}
+          {categoryName ? (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{categoryName}</Text>
+            </View>
+          ) : null}
         </View>
-      </View>
-    </Pressable>
-  );
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.name}
+          </Text>
+          {item.description && (
+            <Text style={styles.cardDescription} numberOfLines={2}>
+              {stripHtml(item.description)}
+            </Text>
+          )}
+          <View style={styles.cardFooter}>
+            <View style={styles.priceContainer}>
+              {item.price && (
+                <Text style={styles.cardPrice}>
+                  {item.price?.toLocaleString('vi-VN')} đ
+                </Text>
+              )}
+              {item.priceOld != null && item.priceOld > (item.price ?? 0) && (
+                <Text style={styles.cardPriceOld}>
+                  {item.priceOld.toLocaleString('vi-VN')} đ
+                </Text>
+              )}
+            </View>
+            {item.duration && (
+              <View style={styles.durationBadge}>
+                <Text style={styles.cardDuration}>
+                  {item.duration} phút
+                </Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.cardActionRow}>
+            <Text style={styles.cardActionText}>Xem chi tiết</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -181,16 +206,16 @@ const ServiceListScreen = () => {
       )}
 
       {/* Empty State */}
-      {!loading && data.length === 0 && (
+      {!loading && filteredData.length === 0 && (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyText}>Không tìm thấy dịch vụ</Text>
         </View>
       )}
 
       {/* Services List */}
-      {!loading && data.length > 0 && (
+      {!loading && filteredData.length > 0 && (
         <FlatList
-          data={data}
+          data={filteredData}
           renderItem={renderServiceCard}
           keyExtractor={item => item._id}
           scrollEnabled={true}
@@ -199,7 +224,7 @@ const ServiceListScreen = () => {
       )}
 
       {/* Pagination */}
-      {!loading && pagination.totalPages > 1 && (
+      {!loading && !searchKeyword && pagination.totalPages > 1 && (
         <View style={styles.pagination}>
           <Pressable
             disabled={pagination.currentPage === 1}
@@ -318,16 +343,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.lightGray,
   },
   listContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    paddingBottom: 100, // Space for pagination
+    paddingBottom: 100,
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    flexDirection: 'row',
+    borderRadius: 16,
+    marginVertical: 10,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
@@ -338,12 +361,26 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardImageContainer: {
-    width: 100,
-    height: 100,
+    width: '100%',
+    height: 170,
   },
   cardImage: {
     width: '100%',
     height: '100%',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    backgroundColor: 'rgba(255, 98, 98, 0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  categoryBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
   },
   cardImagePlaceholder: {
     width: '100%',
@@ -356,21 +393,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   cardContent: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'space-between',
+    padding: 14,
+    gap: 8,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 6,
     lineHeight: 22,
   },
   cardDescription: {
     fontSize: 13,
     color: colors.textLight,
-    marginBottom: 10,
     lineHeight: 18,
   },
   cardFooter: {
@@ -394,15 +428,24 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   durationBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: colors.softPink,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   cardDuration: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.white,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  cardActionRow: {
+    marginTop: 4,
+    alignItems: 'flex-end',
+  },
+  cardActionText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
   },
   pagination: {
     position: 'absolute',

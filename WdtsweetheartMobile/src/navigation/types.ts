@@ -21,7 +21,7 @@ export type RootStackParamList = {
   Checkout: undefined;
   OrderSuccess: { orderCode: string; phone: string };
   Payment: undefined;
-  Booking: undefined;
+  Booking: { serviceId?: string; service?: any } | undefined;
   MyBookings: undefined;
   AddressBook: undefined;
   OrderList: undefined;

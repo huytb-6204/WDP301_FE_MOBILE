@@ -10,14 +10,20 @@ export type ServiceItem = {
 };
 
 export type TimeSlot = {
+  time: string;
+  status: 'available' | 'full' | 'unavailable' | 'pet_busy';
+  freeStaff?: number;
+  totalStaff?: number;
+  mode?: string;
+  staffNames?: string[];
+};
+
+export type ShiftSlotGroup = {
   _id: string;
-  serviceId: string;
-  date: string;
+  name: string;
   startTime: string;
   endTime: string;
-  maxCapacity?: number;
-  currentBookings?: number;
-  status: 'available' | 'full' | 'unavailable';
+  slots: TimeSlot[];
 };
 
 export type Pet = {
@@ -38,24 +44,43 @@ export type Pet = {
 
 export type Booking = {
   _id: string;
-  bookingCode: string;
-  serviceId: string;
-  slotId: string;
-  petIds: string[];
+  code?: string;
+  bookingCode?: string;
+  serviceId?: any;
+  slotId?: string;
+  petIds?: any[];
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
   notes?: string;
   totalPrice?: number;
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
-  paymentStatus?: 'unpaid' | 'partial' | 'paid';
+  subTotal?: number;
+  total?: number;
+  bookingStatus?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'delayed';
+  status?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
+  paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'partially_paid' | 'refunded';
+  paymentMethod?: 'money' | 'vnpay' | 'zalopay' | string;
+  depositAmount?: number;
+  remainingAmount?: number;
+  petStaffMap?: Array<{
+    petId: any;
+    staffId?: any;
+    price?: number;
+    status?: 'pending' | 'in-progress' | 'completed' | string;
+    startedAt?: string;
+    completedAt?: string;
+    surchargeAmount?: number;
+    surchargeNotes?: string;
+  }>;
+  start?: string;
+  end?: string;
   createdAt: string;
 };
 
 export type CreateBookingPayload = {
   serviceId: string;
-  slotId: string;
   petIds: string[];
+  startTime: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;

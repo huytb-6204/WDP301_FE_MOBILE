@@ -22,6 +22,18 @@ export type Service = {
   createdAt: string;
 };
 
+export type ServiceReview = {
+  _id: string;
+  rating: number;
+  comment?: string;
+  createdAt?: string;
+  status?: string;
+  user?: {
+    fullName?: string;
+    avatar?: string;
+  };
+};
+
 export type PaginationResponse<T> = {
   code: number;
   message: string;

@@ -4,8 +4,9 @@ import {
   getServiceCategories,
   getServiceDetail,
   getServiceBySlug,
+  getServiceReviews,
 } from '../services/api/service';
-import { Service, ServiceCategory, ServiceListParams } from '../types/service';
+import { Service, ServiceCategory, ServiceListParams, ServiceReview } from '../types/service';
 
 export const useServices = (params?: ServiceListParams) => {
   const [data, setData] = useState<Service[]>([]);
@@ -128,4 +129,40 @@ export const useServiceBySlug = (slug: string) => {
   }, [slug]);
 
   return { data, loading, error };
+};
+
+export const useServiceReviews = (serviceId: string) => {
+  const [data, setData] = useState<ServiceReview[]>([]);
+  const [summary, setSummary] = useState({ totalReviews: 0, averageRating: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!serviceId) return;
+
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await getServiceReviews(serviceId);
+        setData(result.reviews || []);
+        setSummary({
+          totalReviews: result.totalReviews ?? result.reviews?.length ?? 0,
+          averageRating: result.averageRating ?? 0,
+        });
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Không thể tải đánh giá';
+        console.error('Error fetching service reviews:', errorMsg);
+        setError(errorMsg);
+        setData([]);
+        setSummary({ totalReviews: 0, averageRating: 0 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [serviceId]);
+
+  return { data, summary, loading, error };
 };

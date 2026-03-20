@@ -1,5 +1,5 @@
 import { apiDeleteRaw, apiGetRaw, apiPatchRaw, apiPostRaw } from './client';
-import type { Booking, CreateBookingPayload, Pet, ServiceItem, TimeSlot } from '../../types';
+import type { Booking, CreateBookingPayload, Pet, ServiceItem, ShiftSlotGroup } from '../../types';
 
 type CodeResponse<T> = {
   code: number | string;
@@ -32,18 +32,27 @@ const assertSuccess = <T>(res: CodeResponse<T>) => {
   return res;
 };
 
-export const getServices = async () => {
-  const res = await apiGetRaw<CodeResponse<ServiceItem[]>>('/api/v1/client/booking/services');
+export const getServices = async (params?: { petType?: 'DOG' | 'CAT' | 'ALL' }) => {
+  const search = new URLSearchParams();
+  if (params?.petType && params.petType !== 'ALL') {
+    search.set('petTypes', params.petType);
+  }
+  const query = search.toString();
+  const res = await apiGetRaw<CodeResponse<ServiceItem[]>>(
+    `/api/v1/client/booking/services${query ? `?${query}` : ''}`
+  );
   return assertSuccess(res);
 };
 
-export const getTimeSlots = async (params: { serviceId?: string; date?: string }) => {
+export const getTimeSlots = async (params: { serviceId?: string; date?: string; count?: number; petIds?: string[] }) => {
   const search = new URLSearchParams();
   if (params.serviceId) search.set('serviceId', params.serviceId);
   if (params.date) search.set('date', params.date);
+  if (params.count) search.set('count', String(params.count));
+  if (params.petIds && params.petIds.length > 0) search.set('petIds', params.petIds.join(','));
   const query = search.toString();
 
-  const res = await apiGetRaw<CodeResponse<TimeSlot[]>>(
+  const res = await apiGetRaw<CodeResponse<{ shifts: ShiftSlotGroup[] }>>(
     `/api/v1/client/booking/time-slots${query ? `?${query}` : ''}`
   );
   return assertSuccess(res);

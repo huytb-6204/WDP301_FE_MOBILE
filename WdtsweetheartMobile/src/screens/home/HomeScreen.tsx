@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BookOpen,
@@ -25,7 +25,7 @@ import {
   Heart,
 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
-import type { RootStackParamList } from '../../navigation/types';
+import type { RootStackParamList, HomeTabKey } from '../../navigation/types';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { useProducts } from '../../hooks/useProducts';
@@ -38,7 +38,9 @@ import { StatusMessage } from '../../components/common';
 import { env } from '../../config';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
-type HomeMainTab = 'home' | 'product' | 'service' | 'blog' | 'profile';
+type HomeMainTab = HomeTabKey;
+
+type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
 type TabItem = {
   key: HomeMainTab;
@@ -59,6 +61,8 @@ const homeVisuals = {
   promo1: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-1.jpg',
   promo2: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-2.jpg',
   badge: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/rate-group-img.png',
+  serviceCover: require('../../../assets/service-cover.jpg'),
+  hotelCover: require('../../../assets/hotel-cover.jpg'),
 };
 
 const showcaseCategory = ['THỨC ĂN', 'ĐỒ CHƠI', 'PHỤ KIỆN', 'VỆ SINH'];
@@ -72,13 +76,14 @@ const toAbsoluteUrl = (url?: string) => {
 
 const HomeScreen = () => {
   const navigation = useNavigation<Navigation>();
+  const route = useRoute<HomeRouteProp>();
   const isFocused = useIsFocused();
   const { cartCount, addToCart } = useCart();
   const { favoriteIds, favorites, toggleFavorite } = useFavorites();
   const { data: products } = useProducts({ page: 1, limit: 8 });
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
-  const [activeTab, setActiveTab] = useState<HomeMainTab>('home');
+  const [activeTab, setActiveTab] = useState<HomeMainTab>(() => route.params?.initialTab ?? 'home');
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -129,6 +134,13 @@ const HomeScreen = () => {
     }
   }, [activeTab, isFocused, loadProfile]);
 
+  React.useEffect(() => {
+    if (route.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+      navigation.setParams({ initialTab: undefined });
+    }
+  }, [route.params?.initialTab, navigation]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -140,6 +152,10 @@ const HomeScreen = () => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleTabPress = (tab: HomeMainTab) => {
+    setActiveTab(tab);
   };
 
   const renderShowcaseProduct = (item: (typeof productPreview)[number], index: number) => {
@@ -324,41 +340,76 @@ const HomeScreen = () => {
 
   const renderServiceTab = () => (
     <View style={styles.sectionStack}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
-        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
-          <Text style={styles.inlineActionText}>Xem tất cả</Text>
-          <ArrowRight size={14} color={colors.primary} />
-        </TouchableOpacity>
+      <View style={styles.serviceHeroHeader}>
+        <Text style={styles.sectionEyebrow}>Teddy Pet</Text>
+        <Text style={styles.sectionTitleLarge}>Dịch vụ & Hotel</Text>
+        <Text style={styles.sectionSubtitle}>
+          Chăm sóc toàn diện cho thú cưng với dịch vụ spa chuyên nghiệp và khách sạn tiện nghi.
+        </Text>
       </View>
 
-      <View style={styles.showcaseGrid}>{productPreview.map(renderShowcaseProduct)}</View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Dịch vụ chính</Text>
-        <Text style={styles.cardText}>Spa, grooming, khám sức khỏe, huấn luyện và chăm sóc định kỳ.</Text>
-        <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
-          <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
-        </TouchableOpacity>
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionBlockHeader}>
+          <Text style={styles.sectionBlockTitle}>Dịch vụ spa & grooming</Text>
+          <Text style={styles.sectionBlockTag}>Spa • Grooming • Khám sức khỏe</Text>
+        </View>
+        <ImageBackground
+          source={homeVisuals.serviceCover}
+          style={styles.heroCard}
+          imageStyle={styles.heroCardImage}
+        >
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroCardTitle}>Chăm sóc chuẩn 5 bước</Text>
+            <Text style={styles.heroCardText}>
+              Liệu trình chuyên sâu, phù hợp từng loại da và lông. Đặt lịch nhanh, theo dõi dễ dàng.
+            </Text>
+            <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
+              <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('ServiceList')}>
+              <Text style={styles.secondaryButtonText}>Danh sách dịch vụ</Text>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Khách sạn thú cưng</Text>
-        <Text style={styles.cardText}>Tìm chuồng còn trống, đặt lưu trú và theo dõi thanh toán ngay trên app.</Text>
-        <View style={styles.rowButtons}>
-          <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
-            <Text style={styles.primaryButtonText}>Đặt phòng</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
-            <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionBlockHeader}>
+          <Text style={styles.sectionBlockTitle}>Khách sạn thú cưng</Text>
+          <Text style={styles.sectionBlockTag}>Phòng riêng • Theo dõi 24/7</Text>
+        </View>
+        <ImageBackground
+          source={homeVisuals.hotelCover}
+          style={styles.heroCard}
+          imageStyle={styles.heroCardImage}
+        >
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroCardTitle}>Không gian lưu trú cao cấp</Text>
+            <Text style={styles.heroCardText}>
+              Chọn phòng phù hợp, đặt lịch lưu trú nhanh và kiểm tra tình trạng ngay trên app.
+            </Text>
+            <View style={styles.rowButtons}>
+              <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
+                <Text style={styles.primaryButtonText}>Đặt phòng</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
+                <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ImageBackground>
+      </View>
+
+      <View style={styles.sectionBlock}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
+          <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
+          <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
+            <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
           </TouchableOpacity>
         </View>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
-        <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-          <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -390,12 +441,14 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
       ) : (
-        blogPreview.map((item) => (
-          <TouchableOpacity
-            key={item._id}
-            style={styles.blogCard}
-            onPress={() => navigation.navigate('BlogDetail', { slug: item.slug, blog: item })}
-          >
+          blogPreview.map((item) => (
+            <TouchableOpacity
+              key={item._id}
+              style={styles.blogCard}
+              onPress={() =>
+                navigation.navigate('BlogDetail', { slug: item.slug || item._id, blog: item })
+              }
+            >
             <Text style={styles.blogDate}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
             <Text style={styles.blogTitle}>{item.name}</Text>
             <Text style={styles.blogDesc} numberOfLines={2}>
@@ -447,6 +500,27 @@ const HomeScreen = () => {
         <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
           <Text style={styles.secondaryButtonText}>Lịch hẹn của tôi</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('PetList')}>
+          <Text style={styles.secondaryButtonText}>Thú cưng của tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('AddressBook')}>
+          <Text style={styles.secondaryButtonText}>Sổ địa chỉ</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('OrderList')}>
+          <Text style={styles.secondaryButtonText}>Đơn hàng của tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('CouponList')}>
+          <Text style={styles.secondaryButtonText}>Mã giảm giá</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BreedList')}>
+          <Text style={styles.secondaryButtonText}>Giống thú cưng</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingCages')}>
+          <Text style={styles.secondaryButtonText}>Đặt phòng khách sạn</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingBookings')}>
+          <Text style={styles.secondaryButtonText}>Lịch sử đặt phòng</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={isLoggingOut}>
           {isLoggingOut ? <ActivityIndicator color="#fff" /> : <LogOut size={16} color="#fff" />}
           <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
@@ -485,7 +559,7 @@ const HomeScreen = () => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
           return (
-            <TouchableOpacity key={tab.key} style={styles.tabItem} onPress={() => setActiveTab(tab.key)}>
+            <TouchableOpacity key={tab.key} style={styles.tabItem} onPress={() => handleTabPress(tab.key)}>
               <View style={[styles.tabIconWrap, active && styles.tabIconWrapActive]}>
                 <Icon size={18} color={active ? '#fff' : colors.secondary} />
               </View>
@@ -622,6 +696,72 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: colors.secondary, fontSize: 16, fontWeight: '700' },
   cardText: { color: colors.text, fontSize: 13, lineHeight: 20 },
+  serviceHeroHeader: {
+    paddingVertical: 8,
+    gap: 6,
+  },
+  sectionEyebrow: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  sectionTitleLarge: {
+    color: colors.secondary,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  sectionSubtitle: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  sectionBlock: {
+    gap: 10,
+  },
+  sectionBlockHeader: {
+    gap: 4,
+  },
+  sectionBlockTitle: {
+    color: colors.secondary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionBlockTag: {
+    color: colors.textLight,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroCard: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    minHeight: 220,
+    justifyContent: 'flex-end',
+  },
+  heroCardImage: {
+    borderRadius: 18,
+  },
+  heroOverlay: {
+    backgroundColor: 'rgba(16, 41, 55, 0.65)',
+    padding: 16,
+    gap: 8,
+  },
+  heroCardTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  heroCardText: {
+    color: '#f6f6f6',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   quickItem: {
     width: '48%',

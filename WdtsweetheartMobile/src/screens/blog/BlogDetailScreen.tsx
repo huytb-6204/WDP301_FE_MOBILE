@@ -55,15 +55,22 @@ const BlogDetailScreen = () => {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<RouteProps>();
   const { slug, blog: initialBlog } = route.params;
+  const resolvedSlug = slug || initialBlog?.slug || initialBlog?._id;
   const [blog, setBlog] = useState<BlogItem | undefined>(initialBlog);
   const [loading, setLoading] = useState(!initialBlog);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBlog = async () => {
+    if (!resolvedSlug) {
+      setError('Không tìm thấy mã bài viết');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const data = await getBlogDetail(slug);
+      const data = await getBlogDetail(resolvedSlug);
       setBlog(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải bài viết');
@@ -75,7 +82,7 @@ const BlogDetailScreen = () => {
   useEffect(() => {
     fetchBlog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [resolvedSlug]);
 
   const contentText = useMemo(
     () => stripHtml(blog?.content || blog?.description || ''),

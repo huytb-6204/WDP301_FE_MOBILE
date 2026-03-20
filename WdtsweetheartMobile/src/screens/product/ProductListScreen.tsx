@@ -28,7 +28,13 @@ import {
   X,
 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
-import { useProducts } from '../../hooks/useProducts';
+import {
+  useProductBrands,
+  useProductCategories,
+  useProductSuggestions,
+  useProducts,
+} from '../../hooks/useProducts';
+import type { GetProductsParams } from '../../services/api/product';
 import { formatPrice } from '../../utils';
 import { StatusMessage, Toast } from '../../components/common';
 import type { RootStackParamList } from '../../navigation/types';
@@ -55,6 +61,11 @@ type CategoryOption = {
   keywords?: string[];
 };
 
+type BrandOption = {
+  key: string;
+  label: string;
+};
+
 type PriceOption = {
   key: string;
   label: string;
@@ -62,7 +73,7 @@ type PriceOption = {
   max: number;
 };
 
-const categories: CategoryOption[] = [
+const fallbackCategories: CategoryOption[] = [
   { key: 'all', label: 'Tất cả', icon: Sparkles },
   { key: 'dog', label: 'Chó cưng', icon: Dog, keywords: ['chó', 'dog'] },
   { key: 'cat', label: 'Mèo cưng', icon: Cat, keywords: ['mèo', 'cat'] },
@@ -96,20 +107,90 @@ const ProductListScreen = () => {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<SortOption['value']>('newest');
   const [priceFilter, setPriceFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const { data: categoryData } = useProductCategories();
+  const { data: brandData } = useProductBrands();
   const { addToCart, cartCount } = useCart();
   const { favoriteIds, toggleFavorite } = useFavorites();
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { data, loading, error, refetch } = useProducts({
-    page: 1,
-    limit: 24,
-    keyword: debouncedKeyword || undefined,
-  });
+
+  const hasApiCategories = Array.isArray(categoryData) && categoryData.length > 0;
+  const hasApiBrands = Array.isArray(brandData) && brandData.length > 0;
+
+  const categories = useMemo<CategoryOption[]>(() => {
+    if (!hasApiCategories) return fallbackCategories;
+
+    const apiCategories = categoryData.map((category) => ({
+      key: category.slug || category._id,
+      label: category.name,
+      icon: pickCategoryIcon(category.slug || category.name),
+    }));
+
+    return [{ key: 'all', label: 'Tất cả', icon: Sparkles }, ...apiCategories];
+  }, [categoryData, hasApiCategories]);
+
+  const brands = useMemo<BrandOption[]>(() => {
+    if (!hasApiBrands) return [{ key: 'all', label: 'Tất cả' }];
+
+    const apiBrands = brandData.map((brand) => ({
+      key: brand.slug || brand._id,
+      label: brand.name,
+    }));
+
+    return [{ key: 'all', label: 'Tất cả' }, ...apiBrands];
+  }, [brandData, hasApiBrands]);
+
+  const productParams = useMemo<GetProductsParams>(() => {
+    const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
+    const params: GetProductsParams = { page: 1, limit: 20 };
+
+    if (hasApiCategories && activeCategory !== 'all') {
+      params.categorySlug = activeCategory;
+    }
+    if (hasApiBrands && activeBrand !== 'all') {
+      params.brandSlug = activeBrand;
+    }
+    if (debouncedKeyword.trim()) {
+      params.keyword = debouncedKeyword.trim();
+    }
+    if (priceMeta.key !== 'all') {
+      params.minPrice = priceMeta.min;
+      params.maxPrice = priceMeta.max;
+    }
+
+    if (sortBy === 'price-low') {
+      params.sortKey = 'priceNew';
+      params.sortValue = 1;
+    } else if (sortBy === 'price-high') {
+      params.sortKey = 'priceNew';
+      params.sortValue = -1;
+    } else if (sortBy === 'best-selling') {
+      params.sortKey = 'view';
+      params.sortValue = -1;
+    } else {
+      params.sortKey = 'createdAt';
+      params.sortValue = -1;
+    }
+
+    return params;
+  }, [
+    activeBrand,
+    activeCategory,
+    debouncedKeyword,
+    priceFilter,
+    sortBy,
+    hasApiCategories,
+    hasApiBrands,
+  ]);
+
+  const { data, loading, error, refetch } = useProducts(productParams);
+  const { data: suggestions } = useProductSuggestions(keyword);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -127,7 +208,7 @@ const ProductListScreen = () => {
   }, [keyword]);
 
   const products = useMemo<UIProduct[]>(() => {
-    return (data || []).map((item, index) => {
+    return (Array.isArray(data) ? data : []).map((item, index) => {
       const priceValue = item.priceNew ?? item.priceOld ?? 0;
       const originalPrice =
         item.priceOld && item.priceNew && item.priceOld > item.priceNew
@@ -160,7 +241,7 @@ const ProductListScreen = () => {
       list = list.filter((item) => item.title.toLowerCase().includes(normalized));
     }
 
-    if (activeCategoryMeta && activeCategoryMeta.key !== 'all') {
+    if (activeCategoryMeta && activeCategoryMeta.key !== 'all' && activeCategoryMeta.keywords) {
       const keywords = activeCategoryMeta.keywords || [];
       list = list.filter((item) =>
         keywords.some((key) => item.title.toLowerCase().includes(key))
@@ -215,6 +296,40 @@ const ProductListScreen = () => {
             onChangeText={setKeyword}
           />
         </View>
+
+        {keyword.trim().length > 1 && suggestions.length > 0 ? (
+          <View style={styles.suggestionWrap}>
+            {suggestions.map((item) => (
+              <Pressable
+                key={item._id}
+                style={({ pressed }) => [
+                  styles.suggestionItem,
+                  pressed && styles.suggestionItemPressed,
+                ]}
+                onPress={() => {
+                  setKeyword(item.name);
+                  navigation.navigate('ProductDetail', {
+                    productSlug: item.slug || item._id,
+                  });
+                }}
+              >
+                {item.images?.[0] ? (
+                  <Image source={{ uri: item.images[0] }} style={styles.suggestionImage} />
+                ) : (
+                  <View style={styles.suggestionImagePlaceholder} />
+                )}
+                <View style={styles.suggestionContent}>
+                  <Text style={styles.suggestionTitle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.suggestionPrice}>
+                    {formatPrice(item.priceNew ?? item.priceOld ?? 0)}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
           {categories.map((category) => (
@@ -430,6 +545,34 @@ const ProductListScreen = () => {
               </View>
             </View>
 
+            {brands.length > 1 ? (
+              <View style={styles.sheetSection}>
+                <Text style={styles.sheetLabel}>Thương hiệu</Text>
+                <View style={styles.sheetChipRow}>
+                  {brands.map((brand) => (
+                    <Pressable
+                      key={brand.key}
+                      onPress={() => setActiveBrand(brand.key)}
+                      style={({ pressed }) => [
+                        styles.sheetChip,
+                        activeBrand === brand.key && styles.sheetChipActive,
+                        pressed && styles.sheetChipPressed,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.sheetChipText,
+                          activeBrand === brand.key && styles.sheetChipTextActive,
+                        ]}
+                      >
+                        {brand.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
             <View style={styles.sheetSection}>
               <Text style={styles.sheetLabel}>Khoảng giá</Text>
               <View style={styles.sheetChipRow}>
@@ -465,6 +608,7 @@ const ProductListScreen = () => {
                 onPress={() => {
                   setActiveCategory('all');
                   setPriceFilter('all');
+                  setActiveBrand('all');
                 }}
               >
                 <Text style={styles.sheetClearText}>Xóa lọc</Text>
@@ -563,6 +707,50 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.secondary,
     fontSize: 14,
+  },
+  suggestionWrap: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F1F1',
+    paddingVertical: 6,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  suggestionItemPressed: {
+    backgroundColor: '#F7F7F9',
+  },
+  suggestionImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F1F1',
+    marginRight: 10,
+  },
+  suggestionImagePlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F1F1',
+    marginRight: 10,
+  },
+  suggestionContent: {
+    flex: 1,
+  },
+  suggestionTitle: {
+    color: colors.secondary,
+    fontWeight: '600',
+  },
+  suggestionPrice: {
+    color: colors.primary,
+    marginTop: 2,
+    fontSize: 12,
   },
   categoryRow: {
     paddingLeft: 20,
@@ -996,4 +1184,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProductListScreen;
-

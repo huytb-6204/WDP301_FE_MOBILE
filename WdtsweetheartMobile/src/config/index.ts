@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  API_LAN_HOST,
   OPENMAP_KEY,
   VNPAY_TMN_CODE,
   VNPAY_URL,
@@ -21,11 +22,16 @@ const readMetroHost = () => {
 };
 
 const buildAutoApiBaseUrl = () => {
-  const metroHost = readMetroHost();
-  const isAndroidEmulator =
-    Platform.OS === 'android' && (!metroHost || metroHost === '10.0.2.2' || metroHost === 'localhost');
+  const lanHost = API_LAN_HOST?.trim();
+  if (lanHost) {
+    return `http://${lanHost}:${API_PORT}`;
+  }
 
-  if (isAndroidEmulator) {
+  const metroHost = readMetroHost();
+
+  // On Android emulator, always use the special host IP to reach the dev machine.
+  // This avoids cases where metroHost is a LAN IP that the emulator can't resolve.
+  if (Platform.OS === 'android') {
     return `http://10.0.2.2:${API_PORT}`;
   }
 

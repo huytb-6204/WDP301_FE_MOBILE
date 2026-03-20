@@ -6,6 +6,8 @@ import { FavoritesProvider } from '../context/FavoritesContext';
 import HomeScreen from '../screens/home/HomeScreen';
 import ProductListScreen from '../screens/product/ProductListScreen';
 import ProductDetailScreen from '../screens/product/ProductDetailScreen';
+import ServiceListScreen from '../screens/service/ServiceListScreen';
+import ServiceDetailScreen from '../screens/service/ServiceDetailScreen';
 import BlogListScreen from '../screens/blog/BlogListScreen';
 import BlogDetailScreen from '../screens/blog/BlogDetailScreen';
 import CartScreen from '../screens/cart/CartScreen';
@@ -86,23 +88,23 @@ const RootNavigator = () => {
               component={BookingScreen}
               options={{ animation: 'slide_from_right', animationDuration: 300 }}
             />
-            <Stack.Screen
-              name="MyBookings"
-              component={MyBookingsScreen}
-              options={{ animation: 'slide_from_right', animationDuration: 300 }}
-            />
-            <Stack.Screen
-              name="BoardingHotel"
-              component={BoardingHotelScreen}
-              options={{ animation: 'slide_from_right', animationDuration: 300 }}
-            />
-            <Stack.Screen
-              name="MyBoardingBookings"
-              component={MyBoardingBookingsScreen}
-              options={{ animation: 'slide_from_right', animationDuration: 300 }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
+          <Stack.Screen
+            name="MyBookings"
+            component={MyBookingsScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BoardingHotel"
+            component={BoardingHotelScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="MyBoardingBookings"
+            component={MyBoardingBookingsScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
       </FavoritesProvider>
     </CartProvider>
   );

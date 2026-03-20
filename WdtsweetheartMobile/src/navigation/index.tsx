@@ -32,68 +32,80 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const RootNavigator = () => {
   return (
     <CartProvider>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="WelcomeSplash" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="WelcomeSplash" component={WelcomeSplashScreen} />
-          <Stack.Screen name="WelcomeChoice" component={WelcomeChoiceScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="OTPPassword" component={OTPPasswordScreen} />
-          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen
-            name="ProductList"
-            component={ProductListScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="ProductDetail"
-            component={ProductDetailScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="BlogList"
-            component={BlogListScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="BlogDetail"
-            component={BlogDetailScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="Cart"
-            component={CartScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="Checkout"
-            component={CheckoutScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="OrderSuccess"
-            component={OrderSuccessScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="Payment"
-            component={PaymentScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-          <Stack.Screen
-            name="Booking"
-            component={BookingScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
+      <FavoritesProvider>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="WelcomeSplash" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="WelcomeSplash" component={WelcomeSplashScreen} />
+            <Stack.Screen name="WelcomeChoice" component={WelcomeChoiceScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="OTPPassword" component={OTPPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="ProductList"
+              component={ProductListScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="ProductDetail"
+              component={ProductDetailScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="BlogList"
+              component={BlogListScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="BlogDetail"
+              component={BlogDetailScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="Cart"
+              component={CartScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="Checkout"
+              component={CheckoutScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="OrderSuccess"
+              component={OrderSuccessScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="Payment"
+              component={PaymentScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+            <Stack.Screen
+              name="Booking"
+              component={BookingScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
           <Stack.Screen
             name="MyBookings"
             component={MyBookingsScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
+          <Stack.Screen
+            name="BoardingHotel"
+            component={BoardingHotelScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="MyBoardingBookings"
+            component={MyBoardingBookingsScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
+      </FavoritesProvider>
     </CartProvider>
   );
 };

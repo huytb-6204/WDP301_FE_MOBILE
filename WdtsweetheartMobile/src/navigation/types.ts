@@ -23,7 +23,6 @@ export type RootStackParamList = {
   Payment: undefined;
   Booking: undefined;
   MyBookings: undefined;
-<<<<<<< HEAD
   AddressBook: undefined;
   OrderList: undefined;
   PetList: undefined;
@@ -33,8 +32,6 @@ export type RootStackParamList = {
   BoardingCages: undefined;
   BoardingBookings: undefined;
   BoardingBookingCreate: { cageId: string; checkInDate?: string; checkOutDate?: string };
-=======
   BoardingHotel: undefined;
   MyBoardingBookings: undefined;
->>>>>>> Quan
 };

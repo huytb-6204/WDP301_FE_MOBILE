@@ -34,17 +34,14 @@ import {
   useProductSuggestions,
   useProducts,
 } from '../../hooks/useProducts';
+import type { GetProductsParams } from '../../services/api/product';
 import { formatPrice } from '../../utils';
 import { StatusMessage, Toast } from '../../components/common';
 import type { RootStackParamList } from '../../navigation/types';
 import type { ProductItem } from '../../types';
 import { useCart } from '../../context/CartContext';
-<<<<<<< HEAD
-import type { ProductListParams } from '../../services/api/product';
-=======
 import { useFavorites } from '../../context/FavoritesContext';
 import { env } from '../../config';
->>>>>>> Quan
 
 type UIProduct = ProductItem & {
   priceValue: number;
@@ -98,49 +95,30 @@ const priceOptions: PriceOption[] = [
   { key: 'above-500', label: 'Trên 500k', min: 500000, max: Number.MAX_SAFE_INTEGER },
 ];
 
-<<<<<<< HEAD
-const pickCategoryIcon = (value: string) => {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('cho') || normalized.includes('dog')) return Dog;
-  if (normalized.includes('meo') || normalized.includes('cat')) return Cat;
-  if (normalized.includes('food') || normalized.includes('thuc') || normalized.includes('an')) return Bone;
-  if (normalized.includes('phu') || normalized.includes('access')) return PawPrint;
-  return Sparkles;
-=======
 const toAbsoluteUrl = (url?: string) => {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;
   const trimmed = url.replace(/^\/+/, '');
   return `${env.apiBaseUrl}/${trimmed}`;
->>>>>>> Quan
 };
 
 const ProductListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-<<<<<<< HEAD
-  const { data: categoryData } = useProductCategories();
-  const { data: brandData } = useProductBrands();
-=======
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
->>>>>>> Quan
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeBrand, setActiveBrand] = useState('all');
-  const [keyword, setKeyword] = useState('');
   const [sortBy, setSortBy] = useState<SortOption['value']>('newest');
   const [priceFilter, setPriceFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const { data: categoryData } = useProductCategories();
+  const { data: brandData } = useProductBrands();
   const { addToCart, cartCount } = useCart();
   const { favoriteIds, toggleFavorite } = useFavorites();
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { data, loading, error, refetch } = useProducts({
-    page: 1,
-    limit: 24,
-    keyword: debouncedKeyword || undefined,
-  });
 
   const hasApiCategories = Array.isArray(categoryData) && categoryData.length > 0;
   const hasApiBrands = Array.isArray(brandData) && brandData.length > 0;
@@ -168,9 +146,9 @@ const ProductListScreen = () => {
     return [{ key: 'all', label: 'Tất cả' }, ...apiBrands];
   }, [brandData, hasApiBrands]);
 
-  const productParams = useMemo<ProductListParams>(() => {
+  const productParams = useMemo<GetProductsParams>(() => {
     const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
-    const params: ProductListParams = { page: 1, limit: 20 };
+    const params: GetProductsParams = { page: 1, limit: 20 };
 
     if (hasApiCategories && activeCategory !== 'all') {
       params.categorySlug = activeCategory;
@@ -178,8 +156,8 @@ const ProductListScreen = () => {
     if (hasApiBrands && activeBrand !== 'all') {
       params.brandSlug = activeBrand;
     }
-    if (keyword.trim()) {
-      params.keyword = keyword.trim();
+    if (debouncedKeyword.trim()) {
+      params.keyword = debouncedKeyword.trim();
     }
     if (priceMeta.key !== 'all') {
       params.minPrice = priceMeta.min;
@@ -201,7 +179,15 @@ const ProductListScreen = () => {
     }
 
     return params;
-  }, [activeBrand, activeCategory, keyword, priceFilter, sortBy, hasApiCategories, hasApiBrands]);
+  }, [
+    activeBrand,
+    activeCategory,
+    debouncedKeyword,
+    priceFilter,
+    sortBy,
+    hasApiCategories,
+    hasApiBrands,
+  ]);
 
   const { data, loading, error, refetch } = useProducts(productParams);
   const { data: suggestions } = useProductSuggestions(keyword);
@@ -1198,4 +1184,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProductListScreen;
-

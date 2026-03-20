@@ -6,9 +6,7 @@ export type {
   Booking,
   CreateBookingPayload,
 } from './booking';
-<<<<<<< HEAD
 export type { Service, ServiceCategory, PaginationResponse, ServiceListParams } from './service';
-=======
 export type {
   BoardingGateway,
   BoardingPaymentMethod,
@@ -18,4 +16,3 @@ export type {
   BoardingBookingDetail,
   CreateBoardingBookingPayload,
 } from './boarding';
->>>>>>> Quan

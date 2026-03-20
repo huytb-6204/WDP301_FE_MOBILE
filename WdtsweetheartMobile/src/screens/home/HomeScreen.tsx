@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
-=======
 ﻿import React, { useMemo, useState, useCallback } from 'react';
->>>>>>> Quan
 import {
   ActivityIndicator,
   Image,
@@ -91,16 +87,6 @@ const HomeScreen = () => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-<<<<<<< HEAD
-  const productPreview = useMemo(
-    () => (Array.isArray(products) ? products : []).slice(0, 4),
-    [products]
-  );
-  const blogPreview = useMemo(
-    () => (Array.isArray(blogs) ? blogs : []).slice(0, 3),
-    [blogs]
-  );
-=======
   const productPreview = useMemo(() => {
     const safeProducts = Array.isArray(products) ? products.slice() : [];
     const prioritized = safeProducts.sort((a, b) => {
@@ -111,7 +97,6 @@ const HomeScreen = () => {
     return prioritized.slice(0, 4);
   }, [products, favoriteIds]);
   const blogPreview = useMemo(() => (blogs || []).slice(0, 3), [blogs]);
->>>>>>> Quan
 
   const formatBlogDate = (value?: string) => {
     if (!value) return '';
@@ -422,12 +407,14 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
       ) : (
-        blogPreview.map((item) => (
-          <TouchableOpacity
-            key={item._id}
-            style={styles.blogCard}
-            onPress={() => navigation.navigate('BlogDetail', { slug: item.slug, blog: item })}
-          >
+          blogPreview.map((item) => (
+            <TouchableOpacity
+              key={item._id}
+              style={styles.blogCard}
+              onPress={() =>
+                navigation.navigate('BlogDetail', { slug: item.slug || item._id, blog: item })
+              }
+            >
             <Text style={styles.blogDate}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
             <Text style={styles.blogTitle}>{item.name}</Text>
             <Text style={styles.blogDesc} numberOfLines={2}>

@@ -135,7 +135,10 @@ const BlogListScreen = () => {
                 <Pressable
                   key={item._id}
                   onPress={() =>
-                    navigation.navigate('BlogDetail', { slug: item.slug, blog: item })
+                    navigation.navigate('BlogDetail', {
+                      slug: item.slug || item._id,
+                      blog: item,
+                    })
                   }
                   style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
                 >

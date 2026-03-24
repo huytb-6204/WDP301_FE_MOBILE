@@ -12,6 +12,29 @@ export type Product = {
   content?: string;
   categorySlug?: string;
   brandSlug?: string;
+  stock?: number;
+  variants?: ProductVariant[];
+};
+
+export type ProductVariantOption = {
+  attrId: string;
+  value: string;
+  label: string;
+};
+
+export type ProductVariant = {
+  attributeValue: ProductVariantOption[];
+  priceNew?: number | string;
+  priceOld?: number | string;
+  stock?: number | string;
+  status?: boolean;
+};
+
+export type ProductAttribute = {
+  _id: string;
+  name: string;
+  variants: string[];
+  variantsLabel: string[];
 };
 
 export type ProductCategory = {
@@ -29,7 +52,10 @@ export type ProductBrand = {
 export type ProductSuggestion = {
   _id?: string;
   name: string;
-  slug: string;
+  slug?: string;
+  images?: string[];
+  priceOld?: number;
+  priceNew?: number;
 };
 
 export type GetProductsParams = {
@@ -42,7 +68,7 @@ export type GetProductsParams = {
   minPrice?: number;
   maxPrice?: number;
   sortKey?: string;
-  sortValue?: string;
+  sortValue?: string | number;
 };
 
 type ApiEnvelope<T> = {
@@ -52,7 +78,7 @@ type ApiEnvelope<T> = {
   recordList?: T;
   products?: T;
   productDetail?: Product;
-  attributeList?: unknown[];
+  attributeList?: ProductAttribute[];
   categories?: ProductCategory[];
   brands?: ProductBrand[];
   suggestions?: ProductSuggestion[];
@@ -90,7 +116,7 @@ const readList = <T>(payload: unknown): T[] => {
   return [];
 };
 
-const readProductDetail = (payload: unknown) => {
+const readProductDetail = (payload: unknown): ProductDetailResponse => {
   if (typeof payload !== 'object' || !payload) {
     throw new Error('Không thể tải chi tiết sản phẩm');
   }
@@ -102,7 +128,7 @@ const readProductDetail = (payload: unknown) => {
     ((raw.data as Product | undefined) ?? undefined);
   const attributeList =
     raw.attributeList ||
-    ((raw.data as any)?.attributeList as unknown[] | undefined) ||
+    ((raw.data as any)?.attributeList as ProductAttribute[] | undefined) ||
     [];
 
   if (!productDetail || !productDetail._id) {
@@ -139,7 +165,7 @@ export const getProductSuggestions = async (keyword: string) => {
 
 export type ProductDetailResponse = {
   productDetail: Product;
-  attributeList: unknown[];
+  attributeList: ProductAttribute[];
 };
 
 export const getProductDetail = async (slug: string): Promise<ProductDetailResponse> => {

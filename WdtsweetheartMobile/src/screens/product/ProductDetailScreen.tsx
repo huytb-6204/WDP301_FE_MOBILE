@@ -17,7 +17,7 @@ import { useFavorites } from '../../context/FavoritesContext';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { env } from '../../config';
-import { getProductDetail, type Product } from '../../services/api/product';
+import { getProductDetail, type Product, type ProductAttribute, type ProductVariant } from '../../services/api/product';
 import { Toast } from '../../components/common';
 import { formatPrice } from '../../utils';
 
@@ -35,6 +35,8 @@ type UIProduct = {
   isSale: boolean;
   priceValue: number;
   originalPrice?: string;
+  stock?: number;
+  variants?: ProductVariant[];
 };
 
 const toAbsoluteUrl = (url?: string) => {
@@ -62,6 +64,8 @@ const mapToUIProduct = (item: Product): UIProduct => {
     isSale: !!originalPrice,
     priceValue,
     originalPrice,
+    stock: item.stock,
+    variants: item.variants,
   };
 };
 
@@ -82,6 +86,8 @@ const ProductDetailScreen = () => {
   });
   const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
+  const [attributeList, setAttributeList] = useState<ProductAttribute[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
@@ -104,6 +110,8 @@ const ProductDetailScreen = () => {
         const detail = await getProductDetail(productSlug);
         if (active) {
           setProduct(mapToUIProduct(detail.productDetail));
+          setAttributeList(detail.attributeList || []);
+          setSelectedOptions({});
         }
       } catch (err) {
         if (active) {
@@ -122,21 +130,101 @@ const ProductDetailScreen = () => {
     };
   }, [productSlug]);
 
-  const totalPrice = useMemo(() => {
-    if (!product) return formatPrice(0);
-    return formatPrice(product.priceValue * quantity);
-  }, [product, quantity]);
+  const currentVariant = useMemo(() => {
+    if (!product?.variants || product.variants.length === 0 || attributeList.length === 0) return null;
+    return (
+      product.variants.find((variant) => {
+        if (variant.status === false) return false;
+        return (variant.attributeValue || []).every((attribute) => selectedOptions[attribute.attrId] === attribute.value);
+      }) || null
+    );
+  }, [attributeList.length, product?.variants, selectedOptions]);
+
+  const canAddToCart = useMemo(() => {
+    if (!product) return false;
+    if (attributeList.length === 0) return true;
+    return Object.keys(selectedOptions).length === attributeList.length && !!currentVariant;
+  }, [attributeList.length, currentVariant, product, selectedOptions]);
+
+  const currentPriceValue = useMemo(() => {
+    if (!product) return 0;
+    if (currentVariant?.priceNew !== undefined) return Number(currentVariant.priceNew) || 0;
+    if (product.variants && product.variants.length > 0) {
+      const prices = product.variants
+        .filter((variant) => variant.status !== false)
+        .map((variant) => Number(variant.priceNew) || 0)
+        .filter((price) => price > 0);
+      if (prices.length > 0) return Math.min(...prices);
+    }
+    return product.priceValue;
+  }, [currentVariant, product]);
+
+  const currentOriginalPrice = useMemo(() => {
+    if (!product) return undefined;
+    const priceOld = currentVariant?.priceOld !== undefined ? Number(currentVariant.priceOld) || 0 : product.originalPrice ? Number(String(product.originalPrice).replace(/\D/g, '')) || 0 : 0;
+    return priceOld > currentPriceValue ? formatPrice(priceOld) : undefined;
+  }, [currentPriceValue, currentVariant, product]);
+
+  const maxStock = useMemo(() => {
+    if (currentVariant?.stock !== undefined) return Math.max(0, Number(currentVariant.stock) || 0);
+    return Math.max(0, product?.stock || 0);
+  }, [currentVariant, product]);
+
+  useEffect(() => {
+    if (maxStock <= 0) {
+      setQuantity(0);
+      return;
+    }
+    setQuantity((prev) => Math.min(Math.max(prev, 1), maxStock));
+  }, [maxStock]);
+
+  const totalPrice = useMemo(() => formatPrice(currentPriceValue * quantity), [currentPriceValue, quantity]);
+
+  const selectedVariant = useMemo(
+    () =>
+      currentVariant?.attributeValue?.map((item) => ({
+        attrId: item.attrId,
+        value: item.value,
+        label: item.label,
+      })) || undefined,
+    [currentVariant]
+  );
 
   const handleAddToCart = () => {
-    if (!product) return;
-    addToCart(product, quantity);
+    if (!product || quantity <= 0 || !canAddToCart) return;
+    addToCart(
+      {
+        ...product,
+        priceValue: currentPriceValue,
+        price: formatPrice(currentPriceValue),
+        originalPrice: currentOriginalPrice,
+      },
+      quantity,
+      selectedVariant
+    );
     showToast(`Đã thêm ${quantity} sản phẩm vào giỏ`);
   };
 
   const handleBuyNow = () => {
-    if (!product) return;
-    replaceCart(product, quantity);
+    if (!product || quantity <= 0 || !canAddToCart) return;
+    replaceCart(
+      {
+        ...product,
+        priceValue: currentPriceValue,
+        price: formatPrice(currentPriceValue),
+        originalPrice: currentOriginalPrice,
+      },
+      quantity,
+      selectedVariant
+    );
     navigation.navigate('Checkout');
+  };
+
+  const handleSelectOption = (attrId: string, value: string) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [attrId]: value,
+    }));
   };
 
   const favoriteActive = product ? isFavorite(product.id) : false;
@@ -206,9 +294,42 @@ const ProductDetailScreen = () => {
             </View>
 
             <View style={styles.priceContainer}>
-              <Text style={styles.currentPrice}>{product.price}</Text>
-              {product.originalPrice && <Text style={styles.originalPrice}>{product.originalPrice}</Text>}
+              <Text style={styles.currentPrice}>{formatPrice(currentPriceValue)}</Text>
+              {currentOriginalPrice ? <Text style={styles.originalPrice}>{currentOriginalPrice}</Text> : null}
             </View>
+
+            {attributeList.length > 0 ? (
+              <View style={styles.variantBlock}>
+                <Text style={styles.sectionTitle}>Phân loại</Text>
+                {attributeList.map((attribute) => (
+                  <View key={attribute._id} style={styles.variantGroup}>
+                    <Text style={styles.variantGroupTitle}>
+                      {attribute.name}
+                      {selectedOptions[attribute._id]
+                        ? `: ${attribute.variantsLabel[attribute.variants.indexOf(selectedOptions[attribute._id])] || selectedOptions[attribute._id]}`
+                        : ''}
+                    </Text>
+                    <View style={styles.variantOptions}>
+                      {attribute.variants.map((value, index) => {
+                        const active = selectedOptions[attribute._id] === value;
+                        return (
+                          <TouchableOpacity
+                            key={`${attribute._id}-${value}`}
+                            onPress={() => handleSelectOption(attribute._id, value)}
+                            style={[styles.variantChip, active && styles.variantChipActive]}
+                          >
+                            <Text style={[styles.variantChipText, active && styles.variantChipTextActive]}>
+                              {attribute.variantsLabel[index] || value}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+                {!canAddToCart ? <Text style={styles.variantHint}>Chọn đầy đủ phân loại để thêm vào giỏ hoặc mua ngay.</Text> : null}
+              </View>
+            ) : null}
 
             <View style={styles.descriptionContainer}>
               <Text style={styles.sectionTitle}>Mô tả sản phẩm</Text>
@@ -226,19 +347,22 @@ const ProductDetailScreen = () => {
               <Text style={styles.sectionTitle}>Số lượng</Text>
               <View style={styles.quantityControl}>
                 <TouchableOpacity
-                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  onPress={() => setQuantity(Math.max(maxStock > 0 ? 1 : 0, quantity - 1))}
                   style={styles.quantityButton}
+                  disabled={maxStock === 0}
                 >
                   <Text style={styles.quantityButtonText}>-</Text>
                 </TouchableOpacity>
                 <Text style={styles.quantityValue}>{quantity}</Text>
                 <TouchableOpacity
-                  onPress={() => setQuantity(quantity + 1)}
+                  onPress={() => setQuantity(Math.min(maxStock, quantity + 1))}
                   style={styles.quantityButton}
+                  disabled={maxStock === 0}
                 >
                   <Text style={styles.quantityButtonText}>+</Text>
                 </TouchableOpacity>
               </View>
+              <Text style={styles.stockText}>{maxStock > 0 ? `Còn ${maxStock} sản phẩm` : 'Tạm hết hàng'}</Text>
             </View>
 
             <View style={styles.shippingContainer}>
@@ -254,12 +378,12 @@ const ProductDetailScreen = () => {
       )}
 
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
+        <TouchableOpacity style={[styles.addToCartButton, (!canAddToCart || quantity <= 0) && styles.actionDisabled]} onPress={handleAddToCart} disabled={!canAddToCart || quantity <= 0}>
           <ShoppingCart size={20} color="#fff" />
           <Text style={styles.addToCartText}>Thêm giỏ</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.buyNowButton} onPress={handleBuyNow}>
+        <TouchableOpacity style={[styles.buyNowButton, (!canAddToCart || quantity <= 0) && styles.actionDisabled]} onPress={handleBuyNow} disabled={!canAddToCart || quantity <= 0}>
           <Text style={styles.buyNowText}>Mua ngay</Text>
           <Text style={styles.buyNowPrice}>{totalPrice}</Text>
         </TouchableOpacity>
@@ -329,6 +453,25 @@ const styles = StyleSheet.create({
   priceContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
   currentPrice: { fontSize: 20, fontWeight: '700', color: colors.primary },
   originalPrice: { fontSize: 14, color: '#999999', textDecorationLine: 'line-through' },
+  variantBlock: { marginBottom: 20 },
+  variantGroup: { marginBottom: 14 },
+  variantGroupTitle: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8 },
+  variantOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  variantChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E7DADA',
+    backgroundColor: '#FFF9F9',
+  },
+  variantChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#FFF0F0',
+  },
+  variantChipText: { fontSize: 13, color: '#6C5F5F', fontWeight: '600' },
+  variantChipTextActive: { color: colors.primary },
+  variantHint: { marginTop: 4, fontSize: 12, color: '#B46A6A' },
   descriptionContainer: { marginBottom: 20 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 10 },
   description: { fontSize: 13, color: colors.text, lineHeight: 20 },
@@ -350,6 +493,7 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
+  stockText: { marginTop: 8, fontSize: 12, color: '#8E7F7F' },
   shippingContainer: {
     marginBottom: 20,
     padding: 12,
@@ -391,6 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     borderRadius: 12,
   },
+  actionDisabled: { opacity: 0.45 },
   buyNowText: {
     fontSize: 14,
     fontWeight: '700',

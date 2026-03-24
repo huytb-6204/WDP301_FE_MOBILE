@@ -102,6 +102,23 @@ const toAbsoluteUrl = (url?: string) => {
   return `${env.apiBaseUrl}/${trimmed}`;
 };
 
+const pickCategoryIcon = (value?: string) => {
+  const normalized = value?.toLowerCase() || '';
+  if (normalized.includes('dog') || normalized.includes('cho')) return Dog;
+  if (normalized.includes('cat') || normalized.includes('meo')) return Cat;
+  if (normalized.includes('food') || normalized.includes('thuc-an') || normalized.includes('thức ăn')) return Bone;
+  if (
+    normalized.includes('accessories') ||
+    normalized.includes('phu-kien') ||
+    normalized.includes('phụ kiện') ||
+    normalized.includes('do-choi') ||
+    normalized.includes('đồ chơi')
+  ) {
+    return PawPrint;
+  }
+  return Sparkles;
+};
+
 const ProductListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState('');
@@ -126,11 +143,13 @@ const ProductListScreen = () => {
   const categories = useMemo<CategoryOption[]>(() => {
     if (!hasApiCategories) return fallbackCategories;
 
-    const apiCategories = categoryData.map((category) => ({
-      key: category.slug || category._id,
-      label: category.name,
-      icon: pickCategoryIcon(category.slug || category.name),
-    }));
+    const apiCategories: CategoryOption[] = categoryData
+      .map((category) => ({
+        key: category.slug || category._id || category.name,
+        label: category.name,
+        icon: pickCategoryIcon(category.slug || category.name),
+      }))
+      .filter((category) => Boolean(category.key));
 
     return [{ key: 'all', label: 'Tất cả', icon: Sparkles }, ...apiCategories];
   }, [categoryData, hasApiCategories]);
@@ -138,10 +157,12 @@ const ProductListScreen = () => {
   const brands = useMemo<BrandOption[]>(() => {
     if (!hasApiBrands) return [{ key: 'all', label: 'Tất cả' }];
 
-    const apiBrands = brandData.map((brand) => ({
-      key: brand.slug || brand._id,
-      label: brand.name,
-    }));
+    const apiBrands: BrandOption[] = brandData
+      .map((brand) => ({
+        key: brand.slug || brand._id || brand.name,
+        label: brand.name,
+      }))
+      .filter((brand) => Boolean(brand.key));
 
     return [{ key: 'all', label: 'Tất cả' }, ...apiBrands];
   }, [brandData, hasApiBrands]);
@@ -309,12 +330,12 @@ const ProductListScreen = () => {
                 onPress={() => {
                   setKeyword(item.name);
                   navigation.navigate('ProductDetail', {
-                    productSlug: item.slug || item._id,
+                    productSlug: item.slug || item._id || item.name,
                   });
                 }}
               >
                 {item.images?.[0] ? (
-                  <Image source={{ uri: item.images[0] }} style={styles.suggestionImage} />
+                  <Image source={{ uri: toAbsoluteUrl(item.images[0]) }} style={styles.suggestionImage} />
                 ) : (
                   <View style={styles.suggestionImagePlaceholder} />
                 )}

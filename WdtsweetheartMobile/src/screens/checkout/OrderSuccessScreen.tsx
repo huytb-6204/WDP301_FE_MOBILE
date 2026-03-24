@@ -122,6 +122,12 @@ const OrderSuccessScreen = () => {
                 <Text style={styles.discountValue}>-{formatPrice(order.discount)}</Text>
               </View>
             ) : null}
+            {order.pointDiscount ? (
+              <View style={styles.summaryRow}>
+                <Text style={styles.muted}>Giảm từ điểm</Text>
+                <Text style={styles.discountValue}>-{formatPrice(order.pointDiscount)}</Text>
+              </View>
+            ) : null}
             <View style={styles.summaryRow}>
               <Text style={styles.muted}>
                 Phí vận chuyển{order.shipping?.carrierName ? ` (${order.shipping.carrierName})` : ''}

@@ -1,9 +1,9 @@
-
-import { apiPost } from './client';
+import { apiPostRaw } from './client';
 
 export type CartVariant = {
   attrId: string;
   value: string;
+  label?: string;
 };
 
 export type CartPayloadItem = {
@@ -18,9 +18,9 @@ export type UserAddress = {
 };
 
 export type CartDetail = {
-  // server response fields; adapt as needed
   productId: string;
   quantity: number;
+  variant?: CartVariant[];
   detail: {
     images?: string[];
     slug?: string;
@@ -35,23 +35,34 @@ export type CartDetail = {
 
 export type CartListResponse = {
   cart: CartDetail[];
-  shippingOptions?: any; 
+  shippingOptions?: any;
+  canUsePoint?: number;
+  totalPoint?: number;
+  usedPoint?: number;
+  POINT_TO_MONEY?: number;
+  MONEY_PER_POINT?: number;
 };
 
 export const fetchCartList = async (
   items: CartPayloadItem[],
   userAddress?: UserAddress
 ): Promise<CartListResponse> => {
-  const res = await apiPost<CartListResponse>('/api/v1/client/cart/list', {
+  const res = await apiPostRaw<any>('/api/v1/client/cart/list', {
     cart: items,
     userAddress,
   });
-  // apiPost wraps result in ApiResponse; ensure data exists
-  if (!res.data) {
+
+  const normalized = Array.isArray(res?.cart)
+    ? res
+    : Array.isArray(res?.data?.cart)
+      ? res.data
+      : null;
+
+  if (!normalized || !Array.isArray(normalized.cart)) {
     throw new Error('Empty response from cart list');
   }
-  return res.data;
 
+  return normalized as CartListResponse;
 };
 
 export const getCartDetail = async (payload: {

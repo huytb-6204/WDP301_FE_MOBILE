@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -108,6 +108,7 @@ const CheckoutScreen = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([]);
+  const [selectedSuggestionLabel, setSelectedSuggestionLabel] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -118,8 +119,13 @@ const CheckoutScreen = () => {
   const [pointToMoney, setPointToMoney] = useState(0);
   const [usedPoint, setUsedPoint] = useState(0);
   const [shippingCalculated, setShippingCalculated] = useState(false);
+  const [resolvedShippingOptions, setResolvedShippingOptions] = useState<ShippingOption[]>([]);
+  const [shippingDebug, setShippingDebug] = useState('');
 
-  const shippingTyped = useMemo(() => normalizeShippingOptions(shippingOptions), [shippingOptions]);
+  const shippingTyped = useMemo(() => {
+    if (resolvedShippingOptions.length > 0) return resolvedShippingOptions;
+    return normalizeShippingOptions(shippingOptions);
+  }, [resolvedShippingOptions, shippingOptions]);
   const currentAddress = useMemo(
     () => addresses.find((item) => item._id === selectedAddressId) || null,
     [addresses, selectedAddressId]
@@ -134,6 +140,13 @@ const CheckoutScreen = () => {
   }, [shippingMethod, shippingTyped]);
   const pointDiscount = usedPoint * pointToMoney;
   const total = Math.max(0, subTotal + shippingFee - couponDiscount - pointDiscount);
+
+  const clearShippingSelection = () => {
+    setResolvedShippingOptions([]);
+    setShippingMethod('');
+    setShippingCalculated(false);
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -152,6 +165,7 @@ const CheckoutScreen = () => {
           const preferred = addressResult.value.find((item) => item.isDefault) || addressResult.value[0];
           setSelectedAddressId(preferred._id);
           setCoords(normalizeCoords({ latitude: preferred.latitude, longitude: preferred.longitude }));
+          setSelectedSuggestionLabel('');
         }
         if (couponResult.status === 'fulfilled' && couponResult.value.success) {
           setAvailableCoupons(couponResult.value.data || []);
@@ -217,7 +231,7 @@ const CheckoutScreen = () => {
       return manualCoords;
     }
 
-    const fallbackAddress = address.trim() || searchKeyword.trim();
+    const fallbackAddress = searchKeyword.trim() || address.trim();
     if (fallbackAddress) {
       const fallbackCoords = await geocodeManualAddress(fallbackAddress);
       if (fallbackCoords) {
@@ -232,6 +246,10 @@ const CheckoutScreen = () => {
     try {
       setLoadingShip(true);
       setShippingCalculated(true);
+      setShippingDebug('');
+      if (selectedAddressId === 'new' && !coords) {
+        throw new Error('Vui l\u00f2ng ch\u1ecdn m\u1ed9t g\u1ee3i \u00fd \u0111\u1ecba ch\u1ec9 \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u1ea5y \u0111\u00fang v\u1ecb tr\u00ed giao h\u00e0ng.');
+      }
       if (selectedAddressId === 'new' && !coords && (address.trim() || searchKeyword.trim())) {
         await geocodeManualAddress(address.trim() || searchKeyword.trim());
       }
@@ -239,6 +257,12 @@ const CheckoutScreen = () => {
       const res = await fetchCartDetail(nextCoords);
       syncCartExtras(res);
       const nextOptions = normalizeShippingOptions(res?.shippingOptions);
+      setResolvedShippingOptions(nextOptions);
+      setShippingDebug(
+        `lat=${nextCoords.latitude.toFixed(6)} | lon=${nextCoords.longitude.toFixed(6)} | raw=${
+          res?.shippingOptions == null ? 'null' : Array.isArray(res?.shippingOptions) ? `array:${res.shippingOptions.length}` : typeof res?.shippingOptions
+        } | normalized=${nextOptions.length}`
+      );
 
       const first = nextOptions[0] || null;
       if (!first) {
@@ -247,6 +271,8 @@ const CheckoutScreen = () => {
       }
       setShippingMethod(getShippingMethodValue(first));
     } catch (error) {
+      setResolvedShippingOptions([]);
+      setShippingDebug(error instanceof Error ? error.message : 'shipping_error');
       if (!silent) {
         Alert.alert('Kh\u00f4ng th\u1ec3 t\u00ednh ph\u00ed ship', error instanceof Error ? error.message : 'Vui l\u00f2ng th\u1eed l\u1ea1i.');
       }
@@ -276,6 +302,14 @@ const CheckoutScreen = () => {
       setShippingMethod(getShippingMethodValue(shippingTyped[0]));
     }
   }, [shippingTyped, shippingMethod]);
+
+  useEffect(() => {
+    if (resolvedShippingOptions.length > 0) return;
+    const next = normalizeShippingOptions(shippingOptions);
+    if (next.length > 0) {
+      setResolvedShippingOptions(next);
+    }
+  }, [shippingOptions, resolvedShippingOptions.length]);
 
   useEffect(() => {
     if (checkedCartItems.length === 0) {
@@ -332,9 +366,10 @@ const CheckoutScreen = () => {
 
   const handleSelectSuggestion = (suggestion: GeocodeSuggestion) => {
     setCoords(normalizeCoords({ latitude: suggestion.latitude, longitude: suggestion.longitude }));
-    setAddress(suggestion.displayName);
-    setSearchKeyword('');
+    setSelectedSuggestionLabel(suggestion.displayName);
+    setSearchKeyword(suggestion.displayName);
     setSuggestions([]);
+    setResolvedShippingOptions([]);
     setShippingMethod('');
     setShippingCalculated(false);
     setTimeout(() => {
@@ -347,8 +382,16 @@ const CheckoutScreen = () => {
       Alert.alert('Gi\u1ecf h\u00e0ng tr\u1ed1ng', 'Vui l\u00f2ng th\u00eam s\u1ea3n ph\u1ea9m tr\u01b0\u1edbc khi thanh to\u00e1n.');
       return;
     }
-    if (!currentAddress && (!fullName.trim() || !phone.trim() || !address.trim())) {
-      Alert.alert('Thi\u1ebfu th\u00f4ng tin', 'Vui l\u00f2ng nh\u1eadp h\u1ecd t\u00ean, s\u1ed1 \u0111i\u1ec7n tho\u1ea1i v\u00e0 \u0111\u1ecba ch\u1ec9.');
+    if (!currentAddress && !fullName.trim()) {
+      Alert.alert('Thi\u1ebfu th\u00f4ng tin', 'Vui l\u00f2ng nh\u1eadp h\u1ecd v\u00e0 t\u00ean.');
+      return;
+    }
+    if (!currentAddress && !phone.trim()) {
+      Alert.alert('Thi\u1ebfu th\u00f4ng tin', 'Vui l\u00f2ng nh\u1eadp s\u1ed1 \u0111i\u1ec7n tho\u1ea1i.');
+      return;
+    }
+    if (!currentAddress && !address.trim()) {
+      Alert.alert('Thi\u1ebfu th\u00f4ng tin', 'Vui l\u00f2ng ghi chi ti\u1ebft \u0111\u1ecba ch\u1ec9 giao h\u00e0ng.');
       return;
     }
     if (!shippingMethod) {
@@ -471,6 +514,8 @@ const CheckoutScreen = () => {
                 key={item._id}
                 onPress={() => {
                   setSelectedAddressId(item._id);
+                  setSelectedSuggestionLabel('');
+                  setResolvedShippingOptions([]);
                   setShippingMethod('');
                   setShippingCalculated(false);
                 }}
@@ -491,6 +536,9 @@ const CheckoutScreen = () => {
           <Pressable
             onPress={() => {
               setSelectedAddressId('new');
+              setSelectedSuggestionLabel('');
+              setCoords(null);
+              setResolvedShippingOptions([]);
               setShippingMethod('');
               setShippingCalculated(false);
             }}
@@ -516,9 +564,23 @@ const CheckoutScreen = () => {
               />
               <View style={styles.searchWrap}>
                 <Search size={16} color="#8A8A8A" />
-                <TextInput value={searchKeyword} onChangeText={setSearchKeyword} placeholder={'T\u00ecm nhanh \u0111\u1ecba ch\u1ec9'} style={styles.searchInput} />
+                <TextInput
+                  value={searchKeyword}
+                  onChangeText={(value) => {
+                    setSearchKeyword(value);
+                    if (value.trim() !== selectedSuggestionLabel.trim()) {
+                      setCoords(null);
+                      setSelectedSuggestionLabel('');
+                      setResolvedShippingOptions([]);
+                      setShippingMethod('');
+                      setShippingCalculated(false);
+                    }
+                  }}
+                  placeholder={'T\u00ecm nhanh \u0111\u1ecba ch\u1ec9'}
+                  style={styles.searchInput}
+                />
               </View>
-              <Text style={styles.helperText}>{'Ch\u1ecdn g\u1ee3i \u00fd \u0111\u1ecba ch\u1ec9 \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u1ea5y \u0111\u00fang ph\u00ed giao h\u00e0ng c\u1ee7a t\u1eebng h\u00e3ng ship.'}</Text>
+              <Text style={styles.helperText}>{'Bạn có thể chọn địa chỉ chuẩn ở trên hoặc tìm nhanh bằng từ khóa để hệ thống lấy đúng vị trí giao hàng.'}</Text>
               {searchingAddress ? <Text style={styles.muted}>{'\u0110ang t\u00ecm g\u1ee3i \u00fd \u0111\u1ecba ch\u1ec9...'}</Text> : null}
               {suggestions.length > 0 ? (
                 <View style={styles.suggestionList}>
@@ -533,22 +595,17 @@ const CheckoutScreen = () => {
                 value={address}
                 onChangeText={(value) => {
                   setAddress(value);
-                  setCoords(null);
+                  setResolvedShippingOptions([]);
                   setShippingMethod('');
                   setShippingCalculated(false);
                 }}
-                onBlur={async () => {
-                  if (selectedAddressId !== 'new' || coords || !address.trim()) return;
-                  try {
-                    await geocodeManualAddress(address);
-                  } catch {
-                    setCoords(null);
-                  }
-                }}
-                placeholder={'\u0110\u1ecba ch\u1ec9 chi ti\u1ebft'}
+                placeholder={'S\u1ed1 nh\u00e0, t\u00f2a nh\u00e0, ghi ch\u00fa giao h\u00e0ng'}
                 multiline
                 style={[styles.input, styles.textarea]}
               />
+              <Text style={styles.helperText}>
+                {'Vui lòng ghi đầy đủ số nhà, tên đường, hẻm, tầng hoặc mốc giao hàng để shipper giao chính xác hơn.'}
+              </Text>
               <View style={[styles.statusPill, coords ? styles.statusPillReady : styles.statusPillPending]}>
                 <Text style={[styles.statusPillText, coords ? styles.statusPillTextReady : styles.statusPillTextPending]}>
                   {coords
@@ -619,13 +676,16 @@ const CheckoutScreen = () => {
                 );
               })
             ) : (
-              <Text style={styles.inlineHint}>
-                {hasResolvedLocation
-                  ? 'H\u1ec7 th\u1ed1ng ch\u01b0a tr\u1ea3 v\u1ec1 b\u1ea3ng ph\u00ed c\u1ee7a c\u00e1c h\u00e3ng ship cho v\u1ecb tr\u00ed n\u00e0y.'
-                  : selectedAddressId === 'new'
-                    ? 'Ch\u1ecdn g\u1ee3i \u00fd ho\u1eb7c nh\u1eadp \u0111\u1ecba ch\u1ec9 chi ti\u1ebft \u0111\u1ec3 xem ph\u00ed ship.'
-                    : 'Kh\u00f4ng c\u00f3 ph\u01b0\u01a1ng th\u1ee9c v\u1eadn chuy\u1ec3n.'}
-              </Text>
+              <View>
+                <Text style={styles.inlineHint}>
+                  {hasResolvedLocation
+                    ? 'H\u1ec7 th\u1ed1ng ch\u01b0a tr\u1ea3 v\u1ec1 b\u1ea3ng ph\u00ed c\u1ee7a c\u00e1c h\u00e3ng ship cho v\u1ecb tr\u00ed n\u00e0y.'
+                    : selectedAddressId === 'new'
+                      ? 'Ch\u1ecdn g\u1ee3i \u00fd ho\u1eb7c nh\u1eadp \u0111\u1ecba ch\u1ec9 chi ti\u1ebft \u0111\u1ec3 xem ph\u00ed ship.'
+                      : 'Kh\u00f4ng c\u00f3 ph\u01b0\u01a1ng th\u1ee9c v\u1eadn chuy\u1ec3n.'}
+                </Text>
+                {shippingDebug ? <Text style={styles.debugText}>{shippingDebug}</Text> : null}
+              </View>
             )}
           </View>
           <View style={styles.divider} />
@@ -899,6 +959,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   selectedText: { flex: 1, fontSize: 12, color: '#666', lineHeight: 18 },
+  selectedLocationRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: '#FFF8F7',
+    borderWidth: 1,
+    borderColor: '#F3E1DE',
+  },
+  selectedLocationText: { flex: 1, fontSize: 12, color: '#666', lineHeight: 18 },
   primaryBtn: {
     marginTop: 12,
     backgroundColor: colors.primary,
@@ -984,6 +1055,7 @@ const styles = StyleSheet.create({
   inlineOptionPrice: { fontSize: 13, color: '#7B7B7B', fontWeight: '600' },
   inlineOptionPriceActive: { color: colors.primary },
   inlineHint: { fontSize: 13, color: '#7B7B7B', lineHeight: 20 },
+  debugText: { fontSize: 11, color: '#9A3412', lineHeight: 16, marginTop: 8 },
   totalLabel: { fontSize: 14, fontWeight: '700', color: colors.secondary },
   totalValue: { fontSize: 16, fontWeight: '700', color: colors.primary },
   bottomBar: {

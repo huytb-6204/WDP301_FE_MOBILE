@@ -1,4 +1,4 @@
-export type GeocodeResult = {
+﻿export type GeocodeResult = {
   latitude: number;
   longitude: number;
 };

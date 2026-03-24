@@ -37,6 +37,8 @@ type UIProduct = {
   originalPrice?: string;
   stock?: number;
   variants?: ProductVariant[];
+  description?: string;
+  content?: string;
 };
 
 const toAbsoluteUrl = (url?: string) => {
@@ -66,7 +68,27 @@ const mapToUIProduct = (item: Product): UIProduct => {
     originalPrice,
     stock: item.stock,
     variants: item.variants,
+    description: item.description,
+    content: item.content,
   };
+};
+
+const toPlainText = (value?: string) => {
+  if (!value) return '';
+
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<li>/gi, '• ')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 };
 
 const ProductDetailScreen = () => {
@@ -179,6 +201,16 @@ const ProductDetailScreen = () => {
   }, [maxStock]);
 
   const totalPrice = useMemo(() => formatPrice(currentPriceValue * quantity), [currentPriceValue, quantity]);
+
+  const detailDescription = useMemo(() => {
+    const richContent = toPlainText(product?.content);
+    if (richContent) return richContent;
+
+    const shortDescription = toPlainText(product?.description);
+    if (shortDescription) return shortDescription;
+
+    return `${product?.title || 'Sản phẩm'} là sản phẩm chất lượng cao, được chọn lọc kỹ lưỡng để mang lại những trải nghiệm tốt nhất cho thú cưng của bạn.`;
+  }, [product?.content, product?.description, product?.title]);
 
   const selectedVariant = useMemo(
     () =>
@@ -333,14 +365,7 @@ const ProductDetailScreen = () => {
 
             <View style={styles.descriptionContainer}>
               <Text style={styles.sectionTitle}>Mô tả sản phẩm</Text>
-              <Text style={styles.description}>
-                {product.title} là sản phẩm chất lượng cao, được chọn lọc kỹ lưỡng để mang lại
-                những trải nghiệm tốt nhất cho thú cưng của bạn. Sản phẩm được sản xuất từ các
-                nguyên liệu an toàn, không độc hại.{"\n\n"}
-                • Chất lượng đảm bảo{"\n"}
-                • Giá cả hợp lý{"\n"}
-                • Giao hàng nhanh chóng
-              </Text>
+              <Text style={styles.description}>{detailDescription}</Text>
             </View>
 
             <View style={styles.quantityContainer}>

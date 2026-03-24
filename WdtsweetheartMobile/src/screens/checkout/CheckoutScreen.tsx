@@ -247,9 +247,6 @@ const CheckoutScreen = () => {
       setLoadingShip(true);
       setShippingCalculated(true);
       setShippingDebug('');
-      if (selectedAddressId === 'new' && !coords) {
-        throw new Error('Vui l\u00f2ng ch\u1ecdn m\u1ed9t g\u1ee3i \u00fd \u0111\u1ecba ch\u1ec9 \u0111\u1ec3 h\u1ec7 th\u1ed1ng l\u1ea5y \u0111\u00fang v\u1ecb tr\u00ed giao h\u00e0ng.');
-      }
       if (selectedAddressId === 'new' && !coords && (address.trim() || searchKeyword.trim())) {
         await geocodeManualAddress(address.trim() || searchKeyword.trim());
       }
@@ -580,7 +577,7 @@ const CheckoutScreen = () => {
                   style={styles.searchInput}
                 />
               </View>
-              <Text style={styles.helperText}>{'Bạn có thể chọn địa chỉ chuẩn ở trên hoặc tìm nhanh bằng từ khóa để hệ thống lấy đúng vị trí giao hàng.'}</Text>
+              <Text style={styles.helperText}>{'Bạn có thể nhập trực tiếp địa chỉ hoặc chọn từ gợi ý để hệ thống lấy vị trí giao hàng.'}</Text>
               {searchingAddress ? <Text style={styles.muted}>{'\u0110ang t\u00ecm g\u1ee3i \u00fd \u0111\u1ecba ch\u1ec9...'}</Text> : null}
               {suggestions.length > 0 ? (
                 <View style={styles.suggestionList}>

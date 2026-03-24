@@ -80,7 +80,7 @@ const BookingScreen = () => {
   const isFromServiceDetail = !!route.params?.serviceId;
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [availableShifts, setAvailableShifts] = useState<ShiftSlotGroup[]>([]);
-  const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
+  const [activeShiftKey, setActiveShiftKey] = useState<string | null>(null);
   const [activeHour, setActiveHour] = useState<string | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [petTypeFilter, setPetTypeFilter] = useState<'ALL' | 'DOG' | 'CAT'>('ALL');
@@ -108,6 +108,9 @@ const BookingScreen = () => {
   const [showCreatePetModal, setShowCreatePetModal] = useState(false);
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const [previousTimeOnOpen, setPreviousTimeOnOpen] = useState<string | null>(null);
+  const [showRevertModal, setShowRevertModal] = useState(false);
+  const [pendingRevertSlot, setPendingRevertSlot] = useState<TimeSlot | null>(null);
   const [currentMonth, setCurrentMonth] = useState(parseDateInput(date));
   const [bookingPreview, setBookingPreview] = useState<{
     totalDuration: number;
@@ -182,22 +185,51 @@ const BookingScreen = () => {
     };
   }, [currentMonth]);
 
+  const getShiftKey = (shift: ShiftSlotGroup, index: number, usedIds: Set<string>) => {
+    if (shift._id && !usedIds.has(shift._id)) return shift._id;
+    return `${shift.name || 'shift'}-${index}`;
+  };
+
+  const shiftKeyMap = useMemo(() => {
+    const usedIds = new Set<string>();
+    const entries = availableShifts.map((shift, index) => {
+      const key = getShiftKey(shift, index, usedIds);
+      if (shift._id) usedIds.add(shift._id);
+      return { key, shift };
+    });
+    return entries;
+  }, [availableShifts]);
+
   const activeShift = useMemo(() => {
-    if (!availableShifts.length) return null;
-    if (activeShiftId) {
-      return availableShifts.find((shift) => shift._id === activeShiftId) || availableShifts[0];
+    if (!shiftKeyMap.length) return null;
+    if (activeShiftKey) {
+      return shiftKeyMap.find((item) => item.key === activeShiftKey)?.shift || shiftKeyMap[0].shift;
     }
-    return availableShifts[0];
-  }, [availableShifts, activeShiftId]);
+    return shiftKeyMap[0].shift;
+  }, [shiftKeyMap, activeShiftKey]);
+
+  const PAST_TIME_BUFFER_MINUTES = 10;
+
+  const getMinutesFromTime = (time: string) => {
+    const match = time.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    const lower = time.toLowerCase();
+    if (lower.includes('pm') && hours < 12) hours += 12;
+    if (lower.includes('am') && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
 
   const isPastTimeSlot = (time: string) => {
     const today = formatDateInput(new Date());
     if (date !== today) return false;
+    const minutes = getMinutesFromTime(time);
+    if (minutes === null) return false;
     const now = new Date();
-    const [h, m] = time.split(':').map((v) => Number(v));
-    const check = new Date();
-    check.setHours(h, m, 0, 0);
-    return check.getTime() <= now.getTime();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return minutes < nowMinutes - PAST_TIME_BUFFER_MINUTES;
   };
 
   const isSlotSelectable = (slot: TimeSlot) =>
@@ -219,19 +251,23 @@ const BookingScreen = () => {
   }, [activeShift]);
 
   useEffect(() => {
-    if (!availableShifts.length) {
-      setActiveShiftId(null);
+    if (!shiftKeyMap.length) {
+      setActiveShiftKey(null);
       setActiveHour(null);
       setSelectedTimeSlot(null);
       return;
     }
-    const activeShiftHasSelectable = activeShift?.slots?.some((slot) => isSlotSelectable(slot));
-    if (!activeShiftId || !availableShifts.find((shift) => shift._id === activeShiftId) || !activeShiftHasSelectable) {
-      const firstAvailableShift =
-        availableShifts.find((shift) => shift.slots.some((slot) => isSlotSelectable(slot))) || availableShifts[0];
-      setActiveShiftId(firstAvailableShift?._id || availableShifts[0]._id);
+    if (!activeShiftKey || !shiftKeyMap.find((item) => item.key === activeShiftKey)) {
+      setActiveShiftKey(shiftKeyMap[0].key);
     }
-  }, [activeShift, activeShiftId, availableShifts, date]);
+  }, [activeShiftKey, shiftKeyMap]);
+
+  useEffect(() => {
+    if (!activeShiftKey) return;
+    setActiveHour(null);
+    setSelectedTimeSlot(null);
+    setBookingPreview(null);
+  }, [activeShiftKey]);
 
   useEffect(() => {
     const hours = Object.keys(groupedSlots).sort((a, b) => Number(a) - Number(b));
@@ -328,6 +364,22 @@ const BookingScreen = () => {
         petIds,
       });
       const shifts = res.data?.shifts || [];
+      if (__DEV__) {
+        const sampleSlots = shifts.slice(0, 2).map((shift) => ({
+          shiftId: shift._id,
+          name: shift.name,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          sampleTimes: (shift.slots || []).slice(0, 5).map((slot) => slot.time),
+        }));
+        console.log('[Booking][getTimeSlots]', {
+          date: nextDate,
+          serviceId: nextServiceId,
+          petCount: petIds.length > 0 ? petIds.length : 1,
+          shiftCount: shifts.length,
+          sampleSlots,
+        });
+      }
       setAvailableShifts(shifts);
       setSelectedTimeSlot((prev) => {
         if (!prev) return null;
@@ -420,6 +472,16 @@ const BookingScreen = () => {
       fetchSlots(serviceId, date, selectedPetIds);
     }
   }, [showTimeModal, serviceId, date, selectedPetIds]);
+
+  useEffect(() => {
+    if (showTimeModal) {
+      setPreviousTimeOnOpen(selectedTimeSlot?.time ?? null);
+    } else {
+      setPreviousTimeOnOpen(null);
+      setShowRevertModal(false);
+      setPendingRevertSlot(null);
+    }
+  }, [showTimeModal]);
 
   useEffect(() => {
     const fetchBookedTimes = async () => {
@@ -995,13 +1057,13 @@ const BookingScreen = () => {
             ) : (
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.shiftTabs}>
-                  {availableShifts.map((shift) => {
-                    const active = activeShiftId === shift._id;
+                  {shiftKeyMap.map(({ key, shift }) => {
+                    const active = activeShiftKey === key;
                     return (
                       <TouchableOpacity
-                        key={shift._id}
+                        key={key}
                         style={[styles.shiftTab, active && styles.shiftTabActive]}
-                        onPress={() => setActiveShiftId(shift._id)}
+                        onPress={() => setActiveShiftKey(key)}
                       >
                         <Text style={[styles.shiftTabText, active && styles.shiftTabTextActive]}>
                           {shift.name}
@@ -1033,12 +1095,20 @@ const BookingScreen = () => {
                   {(groupedSlots[activeHour || ''] || []).map((slot) => {
                     const isAvailable = isSlotSelectable(slot);
                     const selected = selectedTimeSlot?.time === slot.time;
+                    const isPreviousBlocked = !!previousTimeOnOpen &&
+                      previousTimeOnOpen === slot.time &&
+                      selectedTimeSlot?.time !== slot.time;
                     const isBookedByUser = bookedTimes.has(slot.time);
                     return (
                       <TouchableOpacity
                         key={slot.time}
                         disabled={!isAvailable}
                         onPress={() => {
+                          if (isPreviousBlocked) {
+                            setPendingRevertSlot(slot);
+                            setShowRevertModal(true);
+                            return;
+                          }
                           setSelectedTimeSlot(slot);
                           setBookingPreview(null);
                         }}
@@ -1046,6 +1116,7 @@ const BookingScreen = () => {
                           styles.timeChip,
                           selected && styles.timeChipActive,
                           !isAvailable && styles.timeChipDisabled,
+                          isPreviousBlocked && styles.timeChipPrevious,
                         ]}
                       >
                         <Text
@@ -1053,6 +1124,7 @@ const BookingScreen = () => {
                             styles.timeChipText,
                             selected && styles.timeChipTextActive,
                             !isAvailable && styles.timeChipTextDisabled,
+                            isPreviousBlocked && styles.timeChipTextPrevious,
                           ]}
                         >
                           {slot.time}
@@ -1156,6 +1228,44 @@ const BookingScreen = () => {
             <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowPetModal(false)}>
               <Text style={styles.primaryBtnText}>Xong</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showRevertModal} animationType="fade" transparent>
+        <View style={styles.centerModalBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIconWrap}>
+              <Text style={styles.confirmIcon}>!</Text>
+            </View>
+            <Text style={styles.confirmTitle}>Chọn lại khung giờ cũ?</Text>
+            <Text style={styles.confirmDesc}>
+              Bạn đang đổi giờ. Bạn có muốn quay lại khung giờ đã chọn trước đó không?
+            </Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmGhostBtn}
+                onPress={() => {
+                  setShowRevertModal(false);
+                  setPendingRevertSlot(null);
+                }}
+              >
+                <Text style={styles.confirmGhostText}>Giữ giờ mới</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmPrimaryBtn}
+                onPress={() => {
+                  if (pendingRevertSlot) {
+                    setSelectedTimeSlot(pendingRevertSlot);
+                    setBookingPreview(null);
+                  }
+                  setShowRevertModal(false);
+                  setPendingRevertSlot(null);
+                }}
+              >
+                <Text style={styles.confirmPrimaryText}>Chọn lại</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1671,6 +1781,80 @@ const styles = StyleSheet.create({
     gap: 12,
     maxHeight: '85%',
   },
+  confirmCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    width: '88%',
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  confirmIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff1f1',
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f0c8c8',
+    marginBottom: 10,
+  },
+  confirmIcon: {
+    color: '#d35b5b',
+    fontWeight: '800',
+    fontSize: 20,
+  },
+  confirmTitle: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  confirmDesc: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.textLight,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmGhostBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f0c8c8',
+    backgroundColor: '#fff7f7',
+    alignItems: 'center',
+  },
+  confirmGhostText: {
+    color: '#b55c5c',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  confirmPrimaryBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  confirmPrimaryText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
   calendarModalCard: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -1764,6 +1948,10 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     backgroundColor: colors.lightGray,
   },
+  timeChipPrevious: {
+    opacity: 0.6,
+    borderColor: '#f0c8c8',
+  },
   timeChipText: {
     color: colors.secondary,
     fontWeight: '700',
@@ -1774,6 +1962,9 @@ const styles = StyleSheet.create({
   },
   timeChipTextDisabled: {
     color: colors.textLight,
+  },
+  timeChipTextPrevious: {
+    color: '#b78b8b',
   },
   timeChipTag: {
     marginTop: 4,

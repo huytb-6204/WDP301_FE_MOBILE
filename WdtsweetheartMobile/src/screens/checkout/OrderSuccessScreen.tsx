@@ -29,6 +29,14 @@ const OrderSuccessScreen = () => {
     });
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    goHome();
+  };
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -80,7 +88,7 @@ const OrderSuccessScreen = () => {
     <SafeAreaView style={styles.safe}>
       <LinearGradient colors={['#F5FFF7', '#FFFFFF']} style={styles.hero}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+          <TouchableOpacity onPress={handleBack} style={styles.iconBtn}>
             <ArrowLeft size={20} color={colors.secondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{'\u0110\u1eb7\u0074\u0020\u0068\u00e0\u006e\u0067\u0020\u0074\u0068\u00e0\u006e\u0068\u0020\u0063\u00f4\u006e\u0067'}</Text>

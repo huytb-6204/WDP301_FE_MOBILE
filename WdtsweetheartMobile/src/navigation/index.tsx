@@ -18,6 +18,11 @@ import BookingScreen from '../screens/booking/BookingScreen';
 import MyBookingsScreen from '../screens/booking/MyBookingsScreen';
 import BoardingHotelScreen from '../screens/boarding/BoardingHotelScreen';
 import MyBoardingBookingsScreen from '../screens/boarding/MyBoardingBookingsScreen';
+import AddressBookScreen from '../screens/account/AddressBookScreen';
+import PetListScreen from '../screens/account/PetListScreen';
+import OrderListScreen from '../screens/account/OrderListScreen';
+import CouponListScreen from '../screens/account/CouponListScreen';
+import BreedListScreen from '../screens/account/BreedListScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
@@ -100,6 +105,41 @@ const RootNavigator = () => {
           />
           <Stack.Screen
             name="MyBoardingBookings"
+            component={MyBoardingBookingsScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="AddressBook"
+            component={AddressBookScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="PetList"
+            component={PetListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="OrderList"
+            component={OrderListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="CouponList"
+            component={CouponListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BreedList"
+            component={BreedListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BoardingCages"
+            component={BoardingHotelScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BoardingBookings"
             component={MyBoardingBookingsScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />

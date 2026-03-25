@@ -30,6 +30,14 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('WelcomeChoice');
+  };
+
   const handleSubmit = async () => {
     setError(null);
 
@@ -71,9 +79,9 @@ const LoginScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.flex}>
+            <View style={styles.flex}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                 <BackArrow width={18} height={18} color={colors.secondary} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Đăng nhập</Text>

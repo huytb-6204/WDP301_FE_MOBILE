@@ -355,12 +355,12 @@ const HomeScreen = () => {
         </View>
         <ImageBackground
           source={homeVisuals.serviceCover}
-          style={styles.heroCard}
-          imageStyle={styles.heroCardImage}
+          style={styles.serviceHeroCard}
+          imageStyle={styles.serviceHeroCardImage}
         >
-          <View style={styles.heroOverlay}>
-            <Text style={styles.heroCardTitle}>Chăm sóc chuẩn 5 bước</Text>
-            <Text style={styles.heroCardText}>
+          <View style={styles.serviceHeroOverlay}>
+            <Text style={styles.serviceHeroCardTitle}>Chăm sóc chuẩn 5 bước</Text>
+            <Text style={styles.serviceHeroCardText}>
               Liệu trình chuyên sâu, phù hợp từng loại da và lông. Đặt lịch nhanh, theo dõi dễ dàng.
             </Text>
             <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
@@ -382,12 +382,12 @@ const HomeScreen = () => {
         </View>
         <ImageBackground
           source={homeVisuals.hotelCover}
-          style={styles.heroCard}
-          imageStyle={styles.heroCardImage}
+          style={styles.serviceHeroCard}
+          imageStyle={styles.serviceHeroCardImage}
         >
-          <View style={styles.heroOverlay}>
-            <Text style={styles.heroCardTitle}>Không gian lưu trú cao cấp</Text>
-            <Text style={styles.heroCardText}>
+          <View style={styles.serviceHeroOverlay}>
+            <Text style={styles.serviceHeroCardTitle}>Không gian lưu trú cao cấp</Text>
+            <Text style={styles.serviceHeroCardText}>
               Chọn phòng phù hợp, đặt lịch lưu trú nhanh và kiểm tra tình trạng ngay trên app.
             </Text>
             <View style={styles.rowButtons}>
@@ -733,26 +733,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  heroCard: {
+  serviceHeroCard: {
     borderRadius: 18,
     overflow: 'hidden',
     minHeight: 220,
     justifyContent: 'flex-end',
   },
-  heroCardImage: {
+  serviceHeroCardImage: {
     borderRadius: 18,
   },
-  heroOverlay: {
+  serviceHeroOverlay: {
     backgroundColor: 'rgba(16, 41, 55, 0.65)',
     padding: 16,
     gap: 8,
   },
-  heroCardTitle: {
+  serviceHeroCardTitle: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
   },
-  heroCardText: {
+  serviceHeroCardText: {
     color: '#f6f6f6',
     fontSize: 12,
     lineHeight: 18,

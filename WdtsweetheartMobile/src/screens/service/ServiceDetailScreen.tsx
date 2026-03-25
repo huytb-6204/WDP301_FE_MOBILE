@@ -16,7 +16,7 @@ import { ArrowLeft, Calendar, Clock, DollarSign, Star } from 'lucide-react-nativ
 import { colors } from '../../theme/colors';
 import { useServiceDetail, useServiceReviews } from '../../hooks';
 import type { RootStackParamList } from '../../navigation/types';
-import type { Service } from '../../types';
+import type { Service, ServiceReview } from '../../types';
 
 type RouteProps = RouteProp<RootStackParamList, 'ServiceDetail'>;
 type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
@@ -38,7 +38,7 @@ const ServiceDetailScreen = () => {
 
   const reviewList = useMemo(() => {
     const list = reviews || [];
-    return list.filter((review) => !review.status || review.status === 'approved');
+    return list.filter((review: ServiceReview) => !review.status || review.status === 'approved');
   }, [reviews]);
   const ratingValue = summary.averageRating || 0;
   const totalReviews = summary.totalReviews || reviewList.length || 0;

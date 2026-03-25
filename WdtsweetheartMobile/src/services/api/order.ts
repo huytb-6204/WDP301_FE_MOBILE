@@ -14,6 +14,7 @@ export type CreateOrderPayload = {
   longitude: number;
   note?: string;
   coupon?: string;
+  usedPoint?: number;
   shippingMethod: string;
   paymentMethod: 'money' | 'zalopay' | 'vnpay' | 'COD' | 'ZALOPAY' | 'VNPAY';
   items: CreateOrderItem[];
@@ -40,6 +41,8 @@ export type OrderSuccessData = {
   total: number;
   subTotal: number;
   discount?: number;
+  pointDiscount?: number;
+  usedPoint?: number;
   coupon?: string;
   paymentMethod: string;
   fullName: string;
@@ -60,10 +63,7 @@ export type OrderSuccessResponse = {
 };
 
 export const createOrder = async (payload: CreateOrderPayload) => {
-  return apiPostRaw<CreateOrderResponse, CreateOrderPayload>(
-    '/api/v1/client/order/create',
-    payload
-  );
+  return apiPostRaw<CreateOrderResponse, CreateOrderPayload>('/api/v1/client/order/create', payload);
 };
 
 export const getOrderSuccess = async (orderCode: string, phone: string) => {

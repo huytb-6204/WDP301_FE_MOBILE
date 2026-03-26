@@ -107,6 +107,11 @@ export const getMyBookings = async (params?: { status?: string; page?: number; l
   return assertSuccess(res);
 };
 
+export const getMyBooking = async (id: string) => {
+  const res = await apiGetRaw<CodeResponse<Booking>>(`/api/v1/client/booking/bookings/${id}`);
+  return assertSuccess(res);
+};
+
 export const cancelBooking = async (id: string, reason?: string) => {
   const res = await apiPatchRaw<CodeResponse<Booking>, { reason?: string }>(
     `/api/v1/client/booking/bookings/${id}/cancel`,

@@ -1,4 +1,4 @@
-import { apiGet, apiGetRaw } from './client';
+import { apiGet, apiGetRaw, apiPatch, apiPost, apiDelete } from './client';
 
 export type ProfileUser = {
   id?: string;
@@ -18,41 +18,82 @@ export type SavedAddress = {
   isDefault?: boolean;
 };
 
+export type DashboardOrder = {
+  _id: string;
+  code: string;
+  orderStatus: string;
+  total: number;
+  createdAt: string;
+  paymentStatus?: string;
+  status?: string; // for backward compatibility
+};
+
 export const getProfile = async () => {
   return apiGet<ProfileUser>('/api/v1/client/dashboard/profile');
 };
 
+export const updateProfile = async (data: Partial<ProfileUser>) => {
+  return apiPatch<any>('/api/v1/client/dashboard/profile/edit', data);
+};
+
+export const changePassword = async (data: any) => {
+  return apiPatch<any>('/api/v1/client/dashboard/change-password', data);
+};
+
+export const changeAvatar = async (avatar: string) => {
+  return apiPatch<any>('/api/v1/client/dashboard/profile/change-avatar', { avatar });
+};
+
 export const getAddresses = async (): Promise<SavedAddress[]> => {
-  const candidates = [
-    '/api/v1/client/dashboard/address',
-    '/api/v1/client/dashboard/addresses',
-  ];
+  const res = await apiGetRaw<{ success?: boolean; data?: SavedAddress[]; addresses?: SavedAddress[] }>('/api/v1/client/dashboard/address');
+  return (res as any).data || (res as any).addresses || [];
+};
 
-  let lastError: unknown = null;
+export const createAddress = async (data: any) => {
+  return apiPost<any>('/api/v1/client/dashboard/address/create', data);
+};
 
-  for (const path of candidates) {
-    try {
-      const res = await apiGetRaw<{
-        success?: boolean;
-        data?: SavedAddress[];
-        addresses?: SavedAddress[];
-      }>(path);
+export const getAddressDetail = async (id: string) => {
+  return apiGet<SavedAddress>(`/api/v1/client/dashboard/address/detail/${id}`);
+};
 
-      if (Array.isArray((res as any)?.data)) {
-        return (res as any).data;
-      }
+export const updateAddress = async (id: string, data: any) => {
+  return apiPatch<any>(`/api/v1/client/dashboard/address/edit/${id}`, data);
+};
 
-      if (Array.isArray((res as any)?.addresses)) {
-        return (res as any).addresses;
-      }
-    } catch (error) {
-      lastError = error;
-    }
-  }
+export const deleteAddress = async (id: string) => {
+  return apiDelete<any>(`/api/v1/client/dashboard/address/delete/${id}`);
+};
 
-  if (lastError) {
-    throw lastError;
-  }
+export const changeDefaultAddress = async (id: string) => {
+  return apiPatch<any>(`/api/v1/client/dashboard/address/change-default/${id}`, {});
+};
 
-  return [];
+export const getOrderList = async (): Promise<DashboardOrder[]> => {
+  const res = await apiGetRaw<{ success: boolean; orders: DashboardOrder[] }>('/api/v1/client/dashboard/order/list');
+  return res.orders || [];
+};
+
+export const getOrderDetail = async (id: string) => {
+  return apiGet<any>(`/api/v1/client/dashboard/order/detail/${id}`);
+};
+
+export const getBoardingBookingDetail = async (id: string) => {
+  return apiGet<any>(`/api/v1/client/boarding/boarding-bookings/${id}`);
+};
+
+export const getDashboardOverview = async () => {
+  return apiGet<any>('/api/v1/client/dashboard/overview');
+};
+
+export const getTransactionHistory = async () => {
+  return apiGet<any[]>('/api/v1/client/dashboard/transactions');
+};
+
+export const getWishlist = async () => {
+  return apiGet<any[]>('/api/v1/client/dashboard/wishlist');
+};
+
+export const toggleWishlist = async (productId: string) => {
+  return apiPost<any>('/api/v1/client/dashboard/wishlist/toggle', { productId });
 };

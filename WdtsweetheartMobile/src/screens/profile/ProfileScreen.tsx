@@ -1,0 +1,373 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  BookOpen,
+  ChevronRight,
+  ClipboardList,
+  Heart,
+  House,
+  Key,
+  LogOut,
+  MapPin,
+  MessageSquare,
+  Package,
+  PawPrint,
+  Settings,
+  ShoppingBag,
+  ShoppingCart,
+  User,
+  UserRound,
+} from 'lucide-react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
+import type { HomeTabKey, RootStackParamList } from '../../navigation/types';
+import { getProfile, type ProfileUser } from '../../services/api/dashboard';
+import { tokenStorage } from '../../services/auth/token';
+import { colors } from '../../theme/colors';
+
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
+type ProfileActionRoute =
+  | 'Overview'
+  | 'OrderList'
+  | 'MyBookings'
+  | 'MyBoardingBookings'
+  | 'PetList'
+  | 'PersonalInfo'
+  | 'FavoriteList'
+  | 'ChangePassword'
+  | 'AccountFeature';
+
+type ProfileAction = {
+  key: string;
+  label: string;
+  route: ProfileActionRoute;
+  icon: any;
+  params?: RootStackParamList[ProfileActionRoute];
+};
+
+type ProfileSection = {
+  key: string;
+  title: string;
+  items: ProfileAction[];
+};
+
+type TabItem = {
+  key: HomeTabKey;
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+};
+
+const tabs: TabItem[] = [
+  { key: 'home', label: 'Trang chủ', icon: House },
+  { key: 'product', label: 'Sản phẩm', icon: ShoppingBag },
+  { key: 'service', label: 'Dịch vụ', icon: PawPrint },
+  { key: 'blog', label: 'Bài viết', icon: BookOpen },
+  { key: 'profile', label: 'Tài khoản', icon: UserRound },
+];
+
+const PROFILE_SECTIONS: ProfileSection[] = [
+  {
+    key: 'overview',
+    title: 'QUẢN LÝ TỔNG QUAN',
+    items: [
+      { key: 'ov', label: 'Tổng quan bảng điều khiển', icon: ClipboardList, route: 'Overview' },
+      { key: 'orders', label: 'Lịch sử đơn hàng', icon: Package, route: 'OrderList' },
+      { key: 'services', label: 'Lịch sử dịch vụ', icon: PawPrint, route: 'MyBookings' },
+      { key: 'boarding', label: 'Booking khách sạn', icon: House, route: 'MyBoardingBookings' },
+      { key: 'transactions', label: 'Lịch sử giao dịch', icon: ShoppingBag, route: 'TransactionHistory' as any },
+    ],
+  },
+  {
+    key: 'account',
+    title: 'CÀI ĐẶT TÀI KHOẢN',
+    items: [
+      { key: 'p-info', label: 'Thông tin cá nhân', icon: User, route: 'PersonalInfo' },
+      { key: 'address', label: 'Sổ địa chỉ', icon: MapPin, route: 'AddressList' as any },
+      { key: 'pets', label: 'Thú cưng của tôi', icon: Heart, route: 'PetList' },
+      { key: 'favorites', label: 'Sản phẩm yêu thích', icon: ShoppingCart, route: 'FavoriteList' },
+      { key: 'reviews', label: 'Đánh giá của tôi', icon: MessageSquare, route: 'ReviewList' as any },
+      { key: 'pwd', label: 'Đổi mật khẩu', icon: Key, route: 'ChangePassword' },
+    ],
+  },
+];
+
+const ProfileScreen = () => {
+  const navigation = useNavigation<Navigation>();
+  const isFocused = useIsFocused();
+  const { cartCount } = useCart();
+  const { user, logout } = useAuth();
+  const [profile, setProfile] = useState<ProfileUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const loadProfileData = async () => {
+      setLoading(true);
+      try {
+        const token = await tokenStorage.get();
+        if (token) {
+          const profileData = await getProfile();
+          setProfile(profileData);
+        }
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isFocused) {
+      void loadProfileData();
+    }
+  }, [isFocused]);
+
+  const displayUser = useMemo(() => {
+    return {
+      fullName: profile?.fullName || user?.fullName || 'Khách hàng',
+      email: profile?.email || user?.email || 'teddy-pet@fpt.edu.vn',
+      avatar: profile?.avatar || user?.avatar || 'https://i.pravatar.cc/150',
+    };
+  }, [profile, user]);
+
+  const handleLogout = async () => {
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi phiên làm việc này?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setIsLoggingOut(true);
+            try {
+              await logout();
+              navigation.reset({ index: 0, routes: [{ name: 'WelcomeChoice' }] });
+            } finally {
+              setIsLoggingOut(false);
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
+  const handleTabPress = (tab: HomeTabKey) => {
+    if (tab === 'profile') return;
+    navigation.navigate('Home', { initialTab: tab });
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <Text style={styles.brand}>Teddy Pet</Text>
+        <View style={styles.headerActions}>
+           <TouchableOpacity style={styles.headerIconBtn} onPress={() => {}}>
+             <Settings size={20} color={colors.secondary} />
+           </TouchableOpacity>
+           <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Cart')}>
+             <ShoppingCart size={20} color={colors.secondary} />
+             {cartCount > 0 && (
+               <View style={styles.badge}>
+                 <Text style={styles.badgeText}>{cartCount}</Text>
+               </View>
+             )}
+           </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* User Card */}
+        <View style={styles.userCard}>
+          <Image source={{ uri: displayUser.avatar }} style={styles.avatar} />
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{displayUser.fullName}</Text>
+            <Text style={styles.userEmail}>{displayUser.email}</Text>
+            <TouchableOpacity 
+              style={styles.editProfileBtn}
+              onPress={() => navigation.navigate('PersonalInfo')}
+            >
+              <Text style={styles.editProfileText}>Chỉnh sửa hồ sơ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Menu Sections */}
+        {PROFILE_SECTIONS.map((section) => (
+          <View key={section.key} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.menuGroup}>
+              {section.items.map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.menuItem, idx === section.items.length - 1 && styles.noBorder]}
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate(item.route as any, item.params)}
+                  >
+                    <View style={styles.menuLeft}>
+                      <View style={styles.menuIconWrap}>
+                        <Icon size={18} color={colors.primary} />
+                      </View>
+                      <Text style={styles.menuLabel}>{item.label}</Text>
+                    </View>
+                    <ChevronRight size={18} color="#CCC" />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+
+        <TouchableOpacity
+          style={[styles.logoutBtn, isLoggingOut && styles.logoutBtnDisabled]}
+          onPress={handleLogout}
+          disabled={isLoggingOut}
+        >
+          {isLoggingOut ? <ActivityIndicator color="#fff" /> : (
+            <>
+              <LogOut size={18} color="#FF4D4D" />
+              <Text style={styles.logoutBtnText}>Đăng xuất tài khoản</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        
+        <Text style={styles.versionText}>Phiên bản 1.0.4 (Stable)</Text>
+      </ScrollView>
+
+      {/* Custom TabBar */}
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = tab.key === 'profile';
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={styles.tabItem}
+              onPress={() => handleTabPress(tab.key)}
+            >
+              <Icon size={20} color={active ? colors.primary : '#999'} />
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  brand: { fontSize: 20, fontWeight: '900', color: colors.primary, letterSpacing: -0.5 },
+  headerActions: { flexDirection: 'row', gap: 12 },
+  headerIconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  badge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: colors.primary,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  content: { padding: 16, paddingBottom: 100 },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#f0f0f0' },
+  userInfo: { marginLeft: 16, flex: 1 },
+  userName: { fontSize: 20, fontWeight: '800', color: colors.secondary },
+  userEmail: { fontSize: 13, color: '#7d7b7b', marginTop: 2, marginBottom: 8 },
+  editProfileBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.softPink,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  editProfileText: { fontSize: 11, fontWeight: '700', color: colors.primary },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 12, fontWeight: '800', color: '#AAA', marginBottom: 12, marginLeft: 4, letterSpacing: 1 },
+  menuGroup: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden' },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9F9F9',
+  },
+  noBorder: { borderBottomWidth: 0 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuIconWrap: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.softPink, alignItems: 'center', justifyContent: 'center' },
+  menuLabel: { fontSize: 15, fontWeight: '600', color: colors.secondary },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    borderRadius: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#FFEBEA',
+  },
+  logoutBtnDisabled: { opacity: 0.6 },
+  logoutBtnText: { fontSize: 15, fontWeight: '700', color: '#FF4D4D' },
+  versionText: { textAlign: 'center', color: '#BBB', fontSize: 12, marginTop: 20 },
+  tabBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  tabItem: { flex: 1, alignItems: 'center', gap: 4 },
+  tabLabel: { fontSize: 10, fontWeight: '600', color: '#999' },
+  tabLabelActive: { color: colors.primary, fontWeight: '800' },
+});
+
+export default ProfileScreen;
+

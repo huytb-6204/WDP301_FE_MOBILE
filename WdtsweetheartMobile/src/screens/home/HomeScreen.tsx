@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -23,7 +23,11 @@ import {
   ShoppingCart,
   ArrowRight,
   Heart,
+  ClipboardList,
+  MessageSquare,
+  Key,
 } from 'lucide-react-native';
+import ProfileScreen from '../profile/ProfileScreen';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList, HomeTabKey } from '../../navigation/types';
 import { useCart } from '../../context/CartContext';
@@ -490,40 +494,80 @@ const HomeScreen = () => {
       );
     }
 
+    const sections = [
+      {
+        title: 'TỔNG QUAN',
+        items: [
+          { label: 'Tổng quan bảng điều khiển', icon: ClipboardList, route: 'Overview' },
+          { label: 'Lịch sử đơn hàng', icon: ShoppingBag, route: 'OrderList' },
+          { label: 'Lịch sử dịch vụ (Spa)', icon: CalendarCheck, route: 'MyBookings' },
+          { label: 'Booking khách sạn', icon: House, route: 'MyBoardingBookings' },
+          { label: 'Lịch sử giao dịch', icon: ShoppingCart, route: 'TransactionHistory' },
+        ],
+      },
+      {
+        title: 'DỊCH VỤ KHÁC',
+        items: [
+          { label: 'Mã giảm giá', icon: ShoppingBag, route: 'CouponList' },
+          { label: 'Giống thú cưng', icon: PawPrint, route: 'BreedList' },
+          { label: 'Chuồng khách sạn', icon: House, route: 'BoardingCages' },
+          { label: 'Lịch sử đặt phòng (Boarding)', icon: ClipboardList, route: 'BoardingBookings' },
+        ],
+      },
+      {
+        title: 'TÀI KHOẢN & CÀI ĐẶT',
+        items: [
+          { label: 'Thông tin cá nhân', icon: UserRound, route: 'PersonalInfo' },
+          { label: 'Sổ địa chỉ', icon: ShoppingBag, route: 'AddressList' },
+          { label: 'Thú cưng của tôi', icon: Heart, route: 'PetList' },
+          { label: 'Sản phẩm yêu thích', icon: Heart, route: 'FavoriteList' },
+          { label: 'Đánh giá của tôi', icon: MessageSquare, route: 'ReviewList' },
+          { label: 'Đổi mật khẩu', icon: Key, route: 'ChangePassword' },
+        ],
+      },
+    ];
+
     return (
       <View style={styles.sectionStack}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{profile.fullName}</Text>
-          <Text style={styles.cardText}>Email: {profile.email}</Text>
-          <Text style={styles.cardText}>SĐT: {profile.phone || 'Chưa cập nhật'}</Text>
+        <View style={styles.profileHeader}>
+          <Image source={{ uri: profile.avatar || 'https://i.pravatar.cc/150' }} style={styles.profileAvatar} />
+          <View style={styles.profileInfoText}>
+            <Text style={styles.profileName}>{profile.fullName}</Text>
+            <Text style={styles.profileEmail}>{profile.email}</Text>
+          </View>
         </View>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-          <Text style={styles.secondaryButtonText}>Lịch hẹn của tôi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('PetList')}>
-          <Text style={styles.secondaryButtonText}>Thú cưng của tôi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('AddressBook')}>
-          <Text style={styles.secondaryButtonText}>Sổ địa chỉ</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('OrderList')}>
-          <Text style={styles.secondaryButtonText}>Đơn hàng của tôi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('CouponList')}>
-          <Text style={styles.secondaryButtonText}>Mã giảm giá</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BreedList')}>
-          <Text style={styles.secondaryButtonText}>Giống thú cưng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingCages')}>
-          <Text style={styles.secondaryButtonText}>Đặt phòng khách sạn</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('BoardingBookings')}>
-          <Text style={styles.secondaryButtonText}>Lịch sử đặt phòng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={isLoggingOut}>
-          {isLoggingOut ? <ActivityIndicator color="#fff" /> : <LogOut size={16} color="#fff" />}
-          <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
+
+        {sections.map((section, idx) => (
+          <View key={idx} style={styles.menuSection}>
+            <View style={styles.menuSectionHeader}>
+               <Text style={styles.menuSectionTitle}>{section.title}</Text>
+            </View>
+            <View style={styles.menuGroup}>
+              {section.items.map((item, iidx) => {
+                const Icon = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={iidx}
+                    style={[styles.menuItem, iidx === section.items.length - 1 && { borderBottomWidth: 0 }]}
+                    onPress={() => navigation.navigate(item.route as any)}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <View style={styles.menuIconWrap}>
+                         <Icon size={16} color={colors.primary} />
+                      </View>
+                      <Text style={styles.menuItemLabel}>{item.label}</Text>
+                    </View>
+                    <ArrowRight size={14} color="#CCC" />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.logoutBtnModern} onPress={handleLogout} disabled={isLoggingOut}>
+          {isLoggingOut ? <ActivityIndicator color="#fff" /> : <LogOut size={16} color="#FF4D4D" />}
+          <Text style={styles.logoutBtnTextModern}>Thoát tài khoản</Text>
         </TouchableOpacity>
         {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
       </View>
@@ -990,6 +1034,56 @@ const styles = StyleSheet.create({
   tabIconWrapActive: { backgroundColor: colors.primary },
   tabLabel: { color: colors.text, fontSize: 11, fontWeight: '600' },
   tabLabelActive: { color: colors.primary },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  profileAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#f5f5f5' },
+  profileInfoText: { flex: 1, gap: 4 },
+  profileName: { fontSize: 18, fontWeight: '800', color: colors.secondary },
+  profileEmail: { fontSize: 13, color: '#7d7b7b' },
+  menuSection: { marginBottom: 20 },
+  menuSectionHeader: { paddingLeft: 8, marginBottom: 10 },
+  menuSectionTitle: { fontSize: 13, fontWeight: '800', color: '#BBB', letterSpacing: 0.5 },
+  menuGroup: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9F9F9',
+  },
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#fff4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemLabel: { fontSize: 14, fontWeight: '600', color: colors.secondary },
+  logoutBtnModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFEBEA',
+    marginTop: 10,
+  },
+  logoutBtnTextModern: { fontSize: 14, fontWeight: '700', color: '#FF4D4D' },
 });
 
 export default HomeScreen;

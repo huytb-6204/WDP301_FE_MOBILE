@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, PawPrint, Plus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -21,16 +22,16 @@ type Navigation = NativeStackNavigationProp<RootStackParamList, 'MyBookings'>;
 
 const statusOptions = [
   { key: '', label: 'Tất cả' },
-  { key: 'pending', label: 'Chờ xác nhận' },
+  { key: 'pending', label: 'Đang chờ' },
   { key: 'confirmed', label: 'Đã xác nhận' },
   { key: 'completed', label: 'Hoàn thành' },
   { key: 'cancelled', label: 'Đã hủy' },
 ];
 
 const statusMap: Record<string, string> = {
-  pending: 'Chờ xác nhận',
+  pending: 'Đang chờ',
   confirmed: 'Đã xác nhận',
-  'in-progress': 'Đang xử lý',
+  'in-progress': 'Đang thực hiện',
   completed: 'Hoàn thành',
   cancelled: 'Đã hủy',
   delayed: 'Trễ hẹn',
@@ -63,21 +64,22 @@ const MyBookingsScreen = () => {
   const navigation = useNavigation<Navigation>();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   const showToast = (message: string) => {
     setToastMessage(message);
     setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 1600);
+    setTimeout(() => setToastVisible(false), 2000);
   };
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (useRefreshing = false) => {
+    if (useRefreshing) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       const res = await getMyBookings({ status: statusFilter || undefined, page: 1, limit: 50 });
@@ -86,14 +88,15 @@ const MyBookingsScreen = () => {
       setError(err instanceof Error ? err.message : 'Không thể tải lịch đặt');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchBookings();
+    void fetchBookings();
   }, [statusFilter]);
 
-  const canCancel = (status: string) => ['pending', 'confirmed', 'in-progress'].includes(status);
+  const canCancel = (status: string) => ['pending', 'confirmed'].includes(status);
 
   const handleCancel = async (item: Booking) => {
     setCancellingId(item._id);
@@ -104,7 +107,7 @@ const MyBookingsScreen = () => {
           booking._id === item._id ? { ...booking, bookingStatus: 'cancelled', status: 'cancelled' } : booking
         )
       );
-      showToast('Đã hủy lịch đặt');
+      showToast('Đã hủy lịch đặt thành công');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể hủy lịch');
     } finally {
@@ -112,29 +115,86 @@ const MyBookingsScreen = () => {
     }
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const renderBookingItem = ({ item }: { item: Booking }) => {
+    const statusKey = item.bookingStatus || item.status || 'pending';
+    const statusText = statusMap[statusKey] || statusKey;
+    const badgeColor = statusColor[statusKey] || colors.text;
+    const serviceName = item.serviceId?.name || 'Dịch vụ';
+    const petNames = (item.petIds || []).map((pet: any) => pet?.name).filter(Boolean);
+    const displayPets = petNames.length ? petNames.join(', ') : 'Chưa chọn thú cưng';
+    const timeSource = item.start || item.createdAt;
+    const totalAmount = Number(item.total ?? item.subTotal ?? item.totalPrice ?? 0);
+    const depositAmount = Number(item.depositAmount || 0);
+    
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.codeWrap}>
+            <Calendar size={16} color={colors.primary} />
+            <Text style={styles.bookingCode}>#{item.code || '---'}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: `${badgeColor}15` }]}>
+            <Text style={[styles.statusText, { color: badgeColor }]}>{statusText}</Text>
+          </View>
+        </View>
 
-  const listHeader = useMemo(
-    () => (
-      <View style={styles.filterRow}>
-        {statusOptions.map((option) => {
-          const active = option.key === statusFilter;
-          return (
-            <TouchableOpacity
-              key={option.key || 'all'}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => setStatusFilter(option.key)}
+        <View style={styles.cardBody}>
+          <Text style={styles.serviceTitle}>{serviceName}</Text>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <Clock size={14} color="#999" />
+              <Text style={styles.infoText}>{formatDateOnly(timeSource)} - {formatTimeOnly(timeSource)}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <PawPrint size={14} color="#999" />
+              <Text style={styles.infoText} numberOfLines={1}>{displayPets}</Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.priceSection}>
+            <View>
+              <Text style={styles.priceLabel}>Tổng cộng</Text>
+              <Text style={styles.priceValue}>{totalAmount.toLocaleString()} đ</Text>
+            </View>
+            {depositAmount > 0 && (
+              <View style={styles.depositBadge}>
+                <Text style={styles.depositText}>Đã cọc {depositAmount.toLocaleString()}đ</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate('Booking', { serviceId: item.serviceId?._id })}
+          >
+            <Text style={styles.actionBtnText}>Đặt lại</Text>
+          </TouchableOpacity>
+          {canCancel(statusKey) && (
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.cancelBtn]}
+              onPress={() => handleCancel(item)}
+              disabled={cancellingId === item._id}
             >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{option.label}</Text>
+              <Text style={[styles.actionBtnText, styles.cancelBtnText]}>
+                {cancellingId === item._id ? 'Đang hủy...' : 'Hủy lịch'}
+              </Text>
             </TouchableOpacity>
-          );
-        })}
+          )}
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.detailBtn]}
+            onPress={() => {}}
+          >
+            <Text style={[styles.actionBtnText, styles.detailBtnText]}>Chi tiết</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    ),
-    [statusFilter]
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,145 +202,62 @@ const MyBookingsScreen = () => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft size={20} color={colors.secondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lịch đặt của tôi</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Lịch sử dịch vụ</Text>
+        <TouchableOpacity 
+          style={styles.plusButton}
+          onPress={() => navigation.navigate('Home', { initialTab: 'service' })}
+        >
+          <Plus size={22} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {error ? <StatusMessage message={error} actionText="Thử lại" onAction={fetchBookings} /> : null}
+      <View style={styles.filterContainer}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={statusOptions}
+          keyExtractor={(item) => item.key || 'all'}
+          contentContainerStyle={styles.filterContent}
+          renderItem={({ item }) => {
+            const active = item.key === statusFilter;
+            return (
+              <TouchableOpacity
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setStatusFilter(item.key)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{item.label}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
-      {loading ? (
+      {loading && !refreshing ? (
         <View style={styles.centerWrap}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.loadingText}>Đang tải lịch đặt...</Text>
         </View>
       ) : (
         <FlatList
           data={bookings}
           keyExtractor={(item) => item._id}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={<StatusMessage message="Chưa có lịch đặt nào" />}
           contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => {
-            const statusKey = item.bookingStatus || item.status || 'pending';
-            const statusText = statusMap[statusKey] || statusKey;
-            const badgeColor = statusColor[statusKey] || colors.text;
-            const serviceName = item.serviceId?.name || 'Dịch vụ';
-            const petNames = (item.petIds || []).map((pet: any) => pet?.name).filter(Boolean);
-            const displayPets = petNames.length ? petNames.join(', ') : 'Chưa chọn thú cưng';
-            const timeSource = item.start || item.createdAt;
-            const totalAmount = Number(item.total ?? item.subTotal ?? item.totalPrice ?? 0);
-            const paymentText =
-              item.paymentStatus === 'paid'
-                ? 'Đã thanh toán'
-                : item.paymentStatus === 'partially_paid'
-                  ? 'Đã cọc'
-                  : 'Chưa thanh toán';
-            const isExpanded = !!expandedIds[item._id];
-
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View>
-                    <Text style={styles.bookingCode}>#{item.code || item.bookingCode || '---'}</Text>
-                    <Text style={styles.serviceName}>{serviceName}</Text>
-                  </View>
-                  <View style={[styles.statusPill, { backgroundColor: `${badgeColor}20` }]}>
-                    <Text style={[styles.statusPillText, { color: badgeColor }]}>{statusText}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.cardBody}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Ngày</Text>
-                    <Text style={styles.infoValue}>{formatDateOnly(timeSource)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Giờ hẹn</Text>
-                    <Text style={styles.infoValue}>{formatTimeOnly(timeSource)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Bé cưng</Text>
-                    <Text style={styles.infoValue}>{displayPets}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Tổng tiền</Text>
-                  <Text style={styles.totalValue}>{totalAmount.toLocaleString()}đ</Text>
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <View style={styles.paymentWrap}>
-                    <Text style={styles.paymentLabel}>Thanh toán</Text>
-                    <Text style={styles.paymentValue}>{paymentText}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.detailBtn} onPress={() => toggleExpand(item._id)}>
-                    <Text style={styles.detailBtnText}>{isExpanded ? 'Thu gọn' : 'Chi tiết'}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {isExpanded ? (
-                  <View style={styles.expandWrap}>
-                    <View style={styles.expandSection}>
-                      <Text style={styles.expandTitle}>Thông tin khách hàng</Text>
-                      <Text style={styles.expandText}>Khách hàng: {item.customerName}</Text>
-                      <Text style={styles.expandText}>SĐT: {item.customerPhone}</Text>
-                      <Text style={styles.expandText}>Ghi chú: {item.notes || 'Không có'}</Text>
-                    </View>
-                    <View style={styles.expandSection}>
-                      <Text style={styles.expandTitle}>Thanh toán</Text>
-                      <Text style={styles.expandText}>
-                        Phương thức: {item.paymentMethod === 'money' ? 'Tiền mặt' : item.paymentMethod || 'Chưa có'}
-                      </Text>
-                      <Text style={styles.expandText}>Đặt cọc: {(item.depositAmount || 0).toLocaleString()}đ</Text>
-                      <Text style={styles.expandText}>
-                        Còn lại: {(item.remainingAmount || 0).toLocaleString()}đ
-                      </Text>
-                    </View>
-                    <View style={styles.expandSection}>
-                      <Text style={styles.expandTitle}>Bé cưng</Text>
-                      {(item.petIds || []).length ? (
-                        (item.petIds || []).map((pet: any) => {
-                          const mapping = item.petStaffMap?.find((m: any) => {
-                            const mappedId = (m.petId?._id || m.petId)?.toString?.() || m.petId;
-                            return mappedId === pet?._id;
-                          });
-                          const petStatus = mapping?.status || 'pending';
-                          return (
-                            <View key={pet?._id || pet?.name} style={styles.petRow}>
-                              <Text style={styles.petName}>{pet?.name || 'Thú cưng'}</Text>
-                              <View style={styles.petStatusChip}>
-                                <Text style={styles.petStatusText}>
-                                  {petStatus === 'completed'
-                                    ? 'Hoàn thành'
-                                    : petStatus === 'in-progress'
-                                      ? 'Đang làm'
-                                      : 'Chờ thực hiện'}
-                                </Text>
-                              </View>
-                            </View>
-                          );
-                        })
-                      ) : (
-                        <Text style={styles.expandText}>Chưa có thú cưng</Text>
-                      )}
-                    </View>
-                  </View>
-                ) : null}
-
-                {canCancel(statusKey) ? (
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => handleCancel(item)}
-                    disabled={cancellingId === item._id}
-                  >
-                    <Text style={styles.cancelBtnText}>
-                      {cancellingId === item._id ? 'Đang hủy...' : 'Hủy lịch'}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            );
-          }}
+          renderItem={renderBookingItem}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => fetchBookings(true)} colors={[colors.primary]} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Calendar size={60} color="#eee" />
+              <Text style={styles.emptyText}>Chưa có lịch đặt nào</Text>
+              <TouchableOpacity 
+                style={styles.emptyBtn}
+                onPress={() => navigation.navigate('Home', { initialTab: 'service' })}
+              >
+                <Text style={styles.emptyBtnText}>ĐẶT LỊCH NGAY</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
       )}
 
@@ -290,123 +267,106 @@ const MyBookingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#F0F0F0',
   },
-  backButton: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
-  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContainer: { padding: 16, paddingBottom: 40 },
-  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff1f1',
+  },
+  headerTitle: { color: colors.secondary, fontSize: 17, fontWeight: '800' },
+  plusButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  filterContainer: { backgroundColor: '#fff', paddingVertical: 10 },
+  filterContent: { paddingHorizontal: 16, gap: 10 },
   filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderColor: '#eee',
     backgroundColor: '#fff',
   },
-  filterChipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  filterChipText: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
   filterChipTextActive: { color: '#fff' },
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { color: '#666', fontSize: 14, fontWeight: '500' },
+  listContainer: { padding: 16, paddingBottom: 40 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 14,
-    gap: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 2,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  bookingCode: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
-  serviceName: { color: colors.text, fontSize: 12, marginTop: 2 },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  statusPillText: { fontSize: 11, fontWeight: '700' },
-  cardBody: { gap: 6, marginTop: 4 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLabel: { color: colors.textLight, fontSize: 12 },
-  infoValue: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
-  totalRow: {
-    marginTop: 4,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  codeWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  bookingCode: { fontSize: 14, fontWeight: '800', color: colors.secondary },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  cardBody: { gap: 10 },
+  serviceTitle: { fontSize: 16, fontWeight: '800', color: colors.secondary },
+  infoRow: { flexDirection: 'column', gap: 6 },
+  infoItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoText: { fontSize: 13, color: '#7d7b7b', flex: 1 },
+  divider: { height: 1, backgroundColor: '#F5F5F5', marginVertical: 4 },
+  priceSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  totalLabel: { color: colors.secondary, fontSize: 12, fontWeight: '700' },
-  totalValue: { color: colors.primary, fontSize: 14, fontWeight: '800' },
+  priceLabel: { fontSize: 12, color: '#999', marginBottom: 2 },
+  priceValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
+  depositBadge: { backgroundColor: '#E7F7EE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  depositText: { fontSize: 11, fontWeight: '700', color: '#05A845' },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  paymentWrap: { gap: 2 },
-  paymentLabel: { color: colors.textLight, fontSize: 11 },
-  paymentValue: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
-  detailBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  detailBtnText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
-  expandWrap: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#F5F5F5',
     gap: 10,
   },
-  expandSection: { gap: 4 },
-  expandTitle: { color: colors.secondary, fontWeight: '700', fontSize: 12 },
-  expandText: { color: colors.text, fontSize: 12 },
-  petRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  petName: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
-  petStatusChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-  },
-  petStatusText: { color: colors.primary, fontSize: 10, fontWeight: '700' },
-  cancelBtn: {
-    marginTop: 6,
-    borderRadius: 999,
-    backgroundColor: '#FF4D4D',
-    minHeight: 38,
+  actionBtn: {
+    flex: 1,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelBtnText: { color: '#fff', fontWeight: '700' },
+  actionBtnText: { fontSize: 12, fontWeight: '700', color: '#666' },
+  cancelBtn: { borderColor: '#FFEBEA' },
+  cancelBtnText: { color: '#FF4D4D' },
+  detailBtn: { backgroundColor: colors.secondary, borderColor: colors.secondary },
+  detailBtnText: { color: '#fff' },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 16 },
+  emptyText: { fontSize: 15, color: '#aaa', fontWeight: '500' },
+  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, marginTop: 10 },
+  emptyBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 });
 
 export default MyBookingsScreen;
+

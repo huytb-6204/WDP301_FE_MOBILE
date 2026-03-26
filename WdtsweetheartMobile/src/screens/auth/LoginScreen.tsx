@@ -12,15 +12,20 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { env } from '../../config';
-import { login } from '../../services/api/auth';
+import { login, loginWithGoogleToken } from '../../services/api/auth';
 import type { RootStackParamList } from '../../navigation/types';
 import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
+import GoogleLogo from '../../../assets/google-logo.svg';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,7 +33,11 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<null | 'google'>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const proxyRedirectUri = 'https://auth.expo.io/@huytran62044/wdtsweetheart-mobile';
+  const returnUrl = AuthSession.getDefaultReturnUrl();
 
   const handleSubmit = async () => {
     setError(null);
@@ -61,6 +70,67 @@ const LoginScreen = () => {
       setError(`${message} (API: ${env.apiBaseUrl})`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+
+    if (!env.googleClientId) {
+      setError('Thiếu cấu hình GOOGLE_CLIENT_ID trong .env');
+      return;
+    }
+
+    setSocialLoading('google');
+    try {
+      const request = new AuthSession.AuthRequest({
+        clientId: env.googleClientId,
+        redirectUri: proxyRedirectUri,
+        responseType: AuthSession.ResponseType.Token,
+        scopes: ['openid', 'email', 'profile'],
+        usePKCE: false,
+        extraParams: {
+          prompt: 'consent',
+        },
+      });
+
+      const discovery = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
+      const authUrl = await request.makeAuthUrlAsync(discovery);
+      const proxyUrl = `${proxyRedirectUri}/start?authUrl=${encodeURIComponent(
+        authUrl
+      )}&returnUrl=${encodeURIComponent(returnUrl)}`;
+
+      const result = await request.promptAsync(discovery, { url: proxyUrl });
+
+      if (result.type !== 'success') {
+        return;
+      }
+
+      const accessToken = result.params?.access_token;
+      const authCode = result.params?.code;
+
+      if (!accessToken && !authCode) {
+        setError('Không lấy được Google token.');
+        return;
+      }
+
+      const user = await loginWithGoogleToken(
+        accessToken
+          ? { accessToken }
+          : { authCode: authCode!, redirectUri: proxyRedirectUri }
+      );
+      if (!user) {
+        setError('Đăng nhập Google thất bại!');
+        return;
+      }
+      navigation.navigate('Home');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!';
+      setError(message);
+      console.warn('Google login error:', err);
+    } finally {
+      navigation.navigate('Home');
+      setSocialLoading(null);
     }
   };
 
@@ -165,6 +235,39 @@ const LoginScreen = () => {
                     )}
                   </TouchableOpacity>
                 </View>
+              </View>
+
+              <View style={styles.socialSection}>
+                <View style={styles.socialDivider}>
+                  <View style={styles.socialDividerLine} />
+                  <Text style={styles.socialDividerText}>Hoặc đăng nhập bằng</Text>
+                  <View style={styles.socialDividerLine} />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleGoogleLogin}
+                  style={[
+                    styles.socialButton,
+                    styles.socialButtonGoogle,
+                    socialLoading && styles.socialButtonDisabled,
+                  ]}
+                  disabled={!!socialLoading}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.socialButtonContent}>
+                    <GoogleLogo width={20} height={20} />
+                    <Text style={[styles.socialButtonText, styles.socialButtonTextDark]}>
+                      Tiếp tục với Google
+                    </Text>
+                  </View>
+                  {socialLoading === 'google' ? (
+                    <ActivityIndicator
+                      size="small"
+                      color="#1f1f1f"
+                      style={styles.socialButtonLoadingIndicator}
+                    />
+                  ) : null}
+                </TouchableOpacity>
               </View>
 
               <View style={styles.footerRow}>
@@ -347,6 +450,64 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
     fontSize: 13,
+  },
+  socialSection: {
+    marginTop: 18,
+    gap: 10,
+  },
+  socialDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  socialDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e7e7e7',
+  },
+  socialDividerText: {
+    color: '#9a9a9a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  socialButton: {
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  socialButtonLoadingIndicator: {
+    position: 'absolute',
+    right: 16,
+  },
+  socialButtonDisabled: {
+    opacity: 0.7,
+  },
+  socialButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  socialButtonTextDark: {
+    color: '#1f1f1f',
+  },
+  socialButtonGoogle: {
+    backgroundColor: '#fff',
+    borderColor: '#e1e1e1',
   },
 });
 

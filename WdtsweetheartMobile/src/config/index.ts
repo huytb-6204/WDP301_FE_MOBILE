@@ -1,6 +1,8 @@
 import {
   API_BASE_URL,
   API_LAN_HOST,
+  FACEBOOK_APP_ID,
+  GOOGLE_CLIENT_ID,
   OPENMAP_KEY,
   VNPAY_TMN_CODE,
   VNPAY_URL,
@@ -49,6 +51,8 @@ const apiBaseUrl = normalizeUrl(rawApiBaseUrl);
 
 export const env = {
   apiBaseUrl,
+  googleClientId: GOOGLE_CLIENT_ID,
+  facebookAppId: FACEBOOK_APP_ID,
   openMapKey: OPENMAP_KEY,
   zalopayAppId: ZALOPAY_APPID,
   zalopayDomain: ZALOPAY_DOMAIN,

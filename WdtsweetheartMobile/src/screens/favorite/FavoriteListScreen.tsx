@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
-  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,18 +9,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Heart, ShoppingCart, ShoppingBag, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Heart, ShoppingCart, Trash2 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
-import { getWishlist, toggleWishlist } from '../../services/api/dashboard';
 import { Toast } from '../../components/common';
 import { useCart } from '../../context/CartContext';
+import { useFavorites, type FavoriteProduct } from '../../context/FavoritesContext';
 
 const FavoriteListScreen = () => {
   const navigation = useNavigation<any>();
   const { addToCart } = useCart();
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { favorites, removeFavorite, isReady } = useFavorites();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -32,77 +28,65 @@ const FavoriteListScreen = () => {
     setTimeout(() => setToastVisible(false), 2000);
   };
 
-  const fetchWishlist = async () => {
-    try {
-      const data = await getWishlist();
-      setItems(Array.isArray(data) ? data : []);
-    } catch (error) {
-      showToast('Không thể tải danh sách yêu thích');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const handleRemove = (item: FavoriteProduct) => {
+    removeFavorite(item.productId, item.variant);
+    showToast('Đã xóa khỏi danh sách yêu thích');
   };
 
-  useEffect(() => {
-    fetchWishlist();
-  }, []);
-
-  const handleRemove = async (productId: string) => {
-    try {
-      await toggleWishlist(productId);
-      setItems(prev => prev.filter(item => (item.productId?._id || item._id) !== productId));
-      showToast('Đã xóa khỏi danh sách yêu thích');
-    } catch (error) {
-      showToast('Lỗi khi xóa sản phẩm');
-    }
-  };
-
-  const handleAddToCart = (product: any) => {
-    addToCart({
-      id: product._id,
-      title: product.name,
-      price: `${product.priceNew || product.price}`,
-      primaryImage: product.images?.[0] || '',
-      rating: 5,
-      isSale: !!product.priceOld,
-      priceValue: product.priceNew || product.price
-    }, 1);
+  const handleAddToCart = (item: FavoriteProduct) => {
+    const { detail } = item;
+    addToCart(
+      {
+        id: detail.id,
+        title: detail.title,
+        price: detail.price,
+        primaryImage: detail.primaryImage,
+        priceValue: detail.priceValue,
+        originalPrice: detail.originalPrice,
+        rating: detail.rating || 5,
+        isSale: !!detail.originalPrice,
+      },
+      item.quantity,
+      item.variant
+    );
     showToast('Đã thêm vào giỏ hàng!');
   };
 
-  const formatCurrency = (value: number) => 
-    `${(value || 0).toLocaleString('vi-VN')} đ`;
+  const renderItem = ({ item }: { item: FavoriteProduct }) => {
+    const { detail } = item;
+    if (!detail) return null;
 
-  const renderItem = ({ item }: { item: any }) => {
-    const product = item.productId || item;
     return (
       <View style={styles.card}>
         <TouchableOpacity 
-          onPress={() => navigation.navigate('ProductDetail', { productSlug: product.slug, product })}
+          onPress={() => navigation.navigate('ProductDetail', { productSlug: detail.slug || detail.id })}
           style={styles.cardContent}
         >
-          <Image source={{ uri: product.images?.[0] || 'https://via.placeholder.com/150' }} style={styles.image} />
+          <Image source={{ uri: detail.primaryImage || 'https://via.placeholder.com/150' }} style={styles.image} />
           <View style={styles.info}>
-            <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-            <Text style={styles.price}>{formatCurrency(product.priceNew || product.price)}</Text>
-            <View style={styles.categoryWrap}>
-               <Text style={styles.categoryText}>{product.category?.name || 'Phụ kiện'}</Text>
-            </View>
+            <Text style={styles.name} numberOfLines={2}>{detail.title}</Text>
+            <Text style={styles.price}>{detail.price}</Text>
+            {item.variant && item.variant.length > 0 && (
+              <View style={styles.variantWrap}>
+                <Text style={styles.variantText}>
+                  {item.variant.map(v => v.label || v.value).join(' / ')}
+                </Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
 
         <View style={styles.actions}>
           <TouchableOpacity 
             style={[styles.actionBtn, styles.cartBtn]} 
-            onPress={() => handleAddToCart(product)}
+            onPress={() => handleAddToCart(item)}
           >
             <ShoppingCart size={16} color="#fff" />
             <Text style={styles.cartBtnText}>Thêm giỏ hàng</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.actionBtn, styles.removeBtn]} 
-            onPress={() => handleRemove(product._id)}
+            onPress={() => handleRemove(item)}
           >
             <Trash2 size={16} color="#FF4D4D" />
           </TouchableOpacity>
@@ -117,23 +101,20 @@ const FavoriteListScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.secondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sản phẩm yêu thích ({items.length})</Text>
+        <Text style={styles.headerTitle}>Sản phẩm yêu thích ({favorites.length})</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {loading ? (
+      {!isReady ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} size="large" />
+          <Text>Đang tải...</Text>
         </View>
       ) : (
         <FlatList
-          data={items}
-          keyExtractor={(item) => item._id || (item.productId?._id)}
+          data={favorites}
+          keyExtractor={(item, index) => `${item.productId}-${index}`}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchWishlist(); }} />
-          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <View style={styles.emptyIconWrap}>
@@ -190,6 +171,16 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginLeft: 12, justifyContent: 'center', gap: 4 },
   name: { fontSize: 15, fontWeight: '700', color: colors.secondary },
   price: { fontSize: 16, fontWeight: '800', color: colors.primary },
+  variantWrap: { 
+    marginTop: 4, 
+    backgroundColor: '#F9FAFB', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  variantText: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
   categoryWrap: { alignSelf: 'flex-start', backgroundColor: '#FFF5F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   categoryText: { fontSize: 10, color: colors.primary, fontWeight: '700' },
   actions: { 

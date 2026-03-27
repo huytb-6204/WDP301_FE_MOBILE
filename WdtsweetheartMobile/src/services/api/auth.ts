@@ -78,11 +78,17 @@ export const loginWithGoogleToken = async (payload: {
     throw new Error(res.message || 'Đăng nhập Google thất bại!');
   }
 
-  if (res.token) {
-    await tokenStorage.set(res.token);
+  const token = res.token ?? (res as any)?.data?.token;
+  const user = (res.user ?? (res as any)?.data?.user) as AuthUser | undefined;
+
+  if (token) {
+    await tokenStorage.set(token);
   }
 
-  return res.user ?? null;
+  return {
+    user: user ?? null,
+    token: token ?? null,
+  };
 };
 
 export const loginWithFacebookToken = async (payload: { accessToken: string }) => {

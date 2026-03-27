@@ -1,5 +1,4 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
@@ -11,10 +10,11 @@ const WelcomeChoiceScreen = () => {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoLetter}>T</Text>
-          </View>
-          <Text style={styles.logoText}>Teddy Pet</Text>
+          <Image
+            source={require('../../../assets/app_logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.body}>
@@ -79,26 +79,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: 20,
+    marginBottom: 40,
   },
-  logoCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoLetter: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  logoText: {
-    marginLeft: 8,
-    color: colors.primary,
-    fontSize: 22,
-    fontWeight: '700',
+  headerLogo: {
+    width: 200,
+    height: 70,
   },
   body: {
     alignItems: 'center',

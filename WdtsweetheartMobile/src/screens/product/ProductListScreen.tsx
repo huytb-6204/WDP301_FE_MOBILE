@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -47,6 +47,8 @@ type UIProduct = ProductItem & {
   priceValue: number;
   originalPrice?: string;
   slug?: string;
+  hasVariants: boolean;
+  rawData: any;
 };
 
 type SortOption = {
@@ -132,7 +134,7 @@ const ProductListScreen = () => {
   const { data: categoryData } = useProductCategories();
   const { data: brandData } = useProductBrands();
   const { addToCart, cartCount } = useCart();
-  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -247,6 +249,8 @@ const ProductListScreen = () => {
         isSale: !!originalPrice,
         priceValue,
         originalPrice,
+        hasVariants: (item.variants?.length || 0) > 0,
+        rawData: item,
       };
     });
   }, [data]);
@@ -281,13 +285,13 @@ const ProductListScreen = () => {
       sorted.sort((a, b) => b.priceValue - a.priceValue);
     }
     sorted.sort((a, b) => {
-      const aPriority = favoriteIds.has(a.id) ? 1 : 0;
-      const bPriority = favoriteIds.has(b.id) ? 1 : 0;
+      const aPriority = isFavorite(a.id) ? 1 : 0;
+      const bPriority = isFavorite(b.id) ? 1 : 0;
       return bPriority - aPriority;
     });
 
     return sorted;
-  }, [products, debouncedKeyword, activeCategory, sortBy, priceFilter, favoriteIds]);
+  }, [products, debouncedKeyword, activeCategory, sortBy, priceFilter, isFavorite]);
 
   const activeSortLabel = useMemo(
     () => sortOptions.find((item) => item.value === sortBy)?.label || 'Mới nhất',
@@ -351,6 +355,26 @@ const ProductListScreen = () => {
             ))}
           </View>
         ) : null}
+
+        <View style={styles.promoSection}>
+            <View style={styles.promoCard}>
+                <Image 
+                    source={{ uri: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800' }} 
+                    style={styles.promoBg} 
+                />
+                <View style={styles.promoOverlay}>
+                    <View style={styles.promoBadge}>
+                        <Sparkles size={12} color="#fff" />
+                        <Text style={styles.promoBadgeText}>DAILY DEAL</Text>
+                    </View>
+                    <Text style={styles.promoContentTitle}>Ưu đãi thức ăn hạt</Text>
+                    <Text style={styles.promoContentSub}>Giảm tới 35% cho tất cả đơn hàng từ 500k</Text>
+                    <Pressable style={styles.promoBtn}>
+                         <Text style={styles.promoBtnText}>Mua ngay</Text>
+                    </Pressable>
+                </View>
+            </View>
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
           {categories.map((category) => (
@@ -448,23 +472,6 @@ const ProductListScreen = () => {
                     ) : (
                       <View style={styles.cardImagePlaceholder} />
                     )}
-                    <Pressable
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        toggleFavorite(item);
-                      }}
-                      style={({ pressed }) => [
-                        styles.favoriteButton,
-                        favoriteIds.has(item.id) && styles.favoriteButtonActive,
-                        pressed && styles.favoriteButtonPressed,
-                      ]}
-                    >
-                      <Heart // thay đổi icon tùy thích, có thể là Heart hoặc Star
-                        size={16}
-                        color={colors.primary}
-                        fill={favoriteIds.has(item.id) ? colors.primary : 'none'}
-                      />
-                    </Pressable>
                     {item.isSale ? (
                       <View style={styles.cardBadge}>
                         <Text style={styles.cardBadgeText}>SALE</Text>
@@ -495,6 +502,14 @@ const ProductListScreen = () => {
                     <Pressable
                       onPress={(event) => {
                         event.stopPropagation();
+                        if (item.hasVariants) {
+                           showToast('Vui lòng chọn phân loại sản phẩm');
+                           navigation.navigate('ProductDetail', {
+                             productSlug: item.slug || item.id,
+                             product: item,
+                           });
+                           return;
+                        }
                         addToCart(item, 1);
                         showToast('Đã thêm sản phẩm vào giỏ hàng');
                       }}
@@ -770,8 +785,81 @@ const styles = StyleSheet.create({
   },
   suggestionPrice: {
     color: colors.primary,
-    marginTop: 2,
+    fontWeight: '700',
     fontSize: 12,
+  },
+  promoSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  promoCard: {
+    height: 160,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: colors.primary,
+    position: 'relative',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  promoBg: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.7,
+  },
+  promoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  promoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 6,
+    marginBottom: 10,
+  },
+  promoBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  promoContentTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  promoContentSub: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  promoBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  promoBtnText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
   },
   categoryRow: {
     paddingLeft: 20,
@@ -866,26 +954,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: colors.border,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ffd6de',
-  },
-  favoriteButtonActive: {
-    backgroundColor: '#fff',
-    borderColor: colors.primary,
-  },
-  favoriteButtonPressed: {
-    transform: [{ scale: 0.96 }],
   },
   cardBadge: {
     position: 'absolute',

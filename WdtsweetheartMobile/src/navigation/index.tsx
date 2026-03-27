@@ -40,6 +40,9 @@ import ReviewScreen from '../screens/review/ReviewScreen';
 import OrderDetailScreen from '../screens/order/OrderDetailScreen';
 import BookingDetailScreen from '../screens/booking/BookingDetailScreen';
 import BoardingBookingDetailScreen from '../screens/boarding/BoardingBookingDetailScreen';
+import CouponListScreen from '../screens/coupon/CouponListScreen';
+import BreedListScreen from '../screens/pet/BreedListScreen';
+import BoardingCagesScreen from '../screens/boarding/BoardingCagesScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -191,6 +194,26 @@ const RootNavigator = () => {
           <Stack.Screen
             name="BoardingBookingDetail"
             component={BoardingBookingDetailScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="CouponList"
+            component={CouponListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BreedList"
+            component={BreedListScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BoardingCages"
+            component={BoardingCagesScreen}
+            options={{ animation: 'slide_from_right', animationDuration: 300 }}
+          />
+          <Stack.Screen
+            name="BoardingBookings"
+            component={MyBoardingBookingsScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
         </Stack.Navigator>

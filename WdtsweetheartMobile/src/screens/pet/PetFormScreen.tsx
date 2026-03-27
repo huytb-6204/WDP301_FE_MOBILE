@@ -8,14 +8,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Camera, Check, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../theme/colors';
 import { createMyPet, updateMyPet, type Pet, type PetPayload } from '../../services/api/pet';
 import { Toast } from '../../components/common';
+
+// Cloudinary Configuration
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dxyuuul0q/image/upload";
+const UPLOAD_PRESET = "teddypet";
 
 const PetFormScreen = () => {
   const navigation = useNavigation<any>();
@@ -36,6 +40,7 @@ const PetFormScreen = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -43,6 +48,64 @@ const PetFormScreen = () => {
     setToastMessage(message);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2000);
+  };
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showToast('Cần cấp quyền truy cập thư viện ảnh');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      await uploadToCloudinary(result.assets[0].uri);
+    }
+  };
+
+  const uploadToCloudinary = async (uri: string) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      
+      const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+      const fileName = uri.split('/').pop() || `pet_avatar_${Date.now()}.jpg`;
+      const fileType = 'image/jpeg';
+
+      // @ts-ignore
+      formData.append('file', {
+        uri: fileUri,
+        type: fileType,
+        name: fileName,
+      });
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header manually, let fetch set it with boundary
+      });
+
+      const data = await response.json();
+      if (data.secure_url) {
+        setForm({ ...form, avatar: data.secure_url });
+        showToast('Tải ảnh lên thành công');
+      } else {
+        console.error('Cloudinary Response Error:', data);
+        showToast('Lỗi khi tải ảnh lên Cloudinary');
+      }
+    } catch (error) {
+      console.error('Cloudinary Upload Error:', error);
+      showToast('Lỗi khi tải ảnh lên');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -75,21 +138,36 @@ const PetFormScreen = () => {
           <ArrowLeft size={24} color={colors.secondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEdit ? 'Chỉnh sửa bé cưng' : 'Thêm bé cưng mới'}</Text>
-        <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
+        <TouchableOpacity onPress={handleSave} disabled={loading || uploading} style={styles.saveBtn}>
           {loading ? <ActivityIndicator color={colors.primary} /> : <Check size={24} color={colors.primary} />}
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarSection}>
-          <TouchableOpacity style={styles.avatarWrapper}>
+          <TouchableOpacity 
+            style={styles.avatarWrapper} 
+            onPress={handlePickImage}
+            disabled={uploading}
+          >
             {form.avatar ? (
               <Image source={{ uri: form.avatar }} style={styles.avatar} />
             ) : (
               <View style={styles.placeholderAvatar}>
-                <Camera size={40} color="#ccc" />
-                <Text style={styles.addPhotoText}>Thêm ảnh</Text>
+                {uploading ? (
+                  <ActivityIndicator color={colors.primary} />
+                ) : (
+                  <>
+                    <Camera size={40} color="#ccc" />
+                    <Text style={styles.addPhotoText}>Thêm ảnh</Text>
+                  </>
+                )}
               </View>
+            )}
+            {form.avatar && uploading && (
+               <View style={styles.uploadOverlay}>
+                 <ActivityIndicator color="#fff" />
+               </View>
             )}
           </TouchableOpacity>
         </View>
@@ -141,6 +219,7 @@ const PetFormScreen = () => {
               </View>
             </View>
           </View>
+
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Giống (Breed)</Text>
@@ -231,6 +310,12 @@ const styles = StyleSheet.create({
   },
   avatar: { width: '100%', height: '100%' },
   placeholderAvatar: { alignItems: 'center' },
+  uploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addPhotoText: { fontSize: 12, color: '#999', marginTop: 4, fontWeight: '600' },
   form: { gap: 16 },
   inputGroup: { gap: 8 },

@@ -65,8 +65,8 @@ const homeVisuals = {
   promo1: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-1.jpg',
   promo2: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/05/h1-filler-img-2.jpg',
   badge: 'https://wdtsweetheart.wpengine.com/wp-content/uploads/2025/06/rate-group-img.png',
-  serviceCover: require('../../../assets/service-cover.jpg'),
-  hotelCover: require('../../../assets/hotel-cover.jpg'),
+  serviceCover: require('../../../assets/pet_spa_premium.png'),
+  hotelCover: require('../../../assets/pet_hotel_premium.png'),
 };
 
 const showcaseCategory = ['THỨC ĂN', 'ĐỒ CHƠI', 'PHỤ KIỆN', 'VỆ SINH'];
@@ -83,7 +83,7 @@ const HomeScreen = () => {
   const route = useRoute<HomeRouteProp>();
   const isFocused = useIsFocused();
   const { cartCount, addToCart } = useCart();
-  const { favoriteIds, favorites, toggleFavorite } = useFavorites();
+  const { isFavorite, favorites, toggleFavorite } = useFavorites();
   const { data: products } = useProducts({ page: 1, limit: 8 });
   const { data: blogs, loading: blogsLoading, error: blogsError, refetch: refetchBlogs } = useBlogs();
 
@@ -96,12 +96,12 @@ const HomeScreen = () => {
   const productPreview = useMemo(() => {
     const safeProducts = Array.isArray(products) ? products.slice() : [];
     const prioritized = safeProducts.sort((a, b) => {
-      const aPriority = favoriteIds.has(a._id) ? 1 : 0;
-      const bPriority = favoriteIds.has(b._id) ? 1 : 0;
+      const aPriority = isFavorite(a._id) ? 1 : 0;
+      const bPriority = isFavorite(b._id) ? 1 : 0;
       return bPriority - aPriority;
     });
     return prioritized.slice(0, 4);
-  }, [products, favoriteIds]);
+  }, [products, isFavorite]);
   const blogPreview = useMemo(() => (blogs || []).slice(0, 3), [blogs]);
 
   const formatBlogDate = (value?: string) => {
@@ -198,20 +198,6 @@ const HomeScreen = () => {
               <Text style={styles.showcaseBadgeText}>{badgeText}</Text>
             </View>
           ) : null}
-          <TouchableOpacity
-            style={[styles.showcaseHeart, favoriteIds.has(item._id) && styles.showcaseHeartActive]}
-            activeOpacity={0.85}
-            onPress={(event) => {
-              event.stopPropagation();
-              toggleFavorite(favoriteProduct);
-            }}
-          >
-            <Heart  // thay đổi icon tùy thích, có thể là Heart hoặc Star
-              size={16}
-              color="#fb7185"
-              fill={favoriteIds.has(item._id) ? '#fb7185' : 'none'}
-            />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.showcaseBody}>
@@ -237,86 +223,99 @@ const HomeScreen = () => {
   const renderHomeTab = () => (
     <View style={styles.sectionStack}>
       {favorites.length > 0 ? (
-        <View style={styles.favoriteHint}>
+        <TouchableOpacity style={styles.favoriteHintModern} onPress={() => navigation.navigate('FavoriteList')}>
           <Heart size={14} color={colors.primary} fill={colors.primary} />
-          <Text style={styles.favoriteHintText}>
-            Đang ưu tiên hiển thị {favorites.length} sản phẩm yêu thích của bạn
+          <Text style={styles.favoriteHintTextModern}>
+            Đang hiển thị {favorites.length} sản phẩm bạn yêu thích
           </Text>
-        </View>
+          <ArrowRight size={12} color={colors.primary} />
+        </TouchableOpacity>
       ) : null}
 
-      <View style={styles.heroCard}>
-        <View style={styles.heroRow}>
-          <View>
-            <Text style={styles.heroTitle}>Teddy Pet Mobile</Text>
-            <Text style={styles.heroDesc}>Chăm sóc thú cưng trọn vẹn trong một chạm.</Text>
-            <Image source={{ uri: homeVisuals.badge }} style={styles.heroRating} resizeMode="contain" />
-          </View>
-          <View style={styles.heroMediaWrap}>
-            <Image source={{ uri: homeVisuals.heroPets }} style={styles.heroPetImage} resizeMode="contain" />
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>{cartCount}</Text>
-              <ShoppingCart size={16} color="#fff" />
+      <TouchableOpacity
+        style={styles.heroCardModern}
+        activeOpacity={0.95}
+        onPress={() => navigation.navigate('ProductList')}
+      >
+        <ImageBackground
+          source={{ uri: homeVisuals.promo1 }}
+          style={styles.heroBackground}
+          imageStyle={styles.heroBackgroundImage}
+        >
+          <View style={styles.heroGlassOverlay}>
+            <View style={styles.heroContent}>
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagText}>SẢN PHẨM MỚI</Text>
+              </View>
+              <Text style={styles.heroTitleModern}>Teddy Pet Mobile</Text>
+              <Text style={styles.heroDescModern}>Chăm sóc thú cưng trọn vẹn trong một chạm.</Text>
+            </View>
+            <View style={styles.heroActionModern}>
+              <View style={styles.heroBtn}>
+                <Text style={styles.heroBtnText}>Khám phá ngay</Text>
+              </View>
+              <View style={styles.heroFloatingBadge}>
+                  <Image source={{ uri: homeVisuals.badge }} style={styles.heroRatingModern} resizeMode="contain" />
+              </View>
             </View>
           </View>
-        </View>
-        <View style={styles.heroActionRow}>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Booking')}>
-            <CalendarCheck size={16} color="#fff" />
-            <Text style={styles.primaryButtonText}>Đặt lịch</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Cart')}>
-            <Text style={styles.secondaryButtonText}>Giỏ hàng</Text>
-          </TouchableOpacity>
+        </ImageBackground>
+      </TouchableOpacity>
+
+      <View style={styles.quickActionCard}>
+        <Text style={styles.quickActionTitle}>Truy cập nhanh</Text>
+        <View style={styles.quickGridModern}>
+          {[
+            { label: 'Sản phẩm', icon: ShoppingBag, color: '#FFF1F1', iconColor: colors.primary, tab: 'product' },
+            { label: 'Dịch vụ', icon: PawPrint, color: '#F1F5FF', iconColor: '#4F46E5', tab: 'service' },
+            { label: 'Bài viết', icon: BookOpen, color: '#F0FFF4', iconColor: '#22C55E', tab: 'blog' },
+            { label: 'Tài khoản', icon: UserRound, color: '#FFFBEB', iconColor: '#F59E0B', tab: 'profile' },
+          ].map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={[styles.quickItemModern, { backgroundColor: item.color }]}
+              onPress={() => setActiveTab(item.tab as HomeMainTab)}
+            >
+              <View style={styles.quickIconBox}>
+                <item.icon size={20} color={item.iconColor} />
+              </View>
+              <Text style={styles.quickLabelModern}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      <View style={styles.promoRow}>
-        <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('service')}>
-          <ImageBackground source={{ uri: homeVisuals.promo1 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
-            <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Spa & Cắt tỉa</Text>
-              <Text style={styles.promoSub}>Đặt lịch nhanh trong 1 chạm</Text>
+      <View style={styles.promoModernRow}>
+        <TouchableOpacity style={styles.promoModernItem} onPress={() => setActiveTab('service')}>
+          <ImageBackground source={{ uri: homeVisuals.promo2 }} style={styles.promoModernImage} imageStyle={styles.promoModernImageInner}>
+            <View style={styles.promoModernOverlay}>
+              <Text style={styles.promoModernTitle}>Spa & Grooming</Text>
+              <View style={styles.promoModernBtn}>
+                <ArrowRight size={10} color="#fff" />
+              </View>
             </View>
           </ImageBackground>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.promoItem} onPress={() => setActiveTab('product')}>
-          <ImageBackground source={{ uri: homeVisuals.promo2 }} style={styles.promoImage} imageStyle={styles.promoImageInner}>
-            <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Cửa hàng thú cưng</Text>
-              <Text style={styles.promoSub}>Khám phá sản phẩm nổi bật</Text>
+        <TouchableOpacity style={styles.promoModernItem} onPress={() => navigation.navigate('Booking')}>
+          <ImageBackground source={{ uri: homeVisuals.promo1 }} style={styles.promoModernImage} imageStyle={styles.promoModernImageInner}>
+            <View style={styles.promoModernOverlay}>
+              <Text style={styles.promoModernTitle}>Đặt lịch ngay</Text>
+              <View style={[styles.promoModernBtn, { backgroundColor: '#4F46E5' }]}>
+                <ArrowRight size={10} color="#fff" />
+              </View>
             </View>
           </ImageBackground>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Tác vụ nhanh</Text>
-        <View style={styles.quickGrid}>
-          <TouchableOpacity style={styles.quickItem} onPress={() => setActiveTab('product')}>
-            <ShoppingBag size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Sản phẩm</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickItem} onPress={() => setActiveTab('service')}>
-            <PawPrint size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Dịch vụ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickItem} onPress={() => setActiveTab('blog')}>
-            <BookOpen size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Bài viết</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickItem} onPress={() => setActiveTab('profile')}>
-            <UserRound size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Tài khoản</Text>
-          </TouchableOpacity>
+      <View style={styles.homeSectionHeader}>
+        <View style={styles.homeSectionTitleRow}>
+            <View style={styles.titleIndicator} />
+            <Text style={styles.homeSectionTitle}>Sản phẩm nổi bật</Text>
         </View>
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
-        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('ProductList')}>
-          <Text style={styles.inlineActionText}>Xem tất cả</Text>
-          <ArrowRight size={14} color={colors.primary} />
+        <TouchableOpacity style={styles.homeSeeAll} onPress={() => navigation.navigate('ProductList')}>
+          <Text style={styles.homeSeeAllText}>Xem tất cả</Text>
+          <ArrowRight size={10} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -345,61 +344,38 @@ const HomeScreen = () => {
   const renderServiceTab = () => (
     <View style={styles.sectionStack}>
       <View style={styles.serviceHeroHeader}>
-        <Text style={styles.sectionEyebrow}>Teddy Pet</Text>
+        <View style={styles.premiumBadge}>
+          <Text style={styles.premiumBadgeText}>PREMIUM SERVICES</Text>
+        </View>
         <Text style={styles.sectionTitleLarge}>Dịch vụ & Hotel</Text>
         <Text style={styles.sectionSubtitle}>
-          Chăm sóc toàn diện cho thú cưng với dịch vụ spa chuyên nghiệp và khách sạn tiện nghi.
+          Trải nghiệm đẳng cấp 5 sao dành riêng cho thú cưng của bạn.
         </Text>
       </View>
 
       <View style={styles.sectionBlock}>
-        <View style={styles.sectionBlockHeader}>
-          <Text style={styles.sectionBlockTitle}>Dịch vụ spa & grooming</Text>
-          <Text style={styles.sectionBlockTag}>Spa • Grooming • Khám sức khỏe</Text>
-        </View>
         <ImageBackground
           source={homeVisuals.serviceCover}
-          style={styles.serviceHeroCard}
+          style={styles.serviceHeroCardLarge}
           imageStyle={styles.serviceHeroCardImage}
         >
-          <View style={styles.serviceHeroOverlay}>
-            <Text style={styles.serviceHeroCardTitle}>Chăm sóc chuẩn 5 bước</Text>
-            <Text style={styles.serviceHeroCardText}>
-              Liệu trình chuyên sâu, phù hợp từng loại da và lông. Đặt lịch nhanh, theo dõi dễ dàng.
-            </Text>
-            <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('Booking')}>
-              <Text style={styles.primaryButtonText}>Đặt lịch dịch vụ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('ServiceList')}>
-              <Text style={styles.secondaryButtonText}>Danh sách dịch vụ</Text>
-            </TouchableOpacity>
-          </View>
-        </ImageBackground>
-      </View>
-
-      <View style={styles.sectionDivider} />
-
-      <View style={styles.sectionBlock}>
-        <View style={styles.sectionBlockHeader}>
-          <Text style={styles.sectionBlockTitle}>Khách sạn thú cưng</Text>
-          <Text style={styles.sectionBlockTag}>Phòng riêng • Theo dõi 24/7</Text>
-        </View>
-        <ImageBackground
-          source={homeVisuals.hotelCover}
-          style={styles.serviceHeroCard}
-          imageStyle={styles.serviceHeroCardImage}
-        >
-          <View style={styles.serviceHeroOverlay}>
-            <Text style={styles.serviceHeroCardTitle}>Không gian lưu trú cao cấp</Text>
-            <Text style={styles.serviceHeroCardText}>
-              Chọn phòng phù hợp, đặt lịch lưu trú nhanh và kiểm tra tình trạng ngay trên app.
-            </Text>
-            <View style={styles.rowButtons}>
-              <TouchableOpacity style={styles.primaryButtonHalf} onPress={() => navigation.navigate('BoardingHotel')}>
-                <Text style={styles.primaryButtonText}>Đặt phòng</Text>
+          <View style={styles.serviceGlassOverlay}>
+            <View style={styles.serviceContentTop}>
+               <View style={styles.serviceTag}>
+                  <PawPrint size={12} color="#fff" />
+                  <Text style={styles.serviceTagText}>SPA & GROOMING</Text>
+               </View>
+               <Text style={styles.serviceMainTitle}>Chăm sóc toàn diện</Text>
+               <Text style={styles.serviceMainDesc}>
+                  Liệu trình Spa chuẩn quốc tế giúp bé cưng thư giãn và rạng rỡ.
+               </Text>
+            </View>
+            <View style={styles.serviceActionRow}>
+              <TouchableOpacity style={styles.servicePrimaryBtn} onPress={() => navigation.navigate('Booking')}>
+                <Text style={styles.servicePrimaryBtnText}>Đặt lịch ngay</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButtonHalf} onPress={() => navigation.navigate('MyBoardingBookings')}>
-                <Text style={styles.secondaryButtonText}>Đơn hotel</Text>
+              <TouchableOpacity style={styles.serviceSecondaryBtn} onPress={() => navigation.navigate('ServiceList')}>
+                <Text style={styles.serviceSecondaryBtnText}>Khám phá</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -407,24 +383,56 @@ const HomeScreen = () => {
       </View>
 
       <View style={styles.sectionBlock}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Lịch hẹn của bạn</Text>
-          <Text style={styles.cardText}>Theo dõi toàn bộ lịch đã đặt và trạng thái xử lý.</Text>
-          <TouchableOpacity style={styles.secondaryButtonFull} onPress={() => navigation.navigate('MyBookings')}>
-            <Text style={styles.secondaryButtonText}>Xem lịch của tôi</Text>
-          </TouchableOpacity>
-        </View>
+        <ImageBackground
+          source={homeVisuals.hotelCover}
+          style={styles.serviceHeroCardLarge}
+          imageStyle={styles.serviceHeroCardImage}
+        >
+          <View style={styles.serviceGlassOverlay}>
+            <View style={styles.serviceContentTop}>
+               <View style={[styles.serviceTag, { backgroundColor: '#4F46E5' }]}>
+                  <House size={12} color="#fff" />
+                  <Text style={styles.serviceTagText}>PET HOTEL</Text>
+               </View>
+               <Text style={styles.serviceMainTitle}>Nơi trú ẩn ấm cúng</Text>
+               <Text style={styles.serviceMainDesc}>
+                  Phòng nghỉ hạng sang với chế độ chăm sóc và theo dõi 24/7.
+               </Text>
+            </View>
+            <View style={styles.serviceActionRow}>
+              <TouchableOpacity style={[styles.servicePrimaryBtn, { backgroundColor: '#4F46E5' }]} onPress={() => navigation.navigate('BoardingHotel')}>
+                <Text style={styles.servicePrimaryBtnText}>Đặt phòng</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.serviceSecondaryBtn} onPress={() => navigation.navigate('MyBoardingBookings')}>
+                <Text style={styles.serviceSecondaryBtnText}>Lịch sử</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ImageBackground>
+      </View>
+
+      <View style={styles.appointmentShortcut}>
+         <View style={styles.appointmentInfo}>
+            <Text style={styles.appointmentTitle}>Quản lý lịch hẹn</Text>
+            <Text style={styles.appointmentSub}>Theo dõi trạng thái và lịch trình của bé</Text>
+         </View>
+         <TouchableOpacity style={styles.appointmentBtn} onPress={() => navigation.navigate('MyBookings')}>
+            <ClipboardList size={20} color={colors.primary} />
+         </TouchableOpacity>
       </View>
     </View>
   );
 
   const renderBlogTab = () => (
     <View style={styles.sectionStack}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Bài viết mới</Text>
-        <TouchableOpacity style={styles.inlineAction} onPress={() => navigation.navigate('BlogList')}>
-          <Text style={styles.inlineActionText}>Xem tất cả</Text>
-          <ArrowRight size={14} color={colors.primary} />
+      <View style={styles.homeSectionHeader}>
+        <View style={styles.homeSectionTitleRow}>
+          <View style={styles.titleIndicator} />
+          <Text style={styles.homeSectionTitle}>Bài viết mới nhất</Text>
+        </View>
+        <TouchableOpacity style={styles.homeSeeAll} onPress={() => navigation.navigate('BlogList')}>
+          <Text style={styles.homeSeeAllText}>Xem tất cả</Text>
+          <ArrowRight size={10} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -440,26 +448,45 @@ const HomeScreen = () => {
       ) : blogPreview.length === 0 ? (
         <View style={styles.emptyBlog}>
           <Text style={styles.emptyBlogText}>Chưa có bài viết nào.</Text>
-          <TouchableOpacity style={styles.primaryButtonFull} onPress={() => navigation.navigate('BlogList')}>
-            <Text style={styles.primaryButtonText}>Khám phá blog</Text>
+          <TouchableOpacity style={styles.browseButtonModern} onPress={() => navigation.navigate('BlogList')}>
+            <Text style={styles.browseButtonTextModern}>Khám phá blog</Text>
           </TouchableOpacity>
         </View>
       ) : (
-          blogPreview.map((item) => (
+        <View style={styles.blogGridModern}>
+          {blogPreview.map((item, idx) => (
             <TouchableOpacity
               key={item._id}
-              style={styles.blogCard}
-              onPress={() =>
-                navigation.navigate('BlogDetail', { slug: item.slug || item._id, blog: item })
-              }
+              activeOpacity={0.9}
+              style={[styles.blogCardModern, idx === 0 && styles.blogCardFeatured]}
+              onPress={() => navigation.navigate('BlogDetail', { slug: item.slug || item._id, blog: item })}
             >
-            <Text style={styles.blogDate}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
-            <Text style={styles.blogTitle}>{item.name}</Text>
-            <Text style={styles.blogDesc} numberOfLines={2}>
-              {item.excerpt || item.expert || item.description || 'Xem chi tiết bài viết'}
-            </Text>
-          </TouchableOpacity>
-        ))
+              <Image
+                source={{ uri: item.featuredImage || item.avatar || 'https://via.placeholder.com/400x200' }}
+                style={idx === 0 ? styles.blogImageFeatured : styles.blogImageNormal}
+                resizeMode="cover"
+              />
+              <View style={styles.blogContentModern}>
+                <View style={styles.blogMetaRow}>
+                  <Text style={styles.blogTagModern}>TIN TỨC</Text>
+                  <Text style={styles.blogDateModern}>{formatBlogDate(item.publishAt || item.createdAt)}</Text>
+                </View>
+                <Text style={styles.blogTitleModern} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                {idx === 0 && (
+                  <Text style={styles.blogDescModern} numberOfLines={2}>
+                    {item.excerpt || item.expert || item.description || 'Xem chi tiết bài viết...'}
+                  </Text>
+                )}
+                <View style={styles.blogFooterModern}>
+                   <Text style={styles.blogReadMore}>Đọc ngay</Text>
+                   <ArrowRight size={12} color={colors.primary} />
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -585,7 +612,11 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.brand}>Teddy Pet</Text>
+        <Image
+          source={require('../../../assets/app_logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
         <TouchableOpacity style={styles.cartIcon} onPress={() => navigation.navigate('Cart')}>
           <ShoppingCart size={18} color={colors.secondary} />
           {cartCount > 0 ? (
@@ -628,6 +659,58 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   brand: { color: colors.secondary, fontSize: 20, fontWeight: '700' },
+  headerLogo: {
+    width: 140,
+    height: 48,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  cardTitle: { color: colors.secondary, fontSize: 16, fontWeight: '700' },
+  cardText: { color: colors.text, fontSize: 13, lineHeight: 20 },
+  primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  secondaryButtonText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  primaryButtonFull: {
+    borderRadius: 999,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    marginTop: 6,
+  },
+  secondaryButtonFull: {
+    borderRadius: 999,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: '#fff',
+  },
+  rowButtons: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  primaryButtonHalf: {
+    flex: 1,
+    borderRadius: 999,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  secondaryButtonHalf: {
+    flex: 1,
+    borderRadius: 999,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: '#fff',
+  },
   cartIcon: {
     width: 38,
     height: 38,
@@ -652,94 +735,307 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   content: { padding: 16, paddingBottom: 110 },
   sectionStack: { gap: 12 },
-  favoriteHint: {
+  favoriteHintModern: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#fff4f6',
+    borderRadius: 16,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ffd6de',
+    borderColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  favoriteHintText: {
+  favoriteHintTextModern: {
     flex: 1,
     color: colors.secondary,
     fontSize: 12,
     fontWeight: '600',
   },
-  heroCard: {
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: colors.softPink,
-    borderWidth: 1,
-    borderColor: '#ffdede',
+  heroCardModern: {
+    height: 190,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 6,
   },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
-  heroDesc: { color: colors.text, marginTop: 4, maxWidth: 220 },
-  heroRating: { width: 100, height: 22, marginTop: 8 },
-  heroMediaWrap: { alignItems: 'center', justifyContent: 'center' },
-  heroPetImage: { width: 116, height: 88, marginTop: -2 },
-  heroBadge: {
-    position: 'absolute',
-    right: -4,
-    bottom: -2,
+  heroBackground: {
+    flex: 1,
+  },
+  heroBackgroundImage: {
+    borderRadius: 24,
+  },
+  heroGlassOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(16, 41, 55, 0.45)',
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  heroContent: {
+    gap: 6,
+  },
+  heroTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  heroTagText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroTitleModern: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  heroDescModern: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    lineHeight: 18,
+    maxWidth: '80%',
+  },
+  heroActionModern: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  heroBtnText: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  heroFloatingBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 8,
+    borderRadius: 12,
+  },
+  heroRatingModern: {
+    width: 60,
+    height: 16,
+  },
+  quickActionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  quickActionTitle: {
+    color: colors.secondary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  quickGridModern: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickItemModern: {
+    width: '23%',
+    aspectRatio: 1,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickLabelModern: {
+    color: colors.secondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  promoModernRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  promoModernItem: {
+    flex: 1,
+    height: 100,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  promoModernImage: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  promoModernImageInner: {
+    borderRadius: 20,
+  },
+  promoModernOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  promoModernTitle: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  promoModernBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  homeSectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  titleIndicator: {
+    width: 6,
+    height: 18,
+    backgroundColor: colors.primary,
+    borderRadius: 3,
+  },
+  homeSectionTitle: {
+    color: colors.secondary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  homeSeeAll: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  heroBadgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  heroActionRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  promoRow: { flexDirection: 'row', gap: 10 },
-  promoItem: { flex: 1, borderRadius: 14, overflow: 'hidden' },
-  promoImage: { height: 120, justifyContent: 'flex-end' },
-  promoImageInner: { borderRadius: 14 },
-  promoOverlay: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(16, 41, 55, 0.55)',
-    gap: 3,
+  homeSeeAllText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
   },
-  promoTitle: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  promoSub: { color: '#fff', fontSize: 11, opacity: 0.92 },
-  primaryButton: {
+  blogGridModern: {
+    gap: 16,
+  },
+  blogCardModern: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+    flexDirection: 'row',
+  },
+  blogCardFeatured: {
+    flexDirection: 'column',
+  },
+  blogImageFeatured: {
+    width: '100%',
+    height: 180,
+  },
+  blogImageNormal: {
+    width: 100,
+    height: '100%',
+    minHeight: 100,
+  },
+  blogContentModern: {
+    padding: 16,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  blogMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    minHeight: 40,
-    paddingHorizontal: 14,
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  secondaryButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    minHeight: 40,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  secondaryButtonText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: 8,
+    marginBottom: 8,
   },
-  cardTitle: { color: colors.secondary, fontSize: 16, fontWeight: '700' },
-  cardText: { color: colors.text, fontSize: 13, lineHeight: 20 },
+  blogTagModern: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: colors.primary,
+    backgroundColor: '#FFF1F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  blogDateModern: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  blogTitleModern: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.secondary,
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  blogDescModern: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  blogFooterModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  blogReadMore: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  browseButtonModern: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  browseButtonTextModern: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   serviceHeroHeader: {
     paddingVertical: 8,
     gap: 6,
@@ -777,34 +1073,141 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  serviceHeroCard: {
-    borderRadius: 18,
+  serviceHeroCardLarge: {
+    borderRadius: 24,
     overflow: 'hidden',
-    minHeight: 220,
+    minHeight: 280,
     justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   serviceHeroCardImage: {
-    borderRadius: 18,
+    borderRadius: 24,
   },
-  serviceHeroOverlay: {
-    backgroundColor: 'rgba(16, 41, 55, 0.65)',
-    padding: 16,
+  serviceGlassOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    padding: 24,
+    gap: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  serviceContentTop: {
     gap: 8,
   },
-  serviceHeroCardTitle: {
+  serviceTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  serviceTagText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  serviceMainTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  serviceMainDesc: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  serviceActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  servicePrimaryBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    flex: 1,
+    alignItems: 'center',
+  },
+  servicePrimaryBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  serviceSecondaryBtn: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    flex: 1,
+    alignItems: 'center',
+  },
+  serviceSecondaryBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  premiumBadge: {
+    backgroundColor: '#F7EDDF',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  premiumBadgeText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  appointmentShortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  appointmentInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  appointmentTitle: {
+    color: colors.secondary,
+    fontSize: 16,
     fontWeight: '700',
   },
-  serviceHeroCardText: {
-    color: '#f6f6f6',
+  appointmentSub: {
+    color: colors.text,
     fontSize: 12,
-    lineHeight: 18,
+  },
+  appointmentBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.softPink,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionDivider: {
     height: 1,
     backgroundColor: colors.border,
-    marginVertical: 8,
+    marginVertical: 12,
   },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   quickItem: {
@@ -937,23 +1340,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  primaryButtonFull: {
-    borderRadius: 999,
-    minHeight: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    marginTop: 6,
-  },
-  secondaryButtonFull: {
-    borderRadius: 999,
-    minHeight: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: '#fff',
-  },
   blogCard: {
     borderRadius: 14,
     borderWidth: 1,
@@ -977,25 +1363,6 @@ const styles = StyleSheet.create({
   emptyBlogText: { color: colors.text, fontSize: 12 },
   loadingWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 40, gap: 8 },
   loadingText: { color: colors.text, fontSize: 13 },
-  rowButtons: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  primaryButtonHalf: {
-    flex: 1,
-    borderRadius: 999,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-  },
-  secondaryButtonHalf: {
-    flex: 1,
-    borderRadius: 999,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: '#fff',
-  },
   logoutButton: {
     marginTop: 4,
     borderRadius: 999,

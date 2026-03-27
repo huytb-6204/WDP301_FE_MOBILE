@@ -21,6 +21,7 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { env } from '../../config';
 import { login, loginWithGoogleToken } from '../../services/api/auth';
+import { tokenStorage } from '../../services/auth/token';
 import type { RootStackParamList } from '../../navigation/types';
 import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
 import GoogleLogo from '../../../assets/google-logo.svg';
@@ -36,8 +37,10 @@ const LoginScreen = () => {
   const [socialLoading, setSocialLoading] = useState<null | 'google'>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const proxyRedirectUri = 'https://auth.expo.io/@huytran62044/wdtsweetheart-mobile';
-  const returnUrl = AuthSession.getDefaultReturnUrl();
+  const redirectUri = AuthSession.makeRedirectUri({
+    useProxy: true,
+    projectNameForProxy: '@huytran62044/wdtsweetheart-mobile',
+  });
 
   const handleSubmit = async () => {
     setError(null);
@@ -85,8 +88,8 @@ const LoginScreen = () => {
     try {
       const request = new AuthSession.AuthRequest({
         clientId: env.googleClientId,
-        redirectUri: proxyRedirectUri,
-        responseType: AuthSession.ResponseType.Token,
+        redirectUri,
+        responseType: AuthSession.ResponseType.Code,
         scopes: ['openid', 'email', 'profile'],
         usePKCE: false,
         extraParams: {
@@ -95,14 +98,13 @@ const LoginScreen = () => {
       });
 
       const discovery = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
-      const authUrl = await request.makeAuthUrlAsync(discovery);
-      const proxyUrl = `${proxyRedirectUri}/start?authUrl=${encodeURIComponent(
-        authUrl
-      )}&returnUrl=${encodeURIComponent(returnUrl)}`;
-
-      const result = await request.promptAsync(discovery, { url: proxyUrl });
+      const result = await request.promptAsync(discovery, {
+        useProxy: true,
+        projectNameForProxy: '@huytran62044/wdtsweetheart-mobile',
+      });
 
       if (result.type !== 'success') {
+        setError('Đăng nhập Google bị hủy hoặc chưa hoàn tất.');
         return;
       }
 
@@ -114,22 +116,26 @@ const LoginScreen = () => {
         return;
       }
 
-      const user = await loginWithGoogleToken(
+      const { token } = await loginWithGoogleToken(
         accessToken
           ? { accessToken }
-          : { authCode: authCode!, redirectUri: proxyRedirectUri }
+          : { authCode: authCode!, redirectUri }
       );
-      if (!user) {
+      if (!token) {
         setError('Đăng nhập Google thất bại!');
         return;
       }
-      navigation.navigate('Home');
+      const storedToken = await tokenStorage.get();
+      if (!storedToken) {
+        setError('Không lưu được phiên đăng nhập. Vui lòng thử lại.');
+        return;
+      }
+      navigation.navigate('Home', { initialTab: 'home' });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!';
       setError(message);
       console.warn('Google login error:', err);
     } finally {
-      navigation.navigate('Home');
       setSocialLoading(null);
     }
   };

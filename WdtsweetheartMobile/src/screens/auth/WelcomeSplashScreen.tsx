@@ -1,5 +1,4 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -15,19 +14,18 @@ const WelcomeSplashScreen = () => {
         <View style={styles.blobBottom} />
 
         <View style={styles.content}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoIcon}>🐾</Text>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../../assets/app_logo.png')}
+              style={styles.splashLogo}
+              resizeMode="contain"
+            />
           </View>
 
-          <Text style={styles.brand}>Teddy Pet</Text>
-
-          <View style={styles.mascotWrap}>
-            <View style={styles.mascotCard}>
-              <Text style={styles.mascot}>🐕</Text>
-            </View>
-            <View style={styles.heartBadge}>
-              <Text style={styles.heart}>❤️</Text>
-            </View>
+          <View style={styles.mascotAndHeart}>
+             <View style={styles.pillBadge}>
+                <Text style={styles.pillText}>PREMIUM PET CARE</Text>
+             </View>
           </View>
 
           <Text style={styles.subtitle}>Kết nối yêu thương cùng thú cưng</Text>
@@ -37,7 +35,7 @@ const WelcomeSplashScreen = () => {
             activeOpacity={0.9}
             style={styles.cta}
           >
-            <Text style={styles.ctaText}>Bắt đầu</Text>
+            <Text style={styles.ctaText}>Bắt đầu trải nghiệm</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -79,82 +77,56 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  logoBox: {
-    width: 92,
-    height: 92,
-    borderRadius: 32,
-    backgroundColor: '#fff',
+  logoContainer: {
+    marginBottom: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-    marginBottom: 12,
   },
-  logoIcon: {
-    fontSize: 48,
+  splashLogo: {
+    width: 280,
+    height: 120,
   },
-  brand: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 16,
+  mascotAndHeart: {
+    marginBottom: 30,
   },
-  mascotWrap: {
-    marginVertical: 24,
-  },
-  mascotCard: {
-    width: 180,
-    height: 180,
-    borderRadius: 36,
+  pillBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  mascot: {
-    fontSize: 80,
-  },
-  heartBadge: {
-    position: 'absolute',
-    right: -6,
-    bottom: -6,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  heart: {
-    fontSize: 26,
+  pillText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 16,
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 17,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 50,
+    fontWeight: '500',
   },
   cta: {
     backgroundColor: '#fff',
-    borderRadius: 999,
-    paddingVertical: 14,
+    borderRadius: 20,
+    paddingVertical: 18,
     paddingHorizontal: 36,
     width: '100%',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   ctaText: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

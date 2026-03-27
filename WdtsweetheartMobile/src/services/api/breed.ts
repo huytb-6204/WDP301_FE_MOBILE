@@ -1,20 +1,22 @@
 import { apiGetRaw } from './client';
 
-export type BreedItem = {
-  _id?: string;
+export interface Breed {
+  _id: string;
   name: string;
-  type?: 'dog' | 'cat' | string;
+  type: string;
   description?: string;
+  image?: string;
 };
 
 type BreedResponse = {
-  code?: number;
-  message?: string;
-  data?: BreedItem[];
+  success: boolean;
+  data: Breed[];
 };
 
-export const getBreeds = async (type?: 'dog' | 'cat') => {
-  const query = type ? `?type=${encodeURIComponent(type)}` : '';
-  const res = await apiGetRaw<BreedResponse>(`/api/v1/client/breed${query}`);
-  return Array.isArray(res?.data) ? res.data : [];
+export const getBreeds = async (type?: string, unique: boolean = false) => {
+  const query = [];
+  if (type) query.push(`type=${type}`);
+  if (unique) query.push(`unique=${unique}`);
+  const queryString = query.length > 0 ? `?${query.join('&')}` : '';
+  return apiGetRaw<{ success: boolean; data: Breed[] }>(`/api/v1/client/breed${queryString}`);
 };

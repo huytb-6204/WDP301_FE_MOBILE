@@ -1,7 +1,9 @@
 {
   "expo": {
+    "owner": "huytran62044",
     "name": "wdtsweetheart-mobile",
     "slug": "wdtsweetheart-mobile",
+    "scheme": "wdtsweetheart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

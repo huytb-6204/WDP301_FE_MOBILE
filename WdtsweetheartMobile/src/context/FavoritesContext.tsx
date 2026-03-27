@@ -1,4 +1,4 @@
-﻿import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
   useCallback,
@@ -11,27 +11,39 @@ import React, {
 
 const FAVORITES_STORAGE_KEY = '@wdt:favorites';
 
+export type ProductVariantOption = {
+  attrId: string;
+  value: string;
+  label?: string;
+};
+
 export type FavoriteProduct = {
-  id: string;
-  title: string;
-  price: string;
-  primaryImage: string;
-  secondaryImage?: string;
-  rating: number;
-  isSale: boolean;
-  priceValue?: number;
-  originalPrice?: string;
-  slug?: string;
+  productId: string;
+  variant?: ProductVariantOption[];
+  quantity: number;
+  addedAt: string;
+  detail: {
+    id: string;
+    title: string;
+    price: string;
+    priceValue: number;
+    originalPrice?: string;
+    primaryImage: string;
+    secondaryImage?: string;
+    slug?: string;
+    stock?: number;
+    rating?: number;
+    attributeList?: any[];
+    variants?: any[];
+  };
 };
 
 type FavoritesContextType = {
   favorites: FavoriteProduct[];
-  favoriteIds: Set<string>;
   isReady: boolean;
-  isFavorite: (productId: string) => boolean;
-  toggleFavorite: (product: FavoriteProduct) => void;
-  addFavorite: (product: FavoriteProduct) => void;
-  removeFavorite: (productId: string) => void;
+  isFavorite: (productId: string, variant?: ProductVariantOption[]) => boolean;
+  toggleFavorite: (product: Omit<FavoriteProduct, 'addedAt'>) => void;
+  removeFavorite: (productId: string, variant?: ProductVariantOption[]) => void;
 };
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
@@ -45,8 +57,38 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
       try {
         const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
         if (stored) {
-          const parsed = JSON.parse(stored) as FavoriteProduct[];
-          setFavorites(Array.isArray(parsed) ? parsed : []);
+          const parsed = JSON.parse(stored) as any[];
+          if (Array.isArray(parsed)) {
+            // Migration: Convert old flat items to the new structured format
+            const migrated = parsed.map((item) => {
+              if (item.detail) return item as FavoriteProduct;
+              
+              const id = item.productId || item.id;
+              if (!id) return null;
+
+              return {
+                productId: id,
+                quantity: item.quantity || 1,
+                addedAt: item.addedAt || new Date().toISOString(),
+                variant: item.variant,
+                detail: {
+                  id: id,
+                  title: item.title || '',
+                  price: item.price || '0',
+                  priceValue: item.priceValue || 0,
+                  originalPrice: item.originalPrice,
+                  primaryImage: item.primaryImage || '',
+                  secondaryImage: item.secondaryImage,
+                  slug: item.slug,
+                  rating: item.rating,
+                },
+              } as FavoriteProduct;
+            }).filter(Boolean) as FavoriteProduct[];
+
+            setFavorites(migrated);
+          } else {
+            setFavorites([]);
+          }
         }
       } catch {
         setFavorites([]);
@@ -63,45 +105,55 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites)).catch(() => {});
   }, [favorites, isReady]);
 
-  const addFavorite = useCallback((product: FavoriteProduct) => {
-    setFavorites((prev) => {
-      if (prev.some((item) => item.id === product.id)) {
-        return prev.map((item) => (item.id === product.id ? { ...item, ...product } : item));
-      }
-      return [product, ...prev];
+  const isInList = (list: FavoriteProduct[], productId: string, variant?: ProductVariantOption[]) => {
+    return list.some((item) => {
+      if (item.productId !== productId) return false;
+      if (!item.variant && !variant) return true;
+      if (!item.variant || !variant) return false;
+      return JSON.stringify(item.variant) === JSON.stringify(variant);
     });
-  }, []);
-
-  const removeFavorite = useCallback((productId: string) => {
-    setFavorites((prev) => prev.filter((item) => item.id !== productId));
-  }, []);
-
-  const toggleFavorite = useCallback((product: FavoriteProduct) => {
-    setFavorites((prev) => {
-      const exists = prev.some((item) => item.id === product.id);
-      if (exists) {
-        return prev.filter((item) => item.id !== product.id);
-      }
-      return [product, ...prev];
-    });
-  }, []);
-
-  const favoriteIds = useMemo(() => new Set(favorites.map((item) => item.id)), [favorites]);
+  };
 
   const isFavorite = useCallback(
-    (productId: string) => favoriteIds.has(productId),
-    [favoriteIds]
+    (productId: string, variant?: ProductVariantOption[]) => {
+      return isInList(favorites, productId, variant);
+    },
+    [favorites]
   );
+
+  const toggleFavorite = useCallback((item: Omit<FavoriteProduct, 'addedAt'>) => {
+    setFavorites((prev) => {
+      const exists = isInList(prev, item.productId, item.variant);
+      if (exists) {
+        return prev.filter((fav) => {
+          if (fav.productId !== item.productId) return true;
+          if (!fav.variant && !item.variant) return false;
+          if (!fav.variant || !item.variant) return true;
+          return JSON.stringify(fav.variant) !== JSON.stringify(item.variant);
+        });
+      }
+      return [{ ...item, addedAt: new Date().toISOString() }, ...prev];
+    });
+  }, []);
+
+  const removeFavorite = useCallback((productId: string, variant?: ProductVariantOption[]) => {
+    setFavorites((prev) =>
+      prev.filter((fav) => {
+        if (fav.productId !== productId) return true;
+        if (!fav.variant && !variant) return false;
+        if (!fav.variant || !variant) return true;
+        return JSON.stringify(fav.variant) !== JSON.stringify(variant);
+      })
+    );
+  }, []);
 
   return (
     <FavoritesContext.Provider
       value={{
         favorites,
-        favoriteIds,
         isReady,
         isFavorite,
         toggleFavorite,
-        addFavorite,
         removeFavorite,
       }}
     >

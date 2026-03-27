@@ -12,15 +12,22 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme/colors';
 import { env } from '../../config';
-import { login } from '../../services/api/auth';
+import { login, loginWithGoogleToken } from '../../services/api/auth';
+import { tokenStorage } from '../../services/auth/token';
 import type { RootStackParamList } from '../../navigation/types';
 import BackArrow from '../../../assets/back-arrow-direction-down-right-left-up-svgrepo-com.svg';
+import GoogleLogo from '../../../assets/google-logo.svg';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,6 +35,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<null | 'google'>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleBack = () => {
@@ -38,21 +46,23 @@ const LoginScreen = () => {
     navigation.navigate('WelcomeChoice');
   };
 
+  const redirectUri = AuthSession.makeRedirectUri();
+
   const handleSubmit = async () => {
     setError(null);
 
     if (!email.trim()) {
-      setError('Vui lòng nhập email!');
+      setError('Vui lòng nhập email.');
       return;
     }
 
     if (!email.includes('@')) {
-      setError('Email không đúng định dạng!');
+      setError('Email không đúng định dạng.');
       return;
     }
 
     if (!password.trim()) {
-      setError('Vui lòng nhập mật khẩu!');
+      setError('Vui lòng nhập mật khẩu.');
       return;
     }
 
@@ -60,26 +70,80 @@ const LoginScreen = () => {
     try {
       const user = await login(email.trim(), password, false);
       if (!user) {
-        setError('Đăng nhập thất bại!');
+        setError('Đăng nhập thất bại.');
       } else {
         navigation.navigate('Home');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!';
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
       setError(`${message} (API: ${env.apiBaseUrl})`);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setError(null);
+
+    if (!env.googleClientId) {
+      setError('Thiếu cấu hình GOOGLE_CLIENT_ID trong .env');
+      return;
+    }
+
+    setSocialLoading('google');
+    try {
+      const request = new AuthSession.AuthRequest({
+        clientId: env.googleClientId,
+        redirectUri,
+        responseType: AuthSession.ResponseType.Code,
+        scopes: ['openid', 'email', 'profile'],
+        usePKCE: false,
+        extraParams: {
+          prompt: 'consent',
+        },
+      });
+
+      const discovery = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
+      const result = await request.promptAsync(discovery);
+
+      if (result.type !== 'success') {
+        setError('Đăng nhập Google bị hủy hoặc chưa hoàn tất.');
+        return;
+      }
+
+      const accessToken = result.params?.access_token;
+      const authCode = result.params?.code;
+
+      if (!accessToken && !authCode) {
+        setError('Không lấy được Google token.');
+        return;
+      }
+
+      const { token } = await loginWithGoogleToken(accessToken ? { accessToken } : { authCode: authCode!, redirectUri });
+      if (!token) {
+        setError('Đăng nhập Google thất bại.');
+        return;
+      }
+      const storedToken = await tokenStorage.get();
+      if (!storedToken) {
+        setError('Không lưu được phiên đăng nhập. Vui lòng thử lại.');
+        return;
+      }
+      navigation.navigate('Home', { initialTab: 'home' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
+      setError(message);
+      console.warn('Google login error:', err);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.flex}>
+          <View style={styles.flex}>
             <View style={styles.header}>
               <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                 <BackArrow width={18} height={18} color={colors.secondary} />
@@ -93,21 +157,32 @@ const LoginScreen = () => {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.heroWrap}>
+              <LinearGradient
+                colors={[colors.gradientPrimaryStart, colors.gradientPrimaryEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroWrap}
+              >
                 <View style={styles.heroGlow} />
+                <View style={styles.heroBadge}>
+                  <Sparkles size={14} color="#fff" />
+                  <Text style={styles.heroBadgeText}>Teddy Pet</Text>
+                </View>
                 <Text style={styles.heroTitle}>Chào mừng trở lại</Text>
-                <Text style={styles.heroSubtitle}>Đăng nhập để quản lý đặt lịch, giỏ hàng và hồ sơ thú cưng</Text>
-              </View>
+                <Text style={styles.heroSubtitle}>
+                  Đăng nhập để quản lý đặt lịch, giỏ hàng và hồ sơ thú cưng trong cùng một không gian.
+                </Text>
+              </LinearGradient>
 
               <View style={styles.card}>
                 <View style={styles.form}>
                   <View style={styles.inputWrap}>
                     <Text style={styles.inputLabel}>Email</Text>
                     <View style={styles.inputShell}>
-                      <Mail size={18} color={colors.text} />
+                      <Mail size={18} color={colors.primaryDeep} />
                       <TextInput
                         placeholder="example@email.com"
-                        placeholderTextColor="#9aa0a6"
+                        placeholderTextColor={colors.textLight}
                         style={styles.input}
                         value={email}
                         onChangeText={setEmail}
@@ -123,10 +198,10 @@ const LoginScreen = () => {
                   <View style={styles.inputWrap}>
                     <Text style={styles.inputLabel}>Mật khẩu</Text>
                     <View style={styles.inputShell}>
-                      <Lock size={18} color={colors.text} />
+                      <Lock size={18} color={colors.primaryDeep} />
                       <TextInput
                         placeholder="Nhập mật khẩu"
-                        placeholderTextColor="#9aa0a6"
+                        placeholderTextColor={colors.textLight}
                         style={styles.input}
                         value={password}
                         onChangeText={setPassword}
@@ -142,37 +217,51 @@ const LoginScreen = () => {
                         style={styles.eyeButton}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        {showPassword ? (
-                          <EyeOff size={18} color={colors.text} />
-                        ) : (
-                          <Eye size={18} color={colors.text} />
-                        )}
+                        {showPassword ? <EyeOff size={18} color={colors.text} /> : <Eye size={18} color={colors.text} />}
                       </TouchableOpacity>
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.forgotWrap}
-                    onPress={() => navigation.navigate('ForgotPassword')}
-                  >
+                  <TouchableOpacity style={styles.forgotWrap} onPress={() => navigation.navigate('ForgotPassword')}>
                     <Text style={styles.link}>Quên mật khẩu?</Text>
                   </TouchableOpacity>
 
                   {error ? <Text style={styles.error}>{error}</Text> : null}
 
-                  <TouchableOpacity
-                    onPress={handleSubmit}
-                    style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
-                    disabled={loading}
-                    activeOpacity={0.9}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryText}>Đăng nhập</Text>
-                    )}
+                  <TouchableOpacity onPress={handleSubmit} disabled={loading} activeOpacity={0.92}>
+                    <LinearGradient
+                      colors={[colors.gradientPrimaryStart, colors.gradientPrimaryEnd]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+                    >
+                      {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Đăng nhập</Text>}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
+              </View>
+
+              <View style={styles.socialSection}>
+                <View style={styles.socialDivider}>
+                  <View style={styles.socialDividerLine} />
+                  <Text style={styles.socialDividerText}>Hoặc đăng nhập bằng</Text>
+                  <View style={styles.socialDividerLine} />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleGoogleLogin}
+                  style={[styles.socialButton, socialLoading && styles.socialButtonDisabled]}
+                  disabled={!!socialLoading}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.socialButtonContent}>
+                    <GoogleLogo width={20} height={20} />
+                    <Text style={styles.socialButtonText}>Tiếp tục với Google</Text>
+                  </View>
+                  {socialLoading === 'google' ? (
+                    <ActivityIndicator size="small" color={colors.secondary} style={styles.socialButtonLoadingIndicator} />
+                  ) : null}
+                </TouchableOpacity>
               </View>
 
               <View style={styles.footerRow}>
@@ -193,84 +282,102 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    paddingVertical: 10,
+    backgroundColor: colors.background,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: colors.softPink,
+    borderRadius: 21,
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: colors.cardBorder,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
     color: colors.secondary,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   headerSpacer: {
-    width: 40,
+    width: 42,
   },
   container: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 28,
   },
   heroWrap: {
-    borderRadius: 24,
-    paddingVertical: 20,
-    paddingHorizontal: 18,
-    marginBottom: 14,
-    backgroundColor: '#FFF7F7',
+    borderRadius: 28,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
   heroGlow: {
     position: 'absolute',
-    top: -20,
-    right: -14,
-    width: 120,
-    height: 120,
+    top: -24,
+    right: -12,
+    width: 130,
+    height: 130,
     borderRadius: 999,
-    backgroundColor: '#FFDCDC',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginBottom: 14,
+  },
+  heroBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.secondary,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#fff',
   },
   heroSubtitle: {
-    marginTop: 6,
-    color: colors.text,
+    marginTop: 8,
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 13,
     lineHeight: 20,
-    maxWidth: '92%',
+    maxWidth: '94%',
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: 28,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#f1f1f1',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   form: {
     gap: 12,
@@ -281,15 +388,15 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.secondary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     paddingLeft: 2,
   },
   inputShell: {
-    minHeight: 52,
-    borderRadius: 16,
+    minHeight: 54,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E7E7E7',
-    backgroundColor: '#fff',
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSoft,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,34 +417,34 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   link: {
-    color: colors.primary,
+    color: colors.primaryDeep,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   error: {
-    color: colors.primary,
+    color: colors.danger,
     textAlign: 'center',
     fontSize: 12,
+    lineHeight: 18,
   },
   primaryBtn: {
-    marginTop: 4,
-    backgroundColor: colors.primary,
+    marginTop: 6,
     borderRadius: 999,
-    paddingVertical: 14,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.26,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   primaryBtnDisabled: {
-    opacity: 0.75,
+    opacity: 0.78,
   },
   primaryText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 16,
   },
   footerRow: {
@@ -352,9 +459,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   footerLink: {
-    color: colors.primary,
-    fontWeight: '700',
+    color: colors.primaryDeep,
+    fontWeight: '800',
     fontSize: 13,
+  },
+  socialSection: {
+    marginTop: 18,
+    gap: 10,
+  },
+  socialDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  socialDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.cardBorder,
+  },
+  socialDividerText: {
+    color: colors.textLight,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  socialButton: {
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.white,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  socialButtonLoadingIndicator: {
+    position: 'absolute',
+    right: 16,
+  },
+  socialButtonDisabled: {
+    opacity: 0.7,
+  },
+  socialButtonText: {
+    color: colors.secondary,
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
 

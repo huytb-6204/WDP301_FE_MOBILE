@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, CreditCard, RefreshCw, XCircle } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, RefreshCw, XCircle, Home, Calendar, ShieldCheck, Plus } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
@@ -26,7 +26,14 @@ import type { BoardingBooking, BoardingGateway } from '../../types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, 'MyBoardingBookings'>;
 
-const statusOptions = ['', 'held', 'confirmed', 'checked-in', 'checked-out', 'cancelled'];
+const statusOptions = [
+  { key: '', label: 'Tất cả' },
+  { key: 'held', label: 'Giữ phòng' },
+  { key: 'confirmed', label: 'Đã xác nhận' },
+  { key: 'checked-in', label: 'Đã nhận' },
+  { key: 'checked-out', label: 'Đã trả' },
+  { key: 'cancelled', label: 'Đã hủy' },
+];
 
 const statusText: Record<string, string> = {
   held: 'Giữ phòng',
@@ -37,7 +44,7 @@ const statusText: Record<string, string> = {
   pending: 'Chờ xử lý',
 };
 
-const paymentText: Record<string, string> = {
+const paymentStatusLabel: Record<string, string> = {
   unpaid: 'Chưa thanh toán',
   partial: 'Đã đặt cọc',
   paid: 'Đã thanh toán',
@@ -53,7 +60,7 @@ const statusColor: Record<string, string> = {
   pending: '#6B7280',
 };
 
-const formatCurrency = (value: number) => `${Math.max(0, value || 0).toLocaleString('vi-VN')}đ`;
+const formatCurrency = (value: number) => `${Math.max(0, value || 0).toLocaleString('vi-VN')} đ`;
 
 const formatDate = (value?: string | null) => {
   if (!value) return '-';
@@ -77,7 +84,7 @@ const MyBoardingBookingsScreen = () => {
   const showToast = (message: string) => {
     setToastMessage(message);
     setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 1800);
+    setTimeout(() => setToastVisible(false), 2000);
   };
 
   const fetchBookings = async (mode: 'loading' | 'refresh' = 'loading') => {
@@ -98,7 +105,7 @@ const MyBoardingBookingsScreen = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchBookings();
+      void fetchBookings();
     }, [])
   );
 
@@ -113,7 +120,7 @@ const MyBoardingBookingsScreen = () => {
     setProcessingId(booking._id);
     try {
       const res = await cancelBoardingBooking(booking._id, 'Khách hàng hủy trên app');
-      showToast(res.message);
+      showToast(res.message || 'Đã hủy booking cáp thành công');
       await fetchBookings('refresh');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể hủy booking');
@@ -129,7 +136,7 @@ const MyBoardingBookingsScreen = () => {
       if (res.paymentUrl) {
         await Linking.openURL(res.paymentUrl);
       }
-      showToast('Đã mở cổng thanh toán');
+      showToast('Đang chuyển đến trang thanh toán...');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể tạo liên kết thanh toán');
     } finally {
@@ -143,15 +150,103 @@ const MyBoardingBookingsScreen = () => {
       const res = await checkBoardingPaymentStatus(booking._id);
       showToast(
         res.paymentStatus === 'paid' || res.paymentStatus === 'partial'
-          ? 'Trạng thái thanh toán đã được cập nhật'
-          : 'Thanh toán vẫn đang chờ xử lý'
+          ? 'Thanh toán thành công!'
+          : 'Giao dịch vẫn đang chờ xử lý'
       );
       await fetchBookings('refresh');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể kiểm tra thanh toán');
+      showToast(err instanceof Error ? err.message : 'Lỗi khi kiểm tra thanh toán');
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const renderItem = ({ item }: { item: BoardingBooking }) => {
+    const status = String(item.boardingStatus || 'pending');
+    const paymentStatus = String(item.paymentStatus || 'unpaid');
+    const busy = processingId === item._id;
+    const badgeColor = statusColor[status] || colors.text;
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.codeWrap}>
+            <Home size={16} color={colors.primary} />
+            <Text style={styles.bookingCode}>#{item.code}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: `${badgeColor}15` }]}>
+            <Text style={[styles.statusTextBadge, { color: badgeColor }]}>
+              {statusText[status] || status}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardBody}>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoItem}>
+              <Calendar size={14} color="#999" />
+              <Text style={styles.infoValue}>{formatDate(item.checkInDate)} - {formatDate(item.checkOutDate)}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <ShieldCheck size={14} color="#999" />
+              <Text style={styles.infoValue}>Thanh toán: <Text style={styles.paymentStatusText}>{paymentStatusLabel[paymentStatus] || paymentStatus}</Text></Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.priceSection}>
+            <View>
+              <Text style={styles.priceLabel}>Tổng chi phí</Text>
+              <Text style={styles.priceValue}>{formatCurrency(Number(item.total || 0))}</Text>
+            </View>
+            <View style={styles.depositSection}>
+               <Text style={styles.priceLabel}>Đặt cọc</Text>
+               <Text style={styles.depositValue}>{formatCurrency(Number(item.depositAmount || 0))}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.actionRow}>
+          {status === 'held' && (
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.payBtn]} 
+              onPress={() => handlePay(item)} 
+              disabled={busy}
+            >
+              <CreditCard size={14} color="#fff" />
+              <Text style={styles.payBtnText}>Thanh toán</Text>
+            </TouchableOpacity>
+          )}
+
+          {(status === 'held' || paymentStatus === 'unpaid') && (
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.checkBtn]} 
+              onPress={() => handleCheckPayment(item)} 
+              disabled={busy}
+            >
+              <RefreshCw size={14} color={colors.primary} />
+              <Text style={styles.checkBtnText}>Kiểm tra</Text>
+            </TouchableOpacity>
+          )}
+
+          {canCancel(status) && (
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.cancelBtn]} 
+              onPress={() => handleCancel(item)} 
+              disabled={busy}
+            >
+              <XCircle size={14} color="#FF4D4D" />
+              <Text style={styles.cancelBtnText}>Hủy</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity style={[styles.actionBtn, styles.detailBtn]} onPress={() => navigation.navigate('BoardingBookingDetail', { bookingId: item._id })}>
+            <Text style={styles.detailBtnText}>Chi tiết</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -160,99 +255,75 @@ const MyBoardingBookingsScreen = () => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft size={20} color={colors.secondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking khách sạn</Text>
-        <View style={styles.gatewaySwitch}>
-          {(['vnpay', 'zalopay'] as BoardingGateway[]).map((item) => (
-            <TouchableOpacity
-              key={item}
-              style={[styles.gatewayChip, paymentGateway === item && styles.gatewayChipActive]}
-              onPress={() => setPaymentGateway(item)}
-            >
-              <Text style={[styles.gatewayChipText, paymentGateway === item && styles.gatewayChipTextActive]}>
-                {item.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={styles.headerTitle}>Khách sạn của thú cưng</Text>
+        <TouchableOpacity 
+          style={styles.plusButton}
+          onPress={() => navigation.navigate('BoardingHotel')}
+        >
+          <Plus size={22} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {error ? <StatusMessage message={error} actionText="Thử lại" onAction={() => fetchBookings()} /> : null}
+      <View style={styles.filterBar}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={statusOptions}
+          keyExtractor={(item) => item.key || 'all'}
+          contentContainerStyle={styles.filterContent}
+          renderItem={({ item }) => {
+            const active = item.key === filter;
+            return (
+              <TouchableOpacity
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setFilter(item.key)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{item.label}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
-      {loading ? (
+      <View style={styles.gatewayBar}>
+          <Text style={styles.gatewayLabel}>Cổng thanh toán:</Text>
+          <View style={styles.gatewayRow}>
+            {(['vnpay', 'zalopay'] as BoardingGateway[]).map((gw) => (
+               <TouchableOpacity 
+                key={gw} 
+                style={[styles.gwBtn, paymentGateway === gw && styles.gwBtnActive]}
+                onPress={() => setPaymentGateway(gw)}
+               >
+                 <Text style={[styles.gwText, paymentGateway === gw && styles.gwTextActive]}>{gw.toUpperCase()}</Text>
+               </TouchableOpacity>
+            ))}
+          </View>
+      </View>
+
+      {loading && !refreshing ? (
         <View style={styles.centerWrap}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.loadingText}>Đang tải booking...</Text>
         </View>
       ) : (
         <FlatList
           data={visibleBookings}
           keyExtractor={(item) => item._id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchBookings('refresh')} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchBookings('refresh')} colors={[colors.primary]} />}
           contentContainerStyle={styles.listContainer}
-          ListHeaderComponent={
-            <View style={styles.filterRow}>
-              {statusOptions.map((item) => {
-                const active = item === filter;
-                return (
-                  <TouchableOpacity
-                    key={item || 'all'}
-                    style={[styles.filterChip, active && styles.filterChipActive]}
-                    onPress={() => setFilter(item)}
-                  >
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                      {item ? statusText[item] || item : 'Tất cả'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Home size={60} color="#eee" />
+              <Text style={styles.emptyText}>Chưa có booking khách sạn nào</Text>
+              <TouchableOpacity 
+                style={styles.emptyBtn}
+                onPress={() => navigation.navigate('BoardingHotel')}
+              >
+                <Text style={styles.emptyBtnText}>ĐẶT PHÒNG NGAY</Text>
+              </TouchableOpacity>
             </View>
           }
-          ListEmptyComponent={<StatusMessage message="Chưa có booking khách sạn nào" />}
-          renderItem={({ item }) => {
-            const status = String(item.boardingStatus || 'pending');
-            const paymentStatus = String(item.paymentStatus || 'unpaid');
-            const busy = processingId === item._id;
-
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <Text style={styles.code}>#{item.code}</Text>
-                  <Text style={[styles.badge, { color: statusColor[status] || colors.text }]}>
-                    {statusText[status] || status}
-                  </Text>
-                </View>
-
-                <Text style={styles.meta}>Ở từ {formatDate(item.checkInDate)} đến {formatDate(item.checkOutDate)}</Text>
-                <Text style={styles.meta}>Số thú cưng: {item.quantity || item.petIds?.length || 1}</Text>
-                <Text style={styles.meta}>Tổng tiền: {formatCurrency(Number(item.total || 0))}</Text>
-                <Text style={styles.meta}>Đặt cọc: {formatCurrency(Number(item.depositAmount || 0))}</Text>
-                <Text style={styles.meta}>Thanh toán: {paymentText[paymentStatus] || paymentStatus}</Text>
-                {item.holdExpiresAt ? <Text style={styles.meta}>Giữ phòng đến: {formatDate(item.holdExpiresAt)}</Text> : null}
-
-                <View style={styles.actionRow}>
-                  {status === 'held' ? (
-                    <TouchableOpacity style={styles.primaryAction} onPress={() => handlePay(item)} disabled={busy}>
-                      {busy ? <ActivityIndicator color="#fff" /> : <CreditCard size={16} color="#fff" />}
-                      <Text style={styles.primaryActionText}>Thanh toán</Text>
-                    </TouchableOpacity>
-                  ) : null}
-
-                  {status === 'held' || paymentStatus === 'unpaid' ? (
-                    <TouchableOpacity style={styles.secondaryAction} onPress={() => handleCheckPayment(item)} disabled={busy}>
-                      <RefreshCw size={16} color={colors.primary} />
-                      <Text style={styles.secondaryActionText}>Kiểm tra tiền</Text>
-                    </TouchableOpacity>
-                  ) : null}
-
-                  {canCancel(status) ? (
-                    <TouchableOpacity style={styles.dangerAction} onPress={() => handleCancel(item)} disabled={busy}>
-                      <XCircle size={16} color="#fff" />
-                      <Text style={styles.dangerActionText}>{busy ? 'Đang xử lý' : 'Hủy đơn'}</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              </View>
-            );
-          }}
         />
       )}
 
@@ -262,89 +333,129 @@ const MyBoardingBookingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 10,
-  },
-  backButton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
-  gatewaySwitch: { flexDirection: 'row', gap: 8 },
-  gatewayChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 12,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  gatewayChipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  gatewayChipText: { color: colors.text, fontSize: 12, fontWeight: '700' },
-  gatewayChipTextActive: { color: '#fff' },
-  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContainer: { padding: 16, paddingBottom: 34 },
-  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff1f1',
+  },
+  headerTitle: { color: colors.secondary, fontSize: 17, fontWeight: '800' },
+  plusButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  filterBar: { backgroundColor: '#fff', paddingVertical: 10 },
+  filterContent: { paddingHorizontal: 16, gap: 10 },
   filterChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#eee',
     backgroundColor: '#fff',
   },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterChipText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
   filterChipTextActive: { color: '#fff' },
+  gatewayBar: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    backgroundColor: '#fff', 
+    paddingHorizontal: 16, 
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  gatewayLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
+  gatewayRow: { flexDirection: 'row', gap: 6 },
+  gwBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: '#eee' },
+  gwBtnActive: { borderColor: colors.primary, backgroundColor: colors.softPink },
+  gwText: { fontSize: 10, fontWeight: '800', color: '#999' },
+  gwTextActive: { color: colors.primary },
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { fontSize: 14, color: '#666', fontWeight: '500' },
+  listContainer: { padding: 16, paddingBottom: 40 },
   card: {
-    backgroundColor: colors.softPink,
-    borderRadius: 16,
-    padding: 12,
-    gap: 6,
-    marginBottom: 10,
-  },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  code: { color: colors.secondary, fontSize: 14, fontWeight: '700', flex: 1 },
-  badge: { fontSize: 12, fontWeight: '700' },
-  meta: { color: colors.text, fontSize: 12, lineHeight: 18 },
-  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
-  primaryAction: {
-    minHeight: 40,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryActionText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  secondaryAction: {
-    minHeight: 40,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.primary,
     backgroundColor: '#fff',
-    paddingHorizontal: 14,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  codeWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  bookingCode: { fontSize: 14, fontWeight: '800', color: colors.secondary },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusTextBadge: { fontSize: 11, fontWeight: '700' },
+  cardBody: { gap: 12 },
+  infoGrid: { gap: 8 },
+  infoItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoValue: { fontSize: 13, color: '#7d7b7b' },
+  paymentStatusText: { fontWeight: '700', color: colors.secondary },
+  divider: { height: 1, backgroundColor: '#F5F5F5' },
+  priceSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceLabel: { fontSize: 11, color: '#999', marginBottom: 2 },
+  priceValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
+  depositSection: { alignItems: 'flex-end' },
+  depositValue: { fontSize: 14, fontWeight: '700', color: '#05A845' },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F5',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  actionBtn: {
+    minWidth: 80,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: '#eee',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 12,
   },
-  secondaryActionText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  dangerAction: {
-    minHeight: 40,
-    borderRadius: 999,
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  dangerActionText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  payBtn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  checkBtn: { borderColor: colors.primary },
+  checkBtnText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
+  cancelBtn: { borderColor: '#FFEBEA' },
+  cancelBtnText: { color: '#FF4D4D', fontSize: 11, fontWeight: '700' },
+  detailBtn: { backgroundColor: colors.secondary, borderColor: colors.secondary, flex: 1 },
+  detailBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 16 },
+  emptyText: { fontSize: 15, color: '#aaa', fontWeight: '500', textAlign: 'center' },
+  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, marginTop: 10 },
+  emptyBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 });
 
 export default MyBoardingBookingsScreen;
+

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, Check, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react-native';
@@ -25,221 +26,418 @@ const CartScreen = () => {
   const isAllChecked = items.length > 0 && items.every((item) => item.checked);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ArrowLeft size={20} color={colors.secondary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Giỏ hàng</Text>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>{cartCount}</Text>
+    <View style={styles.safe}>
+      <SafeAreaView edges={['top']} style={styles.headerSafe}>
+        <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButtonModern}>
+            <ArrowLeft size={22} color={colors.secondary} />
+          </Pressable>
+          <Text style={styles.headerTitleModern}>Giỏ hàng của bạn</Text>
+          <View style={styles.headerBadgeModern}>
+            <Text style={styles.badgeTextModern}>{cartCount}</Text>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconWrap}>
-            <ShoppingBag size={34} color={colors.primary} />
+          <View style={styles.emptyIconWrapModern}>
+            <ShoppingBag size={40} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Giỏ hàng trống</Text>
-          <Text style={styles.emptyText}>Thêm sản phẩm để tiếp tục mua sắm.</Text>
-          <Pressable style={styles.browseButton} onPress={() => navigation.navigate('ProductList')}>
-            <Text style={styles.browseButtonText}>Mở danh sách sản phẩm</Text>
-          </Pressable>
+          <Text style={styles.emptyTitleModern}>Giỏ hàng đang trống</Text>
+          <Text style={styles.emptyTextModern}>Hãy chọn cho bé cưng những món đồ tuyệt vời nhất nhé!</Text>
+          <TouchableOpacity style={styles.browseButtonModern} onPress={() => navigation.navigate('ProductList')}>
+            <Text style={styles.browseButtonTextModern}>Khám phá ngay</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <>
-          <View style={styles.selectRow}>
+        <View style={styles.flex1}>
+          <View style={styles.selectRowModern}>
             <Pressable onPress={toggleAll} style={styles.selectAllWrap}>
-              <View style={[styles.checkBox, isAllChecked && styles.checkBoxActive]}>
+              <View style={[styles.checkBoxModern, isAllChecked && styles.checkBoxActiveModern]}>
                 {isAllChecked ? <Check size={12} color="#fff" /> : null}
               </View>
-              <Text style={styles.selectAllText}>Chọn tất cả</Text>
+              <Text style={styles.selectAllTextModern}>Chọn tất cả</Text>
             </Pressable>
-            <Text style={styles.selectedCount}>{checkedCartCount} sản phẩm</Text>
+            <Text style={styles.selectedCountModern}>Đã chọn {checkedCartCount} món</Text>
           </View>
 
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView contentContainerStyle={styles.listModern} showsVerticalScrollIndicator={false}>
             {items.map((item) => (
-              <View key={item.lineId} style={[styles.card, item.checked && styles.cardActive]}>
-                <Pressable onPress={() => toggleCheck(item.lineId)} style={styles.checkColumn}>
-                  <View style={[styles.checkBox, item.checked && styles.checkBoxActive]}>
+              <View key={item.lineId} style={[styles.cardModern, item.checked && styles.cardActiveModern]}>
+                <Pressable onPress={() => toggleCheck(item.lineId)} style={styles.checkColumnModern}>
+                  <View style={[styles.checkBoxModern, item.checked && styles.checkBoxActiveModern]}>
                     {item.checked ? <Check size={12} color="#fff" /> : null}
                   </View>
                 </Pressable>
 
-                {item.product.primaryImage ? (
-                  <Image source={{ uri: item.product.primaryImage }} style={styles.cardImage} />
-                ) : (
-                  <View style={styles.cardImagePlaceholder} />
-                )}
-
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.product.title}
-                  </Text>
-                  {item.variant && item.variant.length > 0 ? (
-                    <Text style={styles.variantText}>{item.variant.map((variant) => variant.label || variant.value).join(' / ')}</Text>
-                  ) : null}
-                  <Text style={styles.cardPrice}>{formatPrice(item.product.priceValue)}</Text>
-
-                  <View style={styles.bottomRow}>
-                    <View style={styles.qtyRow}>
-                      <Pressable onPress={() => updateQuantity(item.lineId, item.quantity - 1)} style={styles.qtyButton}>
-                        <Minus size={16} color={colors.text} />
-                      </Pressable>
-                      <Text style={styles.qtyValue}>{item.quantity}</Text>
-                      <Pressable onPress={() => updateQuantity(item.lineId, item.quantity + 1)} style={styles.qtyButton}>
-                        <Plus size={16} color={colors.text} />
-                      </Pressable>
+                <View style={styles.cardContentModern}>
+                  <View style={styles.cardTopRowModern}>
+                    {item.product.primaryImage ? (
+                      <Image source={{ uri: item.product.primaryImage }} style={styles.cardImageModern} />
+                    ) : (
+                      <View style={styles.cardImagePlaceholderModern} />
+                    )}
+                    <View style={styles.cardMainInfoModern}>
+                      <Text style={styles.cardTitleModern} numberOfLines={2}>
+                        {item.product.title}
+                      </Text>
+                      {item.variant && item.variant.length > 0 ? (
+                        <View style={styles.variantBadgeModern}>
+                           <Text style={styles.variantTextModern}>{item.variant.map((v) => v.label || v.value).join(' / ')}</Text>
+                        </View>
+                      ) : null}
+                      <Text style={styles.cardPriceModern}>{formatPrice(item.product.priceValue)}</Text>
                     </View>
-                    <Text style={styles.lineTotal}>{formatPrice(item.product.priceValue * item.quantity)}</Text>
+                    <TouchableOpacity onPress={() => removeFromCart(item.lineId)} style={styles.removeCircleModern}>
+                      <Trash2 size={16} color="#FF4D4C" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.cardBottomRowModern}>
+                    <View style={styles.qtyContainerModern}>
+                      <TouchableOpacity onPress={() => updateQuantity(item.lineId, item.quantity - 1)} style={styles.qtyBtnModern}>
+                        <Minus size={14} color={colors.secondary} />
+                      </TouchableOpacity>
+                      <Text style={styles.qtyTextModern}>{item.quantity}</Text>
+                      <TouchableOpacity onPress={() => updateQuantity(item.lineId, item.quantity + 1)} style={styles.qtyBtnModern}>
+                        <Plus size={14} color={colors.secondary} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.subtotalContainerModern}>
+                        <Text style={styles.subtotalLabelModern}>Thành tiền:</Text>
+                        <Text style={styles.subtotalValueModern}>{formatPrice(item.product.priceValue * item.quantity)}</Text>
+                    </View>
                   </View>
                 </View>
-
-                <Pressable onPress={() => removeFromCart(item.lineId)} style={styles.removeButton}>
-                  <Trash2 size={18} color={colors.text} />
-                </Pressable>
               </View>
             ))}
           </ScrollView>
 
-          <View style={styles.footer}>
-            <Text style={styles.totalLabel}>Tổng cộng</Text>
-            <Text style={styles.totalValue}>{formatPrice(checkedCartTotal)}</Text>
-            <Pressable
-              style={[styles.checkoutButton, checkedCartCount === 0 && styles.checkoutButtonDisabled]}
-              onPress={() => checkedCartCount > 0 && navigation.navigate('Checkout')}
-            >
-              <Text style={styles.checkoutText}>Tiếp tục thanh toán</Text>
-            </Pressable>
+          <View style={styles.footerModern}>
+            <View style={styles.footerInfoModern}>
+              <View>
+                <Text style={styles.footerTotalLabelModern}>Tổng thanh toán</Text>
+                <Text style={styles.footerTotalValueModern}>{formatPrice(checkedCartTotal)}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.checkoutBtnModern, checkedCartCount === 0 && styles.checkoutBtnDisabledModern]}
+                onPress={() => checkedCartCount > 0 && navigation.navigate('Checkout')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.checkoutBtnTextModern}>Thanh toán ({checkedCartCount})</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </>
+        </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  flex1: { flex: 1 },
+  headerSafe: { backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F1F1',
+    paddingVertical: 14,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  headerTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
-  headerButton: {
+  backButtonModern: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.softPink,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerBadge: {
-    minWidth: 40,
+  headerTitleModern: {
+    color: colors.secondary,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  headerBadgeModern: {
+    width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.softPink,
+    borderRadius: 12,
+    backgroundColor: '#FFF1F2',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
   },
-  headerBadgeText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
-  selectRow: {
+  badgeTextModern: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    backgroundColor: '#fff',
+  },
+  emptyIconWrapModern: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFF1F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyTitleModern: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.secondary,
+    marginBottom: 10,
+  },
+  emptyTextModern: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 30,
+  },
+  browseButtonModern: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  browseButtonTextModern: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  selectRowModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 4,
+    paddingVertical: 16,
+  },
+  selectAllWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkBoxModern: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxActiveModern: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectAllTextModern: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.secondary,
+  },
+  selectedCountModern: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  listModern: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+  cardModern: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 16,
+    padding: 12,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardActiveModern: {
+    borderColor: '#FFE4E6',
+    backgroundColor: '#FFFBFB',
+  },
+  checkColumnModern: {
+    justifyContent: 'center',
+    paddingRight: 12,
+  },
+  cardContentModern: {
+    flex: 1,
+  },
+  cardTopRowModern: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cardImageModern: {
+    width: 84,
+    height: 84,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+  },
+  cardImagePlaceholderModern: {
+    width: 84,
+    height: 84,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+  },
+  cardMainInfoModern: {
+    flex: 1,
+    gap: 4,
+  },
+  cardTitleModern: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.secondary,
+    lineHeight: 20,
+  },
+  variantBadgeModern: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  variantTextModern: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  cardPriceModern: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  removeCircleModern: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFF1F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBottomRowModern: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  qtyContainerModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 2,
+  },
+  qtyBtnModern: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  qtyTextModern: {
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.secondary,
+  },
+  subtotalContainerModern: {
+    alignItems: 'flex-end',
+  },
+  subtotalLabelModern: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  subtotalValueModern: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.secondary,
+  },
+  footerModern: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 34,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  footerInfoModern: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  selectAllWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  checkBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#D5D5D5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+  footerTotalLabelModern: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
   },
-  checkBoxActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  selectAllText: { color: colors.secondary, fontWeight: '600' },
-  selectedCount: { color: colors.text, fontSize: 12 },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.softPink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+  footerTotalValueModern: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.secondary,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.secondary },
-  emptyText: { fontSize: 14, color: colors.text, marginTop: 8, marginBottom: 20, textAlign: 'center' },
-  browseButton: { backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 12 },
-  browseButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  list: { padding: 20, paddingBottom: 150 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F3E8E8',
-  },
-  cardActive: { borderColor: '#F6B0B0', backgroundColor: '#FFFDFD' },
-  checkColumn: { paddingRight: 10 },
-  cardImage: { width: 80, height: 80, borderRadius: 12, backgroundColor: colors.softPink },
-  cardImagePlaceholder: { width: 80, height: 80, borderRadius: 12, backgroundColor: colors.border },
-  cardBody: { flex: 1, marginLeft: 12 },
-  cardTitle: { color: colors.secondary, fontSize: 14, fontWeight: '600' },
-  variantText: { color: '#8B7A7A', fontSize: 12, marginTop: 4 },
-  cardPrice: { color: colors.primary, fontSize: 14, fontWeight: '700', marginTop: 4 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 12 },
-  qtyRow: { flexDirection: 'row', alignItems: 'center' },
-  qtyButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.softPink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyValue: { marginHorizontal: 8, fontSize: 14, color: colors.text, minWidth: 20, textAlign: 'center' },
-  lineTotal: { color: colors.secondary, fontSize: 14, fontWeight: '700' },
-  removeButton: { paddingLeft: 8 },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#F3E8E8',
-  },
-  totalLabel: { color: colors.text, fontSize: 14 },
-  totalValue: { color: colors.secondary, fontSize: 18, fontWeight: '700', marginTop: 4 },
-  checkoutButton: {
-    marginTop: 12,
+  checkoutBtnModern: {
     backgroundColor: colors.primary,
-    borderRadius: 999,
+    paddingHorizontal: 24,
     paddingVertical: 14,
-    alignItems: 'center',
+    borderRadius: 14,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  checkoutButtonDisabled: { opacity: 0.45 },
-  checkoutText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  checkoutBtnDisabledModern: {
+    backgroundColor: '#E2E8F0',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  checkoutBtnTextModern: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });
 
 export default CartScreen;

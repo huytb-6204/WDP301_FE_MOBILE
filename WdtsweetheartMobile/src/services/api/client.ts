@@ -124,3 +124,29 @@ export const apiDeleteRaw = async <T>(path: string): Promise<T> => {
 
   return json as T;
 };
+export const apiPatch = async <T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const json = await parseJsonSafely<any>(res);
+  if (!json || !res.ok) {
+    throw new Error(json?.message || `Request failed (${res.status})`);
+  }
+  return json;
+};
+
+export const apiDelete = async <T>(path: string): Promise<ApiResponse<T>> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    headers,
+  });
+  const json = await parseJsonSafely<any>(res);
+  if (!json || !res.ok) {
+    throw new Error(json?.message || `Request failed (${res.status})`);
+  }
+  return json;
+};

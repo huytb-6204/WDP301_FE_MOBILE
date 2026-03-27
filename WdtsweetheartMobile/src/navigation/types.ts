@@ -23,15 +23,27 @@ export type RootStackParamList = {
   Payment: undefined;
   Booking: { serviceId?: string; service?: any } | undefined;
   MyBookings: undefined;
-  AddressBook: undefined;
+  BookingDetail: { bookingId: string };
+  AddressList: undefined;
+  AddressForm: { address?: any }; // any for SavedAddress to avoid circular if not imported
   OrderList: undefined;
+  OrderDetail: { orderId: string };
   PetList: undefined;
+  PetForm: { pet?: any }; 
   PetDetail: { petId: string };
+  TransactionHistory: undefined;
+  ReviewList: undefined;
+  FavoriteList: undefined;
+  PersonalInfo: undefined;
+  ChangePassword: undefined;
   CouponList: undefined;
   BreedList: undefined;
   BoardingCages: undefined;
   BoardingBookings: undefined;
   BoardingBookingCreate: { cageId: string; checkInDate?: string; checkOutDate?: string };
+  BoardingBookingDetail: { bookingId: string };
   BoardingHotel: undefined;
   MyBoardingBookings: undefined;
+  Overview: undefined;
+  AccountFeature: { title: string; description?: string };
 };

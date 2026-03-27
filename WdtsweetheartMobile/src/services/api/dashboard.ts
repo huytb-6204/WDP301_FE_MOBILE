@@ -1,4 +1,4 @@
-import { apiDeleteRaw, apiGet, apiGetRaw, apiPatch, apiPatchRaw, apiPost, apiPostRaw } from './client';
+import { apiDelete, apiDeleteRaw, apiGet, apiGetRaw, apiPatch, apiPatchRaw, apiPost, apiPostRaw } from './client';
 
 export type ProfileUser = {
   id?: string;
@@ -87,8 +87,17 @@ export const changeAvatar = async (avatar: string) => {
 };
 
 export const getAddresses = async (): Promise<SavedAddress[]> => {
-  const res = await apiGetRaw<{ success?: boolean; data?: SavedAddress[]; addresses?: SavedAddress[] }>('/api/v1/client/dashboard/address');
+  const res = await apiGetRaw<{ success?: boolean; data?: SavedAddress[]; addresses?: SavedAddress[] }>(
+    '/api/v1/client/dashboard/address'
+  );
   return (res as any).data || (res as any).addresses || [];
+};
+
+export const createAddress = async (payload: AddressPayload) => {
+  return apiPostRaw<{ success: boolean; message: string }, AddressPayload>(
+    '/api/v1/client/dashboard/address/create',
+    payload
+  );
 };
 
 export const getAddressDetail = async (id: string) => {
@@ -97,6 +106,29 @@ export const getAddressDetail = async (id: string) => {
 
 export const updateAddress = async (id: string, data: any) => {
   return apiPatch<any>(`/api/v1/client/dashboard/address/edit/${id}`, data);
+};
+
+export const deleteAddress = async (id: string) => {
+  return apiDeleteRaw<{ success: boolean; message: string }>(
+    `/api/v1/client/dashboard/address/delete/${id}`
+  );
+};
+
+export const changeDefaultAddress = async (id: string) => {
+  return apiPatchRaw<{ success: boolean; message: string }, Record<string, never>>(
+    `/api/v1/client/dashboard/address/change-default/${id}`,
+    {}
+  );
+};
+
+export const getOrderList = async (): Promise<DashboardOrder[]> => {
+  const res = await apiGetRaw<{ success?: boolean; orders?: DashboardOrder[]; data?: DashboardOrder[] }>(
+    '/api/v1/client/dashboard/order/list'
+  );
+
+  if (Array.isArray((res as any)?.orders)) return (res as any).orders;
+  if (Array.isArray((res as any)?.data)) return (res as any).data;
+  return [];
 };
 
 export const getOrderDetail = async (id: string) => {
@@ -121,38 +153,4 @@ export const getWishlist = async () => {
 
 export const toggleWishlist = async (productId: string) => {
   return apiPost<any>('/api/v1/client/dashboard/wishlist/toggle', { productId });
-};
-
-export const createAddress = async (payload: AddressPayload) => {
-  return apiPostRaw<{ success: boolean; message: string }, AddressPayload>(
-    '/api/v1/client/dashboard/address/create',
-    payload
-  );
-};
-
-export const deleteAddress = async (id: string) => {
-  return apiDeleteRaw<{ success: boolean; message: string }>(`/api/v1/client/dashboard/address/delete/${id}`);
-};
-
-export const changeDefaultAddress = async (id: string) => {
-  return apiPatchRaw<{ success: boolean; message: string }, Record<string, never>>(
-    `/api/v1/client/dashboard/address/change-default/${id}`,
-    {}
-  );
-};
-
-export const getOrderList = async (): Promise<DashboardOrder[]> => {
-  const res = await apiGetRaw<{ success?: boolean; orders?: DashboardOrder[]; data?: DashboardOrder[] }>(
-    '/api/v1/client/dashboard/order/list'
-  );
-
-  if (Array.isArray((res as any)?.orders)) {
-    return (res as any).orders;
-  }
-
-  if (Array.isArray((res as any)?.data)) {
-    return (res as any).data;
-  }
-
-  return [];
 };

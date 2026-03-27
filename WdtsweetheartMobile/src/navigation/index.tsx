@@ -23,6 +23,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import OTPPasswordScreen from '../screens/auth/OTPPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import OrderListScreen from '../screens/order/OrderListScreen';
 import WelcomeSplashScreen from '../screens/auth/WelcomeSplashScreen';
 import WelcomeChoiceScreen from '../screens/cart/WelcomeChoiceScreen';
 import OverviewScreen from '../screens/profile/OverviewScreen';
@@ -36,13 +37,18 @@ import AddressListScreen from '../screens/address/AddressListScreen';
 import AddressFormScreen from '../screens/address/AddressFormScreen';
 import TransactionHistoryScreen from '../screens/transaction/TransactionHistoryScreen';
 import ReviewScreen from '../screens/review/ReviewScreen';
-import OrderListScreen from '../screens/order/OrderListScreen';
 import OrderDetailScreen from '../screens/order/OrderDetailScreen';
 import BookingDetailScreen from '../screens/booking/BookingDetailScreen';
 import BoardingBookingDetailScreen from '../screens/boarding/BoardingBookingDetailScreen';
 import CouponListScreen from '../screens/coupon/CouponListScreen';
 import BreedListScreen from '../screens/pet/BreedListScreen';
 import BoardingCagesScreen from '../screens/boarding/BoardingCagesScreen';
+import StaffLoginScreen from '../screens/staff/auth/StaffLoginScreen';
+import StaffHomeScreen from '../screens/staff/home/StaffHomeScreen';
+import StaffTaskListScreen from '../screens/staff/task/StaffTaskListScreen';
+import StaffCareDetailScreen from '../screens/staff/boarding/StaffCareDetailScreen';
+import StaffCustomerListScreen from '../screens/staff/customer/StaffCustomerListScreen';
+import StaffCagesScreen from '../screens/staff/boarding/StaffCagesScreen';
 import { colors } from '../theme/colors';
 import type { RootStackParamList } from './types';
 
@@ -85,11 +91,7 @@ const RootNavigator = () => {
             <Stack.Screen name="MyBookings" component={MyBookingsScreen} options={animatedScreenOptions} />
             <Stack.Screen name="BoardingHotel" component={BoardingHotelScreen} options={animatedScreenOptions} />
             <Stack.Screen name="OrderList" component={OrderListScreen} options={animatedScreenOptions} />
-            <Stack.Screen
-              name="MyBoardingBookings"
-              component={MyBoardingBookingsScreen}
-              options={animatedScreenOptions}
-            />
+            <Stack.Screen name="MyBoardingBookings" component={MyBoardingBookingsScreen} options={animatedScreenOptions} />
             <Stack.Screen name="Overview" component={OverviewScreen} options={animatedScreenOptions} />
             <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} options={animatedScreenOptions} />
             <Stack.Screen name="FavoriteList" component={FavoriteListScreen} options={animatedScreenOptions} />
@@ -99,11 +101,7 @@ const RootNavigator = () => {
             <Stack.Screen name="PetForm" component={PetFormScreen} options={animatedScreenOptions} />
             <Stack.Screen name="AddressList" component={AddressListScreen} options={animatedScreenOptions} />
             <Stack.Screen name="AddressForm" component={AddressFormScreen} options={animatedScreenOptions} />
-            <Stack.Screen
-              name="TransactionHistory"
-              component={TransactionHistoryScreen}
-              options={animatedScreenOptions}
-            />
+            <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} options={animatedScreenOptions} />
             <Stack.Screen name="ReviewList" component={ReviewScreen} options={animatedScreenOptions} />
             <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={animatedScreenOptions} />
             <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={animatedScreenOptions} />
@@ -115,11 +113,13 @@ const RootNavigator = () => {
             <Stack.Screen name="CouponList" component={CouponListScreen} options={animatedScreenOptions} />
             <Stack.Screen name="BreedList" component={BreedListScreen} options={animatedScreenOptions} />
             <Stack.Screen name="BoardingCages" component={BoardingCagesScreen} options={animatedScreenOptions} />
-            <Stack.Screen
-              name="BoardingBookings"
-              component={MyBoardingBookingsScreen}
-              options={animatedScreenOptions}
-            />
+            <Stack.Screen name="BoardingBookings" component={MyBoardingBookingsScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffLogin" component={StaffLoginScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffHome" component={StaffHomeScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffTaskList" component={StaffTaskListScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffCareDetail" component={StaffCareDetailScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffCustomerList" component={StaffCustomerListScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffCages" component={StaffCagesScreen} options={animatedScreenOptions} />
           </Stack.Navigator>
         </NavigationContainer>
       </FavoritesProvider>

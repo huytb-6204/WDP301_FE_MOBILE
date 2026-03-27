@@ -1,25 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  FlatList,
   Image,
   Modal,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowLeft,
-  Bone,
-  Cat,
   ChevronDown,
-  Dog,
-  Heart,
-  PawPrint,
   Search,
   ShoppingCart,
   SlidersHorizontal,
@@ -27,193 +23,129 @@ import {
   Star,
   X,
 } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
-import {
-  useProductBrands,
-  useProductCategories,
-  useProductSuggestions,
-  useProducts,
-} from '../../hooks/useProducts';
-import type { GetProductsParams } from '../../services/api/product';
-import { formatPrice } from '../../utils';
-import { StatusMessage, Toast } from '../../components/common';
 import type { RootStackParamList } from '../../navigation/types';
-import type { ProductItem } from '../../types';
+import { colors } from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { StatusMessage, Toast } from '../../components/common';
+import { formatPrice } from '../../utils';
 import { env } from '../../config';
+import { useProductBrands, useProductCategories, useProductSuggestions, useProducts } from '../../hooks/useProducts';
+import type { GetProductsParams, ProductCategory } from '../../services/api/product';
+import type { ProductItem } from '../../types';
+
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
+type SortKey = 'newest' | 'price-low' | 'price-high' | 'best-selling';
 
 type UIProduct = ProductItem & {
   priceValue: number;
   originalPrice?: string;
   slug?: string;
   hasVariants: boolean;
-  rawData: any;
 };
 
-type SortOption = {
-  value: 'newest' | 'price-low' | 'price-high' | 'best-selling';
-  label: string;
-};
-
-type CategoryOption = {
+type CategoryChip = {
   key: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
-  keywords?: string[];
+  parent?: string | null;
+  productCount?: number;
 };
 
-type BrandOption = {
-  key: string;
-  label: string;
-};
-
-type PriceOption = {
-  key: string;
-  label: string;
-  min: number;
-  max: number;
-};
-
-const fallbackCategories: CategoryOption[] = [
-  { key: 'all', label: 'Tất cả', icon: Sparkles },
-  { key: 'dog', label: 'Chó cưng', icon: Dog, keywords: ['chó', 'dog'] },
-  { key: 'cat', label: 'Mèo cưng', icon: Cat, keywords: ['mèo', 'cat'] },
-  { key: 'food', label: 'Đồ ăn', icon: Bone, keywords: ['thức ăn', 'food'] },
-  { key: 'accessories', label: 'Phụ kiện', icon: PawPrint, keywords: ['phụ kiện', 'accessories', 'đồ chơi'] },
-];
-
-const sortOptions: SortOption[] = [
+const sortOptions: Array<{ value: SortKey; label: string }> = [
   { value: 'newest', label: 'Mới nhất' },
   { value: 'price-low', label: 'Giá thấp đến cao' },
   { value: 'price-high', label: 'Giá cao đến thấp' },
   { value: 'best-selling', label: 'Bán chạy' },
 ];
 
-const priceOptions: PriceOption[] = [
-  { key: 'all', label: 'Tất cả', min: 0, max: Number.MAX_SAFE_INTEGER },
-  { key: 'under-200', label: 'Dưới 200k', min: 0, max: 200000 },
-  { key: '200-500', label: '200k - 500k', min: 200000, max: 500000 },
-  { key: 'above-500', label: 'Trên 500k', min: 500000, max: Number.MAX_SAFE_INTEGER },
-];
-
 const toAbsoluteUrl = (url?: string) => {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;
-  const trimmed = url.replace(/^\/+/, '');
-  return `${env.apiBaseUrl}/${trimmed}`;
-};
-
-const pickCategoryIcon = (value?: string) => {
-  const normalized = value?.toLowerCase() || '';
-  if (normalized.includes('dog') || normalized.includes('cho')) return Dog;
-  if (normalized.includes('cat') || normalized.includes('meo')) return Cat;
-  if (normalized.includes('food') || normalized.includes('thuc-an') || normalized.includes('thức ăn')) return Bone;
-  if (
-    normalized.includes('accessories') ||
-    normalized.includes('phu-kien') ||
-    normalized.includes('phụ kiện') ||
-    normalized.includes('do-choi') ||
-    normalized.includes('đồ chơi')
-  ) {
-    return PawPrint;
-  }
-  return Sparkles;
+  return `${env.apiBaseUrl}/${url.replace(/^\/+/, '')}`;
 };
 
 const ProductListScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [keyword, setKeyword] = useState('');
-  const [debouncedKeyword, setDebouncedKeyword] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeBrand, setActiveBrand] = useState('all');
-  const [sortBy, setSortBy] = useState<SortOption['value']>('newest');
-  const [priceFilter, setPriceFilter] = useState('all');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
+  const navigation = useNavigation<Navigation>();
+  const { addToCart, cartCount } = useCart();
+  const { isFavorite } = useFavorites();
   const { data: categoryData } = useProductCategories();
   const { data: brandData } = useProductBrands();
-  const { addToCart, cartCount } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const [keyword, setKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+  const [activeParentCategory, setActiveParentCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeBrand, setActiveBrand] = useState('all');
+  const [sortBy, setSortBy] = useState<SortKey>('newest');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasApiCategories = Array.isArray(categoryData) && categoryData.length > 0;
-  const hasApiBrands = Array.isArray(brandData) && brandData.length > 0;
+  const apiCategories = (Array.isArray(categoryData) ? categoryData : []) as ProductCategory[];
+  const brands = useMemo(
+    () => [{ key: 'all', label: 'Tất cả' }, ...(brandData || []).map((item) => ({ key: item.slug || item._id || item.name, label: item.name }))],
+    [brandData]
+  );
 
-  const categories = useMemo<CategoryOption[]>(() => {
-    if (!hasApiCategories) return fallbackCategories;
+  const categories = useMemo<CategoryChip[]>(
+    () => [{ key: 'all', label: 'Tất cả' }, ...apiCategories.map((item) => ({
+      key: item.slug || item._id || item.name,
+      label: item.name,
+      parent: item.parent || null,
+      productCount: item.productCount ?? 0,
+    }))],
+    [apiCategories]
+  );
 
-    const apiCategories: CategoryOption[] = categoryData
-      .map((category) => ({
-        key: category.slug || category._id || category.name,
-        label: category.name,
-        icon: pickCategoryIcon(category.slug || category.name),
-      }))
-      .filter((category) => Boolean(category.key));
+  const parentCategoryId = useMemo(() => {
+    if (activeParentCategory === 'all') return '';
+    const item = apiCategories.find((category) => (category.slug || category._id || category.name) === activeParentCategory);
+    return item?._id || '';
+  }, [activeParentCategory, apiCategories]);
 
-    return [{ key: 'all', label: 'Tất cả', icon: Sparkles }, ...apiCategories];
-  }, [categoryData, hasApiCategories]);
+  const parentCategories = useMemo(
+    () => categories.filter((item) => item.key === 'all' || !item.parent),
+    [categories]
+  );
 
-  const brands = useMemo<BrandOption[]>(() => {
-    if (!hasApiBrands) return [{ key: 'all', label: 'Tất cả' }];
-
-    const apiBrands: BrandOption[] = brandData
-      .map((brand) => ({
-        key: brand.slug || brand._id || brand.name,
-        label: brand.name,
-      }))
-      .filter((brand) => Boolean(brand.key));
-
-    return [{ key: 'all', label: 'Tất cả' }, ...apiBrands];
-  }, [brandData, hasApiBrands]);
+  const childCategories = useMemo(
+    () => (parentCategoryId ? categories.filter((item) => item.parent === parentCategoryId) : []),
+    [categories, parentCategoryId]
+  );
 
   const productParams = useMemo<GetProductsParams>(() => {
-    const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
     const params: GetProductsParams = { page: 1, limit: 20 };
-
-    if (hasApiCategories && activeCategory !== 'all') {
-      params.categorySlug = activeCategory;
-    }
-    if (hasApiBrands && activeBrand !== 'all') {
-      params.brandSlug = activeBrand;
-    }
-    if (debouncedKeyword.trim()) {
-      params.keyword = debouncedKeyword.trim();
-    }
-    if (priceMeta.key !== 'all') {
-      params.minPrice = priceMeta.min;
-      params.maxPrice = priceMeta.max;
-    }
+    if (activeCategory !== 'all') params.categorySlug = activeCategory;
+    if (activeBrand !== 'all') params.brandSlug = activeBrand;
+    if (debouncedKeyword) params.keyword = debouncedKeyword;
 
     if (sortBy === 'price-low') {
       params.sortKey = 'priceNew';
-      params.sortValue = 1;
+      params.sortValue = 'asc';
     } else if (sortBy === 'price-high') {
       params.sortKey = 'priceNew';
-      params.sortValue = -1;
+      params.sortValue = 'desc';
     } else if (sortBy === 'best-selling') {
       params.sortKey = 'view';
-      params.sortValue = -1;
+      params.sortValue = 'desc';
     } else {
       params.sortKey = 'createdAt';
-      params.sortValue = -1;
+      params.sortValue = 'desc';
     }
 
     return params;
-  }, [
-    activeBrand,
-    activeCategory,
-    debouncedKeyword,
-    priceFilter,
-    sortBy,
-    hasApiCategories,
-    hasApiBrands,
-  ]);
+  }, [activeBrand, activeCategory, debouncedKeyword, sortBy]);
 
   const { data, loading, error, refetch } = useProducts(productParams);
   const { data: suggestions } = useProductSuggestions(keyword);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedKeyword(keyword.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [keyword]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -222,80 +154,77 @@ const ProductListScreen = () => {
     toastTimer.current = setTimeout(() => setToastVisible(false), 1400);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedKeyword(keyword.trim());
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [keyword]);
-
   const products = useMemo<UIProduct[]>(() => {
-    return (Array.isArray(data) ? data : []).map((item, index) => {
+    return (Array.isArray(data) ? data : []).map((item) => {
       const priceValue = item.priceNew ?? item.priceOld ?? 0;
-      const originalPrice =
-        item.priceOld && item.priceNew && item.priceOld > item.priceNew
-          ? formatPrice(item.priceOld)
-          : undefined;
-
       return {
         id: item._id,
-        slug: item.slug,
         title: item.name,
+        slug: item.slug,
         price: formatPrice(priceValue),
+        priceValue,
         primaryImage: toAbsoluteUrl(item.images?.[0]),
         secondaryImage: toAbsoluteUrl(item.images?.[1] || item.images?.[0]),
-        rating: 5 - (index % 2 === 0 ? 0 : 1),
-        isSale: !!originalPrice,
-        priceValue,
-        originalPrice,
+        originalPrice: item.priceOld && item.priceOld > priceValue ? formatPrice(item.priceOld) : undefined,
+        isSale: !!(item.priceOld && item.priceOld > priceValue),
+        rating: 4.5,
         hasVariants: (item.variants?.length || 0) > 0,
-        rawData: item,
       };
     });
   }, [data]);
 
-  const filteredProducts = useMemo(() => {
-    const normalized = debouncedKeyword.trim().toLowerCase();
-    const activeCategoryMeta = categories.find((item) => item.key === activeCategory);
-    const priceMeta = priceOptions.find((item) => item.key === priceFilter) ?? priceOptions[0];
-
-    let list = products;
-
-    if (normalized) {
-      list = list.filter((item) => item.title.toLowerCase().includes(normalized));
-    }
-
-    if (activeCategoryMeta && activeCategoryMeta.key !== 'all' && activeCategoryMeta.keywords) {
-      const keywords = activeCategoryMeta.keywords || [];
-      list = list.filter((item) =>
-        keywords.some((key) => item.title.toLowerCase().includes(key))
-      );
-    }
-
-    list = list.filter(
-      (item) => item.priceValue >= priceMeta.min && item.priceValue <= priceMeta.max
-    );
-
-    const sorted = [...list];
-    if (sortBy === 'price-low') {
-      sorted.sort((a, b) => a.priceValue - b.priceValue);
-    }
-    if (sortBy === 'price-high') {
-      sorted.sort((a, b) => b.priceValue - a.priceValue);
-    }
-    sorted.sort((a, b) => {
-      const aPriority = isFavorite(a.id) ? 1 : 0;
-      const bPriority = isFavorite(b.id) ? 1 : 0;
-      return bPriority - aPriority;
-    });
-
+  const visibleProducts = useMemo(() => {
+    const sorted = [...products];
+    if (sortBy === 'price-low') sorted.sort((a, b) => a.priceValue - b.priceValue);
+    if (sortBy === 'price-high') sorted.sort((a, b) => b.priceValue - a.priceValue);
+    sorted.sort((a, b) => Number(isFavorite(b.id)) - Number(isFavorite(a.id)));
     return sorted;
-  }, [products, debouncedKeyword, activeCategory, sortBy, priceFilter, isFavorite]);
+  }, [products, sortBy, isFavorite]);
 
-  const activeSortLabel = useMemo(
-    () => sortOptions.find((item) => item.value === sortBy)?.label || 'Mới nhất',
-    [sortBy]
+  const renderProduct = ({ item }: { item: UIProduct }) => (
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={() => navigation.navigate('ProductDetail', { productSlug: item.slug || item.id, product: item })}
+    >
+      {item.primaryImage ? (
+        <Image source={{ uri: item.primaryImage }} style={styles.cardImage} />
+      ) : (
+        <View style={styles.cardImagePlaceholder} />
+      )}
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitle} numberOfLines={3}>{item.title}</Text>
+        <View style={styles.ratingRow}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={`${item.id}-${star}`}
+              size={12}
+              color={star <= Math.round(item.rating) ? '#FFB800' : '#E5E7EB'}
+              fill={star <= Math.round(item.rating) ? '#FFB800' : 'none'}
+            />
+          ))}
+          <Text style={styles.ratingText}>({item.rating.toFixed(1)})</Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceText}>{item.price}</Text>
+          {item.originalPrice ? <Text style={styles.oldPriceText}>{item.originalPrice}</Text> : null}
+        </View>
+        <Pressable
+          style={styles.addButton}
+          onPress={(event) => {
+            event.stopPropagation();
+            if (item.hasVariants) {
+              showToast('Vui lòng chọn phân loại sản phẩm');
+              navigation.navigate('ProductDetail', { productSlug: item.slug || item.id, product: item });
+              return;
+            }
+            addToCart(item, 1);
+            showToast('Đã thêm sản phẩm vào giỏ hàng');
+          }}
+        >
+          <Text style={styles.addButtonText}>Thêm giỏ</Text>
+        </Pressable>
+      </View>
+    </Pressable>
   );
 
   return (
@@ -310,223 +239,119 @@ const ProductListScreen = () => {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.searchBox}>
-          <Search size={16} color={colors.text} style={styles.searchIcon} />
-          <TextInput
-            placeholder="Tìm kiếm sản phẩm"
-            placeholderTextColor="#9b9b9b"
-            style={styles.searchInput}
-            value={keyword}
-            onChangeText={setKeyword}
-          />
-        </View>
-
-        {keyword.trim().length > 1 && suggestions.length > 0 ? (
-          <View style={styles.suggestionWrap}>
-            {suggestions.map((item) => (
-              <Pressable
-                key={item._id}
-                style={({ pressed }) => [
-                  styles.suggestionItem,
-                  pressed && styles.suggestionItemPressed,
-                ]}
-                onPress={() => {
-                  setKeyword(item.name);
-                  navigation.navigate('ProductDetail', {
-                    productSlug: item.slug || item._id || item.name,
-                  });
-                }}
-              >
-                {item.images?.[0] ? (
-                  <Image source={{ uri: toAbsoluteUrl(item.images[0]) }} style={styles.suggestionImage} />
-                ) : (
-                  <View style={styles.suggestionImagePlaceholder} />
-                )}
-                <View style={styles.suggestionContent}>
-                  <Text style={styles.suggestionTitle} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.suggestionPrice}>
-                    {formatPrice(item.priceNew ?? item.priceOld ?? 0)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        <View style={styles.promoSection}>
-            <View style={styles.promoCard}>
-                <Image 
-                    source={{ uri: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800' }} 
-                    style={styles.promoBg} 
-                />
-                <View style={styles.promoOverlay}>
-                    <View style={styles.promoBadge}>
-                        <Sparkles size={12} color="#fff" />
-                        <Text style={styles.promoBadgeText}>DAILY DEAL</Text>
-                    </View>
-                    <Text style={styles.promoContentTitle}>Ưu đãi thức ăn hạt</Text>
-                    <Text style={styles.promoContentSub}>Giảm tới 35% cho tất cả đơn hàng từ 500k</Text>
-                    <Pressable style={styles.promoBtn}>
-                         <Text style={styles.promoBtnText}>Mua ngay</Text>
-                    </Pressable>
-                </View>
+      <FlatList
+        data={visibleProducts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderProduct}
+        numColumns={2}
+        columnWrapperStyle={visibleProducts.length > 1 ? styles.gridRow : undefined}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <>
+            <View style={styles.searchBox}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm kiếm sản phẩm"
+                placeholderTextColor="#9CA3AF"
+                value={keyword}
+                onChangeText={setKeyword}
+              />
             </View>
-        </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
-          {categories.map((category) => (
-            <Pressable
-              key={category.key}
-              onPress={() => setActiveCategory(category.key)}
-              style={({ pressed }) => [
-                styles.categoryChip,
-                activeCategory === category.key && styles.categoryChipActive,
-                pressed && styles.categoryChipPressed,
-              ]}
-            >
-              <View style={styles.categoryChipContent}>
-                <category.icon
-                  size={14}
-                  color={activeCategory === category.key ? '#fff' : colors.text}
-                />
-                <Text
-                  style={[
-                    styles.categoryChipText,
-                    activeCategory === category.key && styles.categoryChipTextActive,
-                  ]}
-                >
-                  {category.label}
-                </Text>
+            {keyword.trim().length > 1 && suggestions.length > 0 ? (
+              <View style={styles.suggestionWrap}>
+                {suggestions.map((item) => (
+                  <Pressable
+                    key={item._id}
+                    style={styles.suggestionItem}
+                    onPress={() => {
+                      setKeyword(item.name);
+                      navigation.navigate('ProductDetail', { productSlug: item.slug || item._id || item.name });
+                    }}
+                  >
+                    <Text style={styles.suggestionTitle}>{item.name}</Text>
+                    <Text style={styles.suggestionPrice}>{formatPrice(item.priceNew ?? item.priceOld ?? 0)}</Text>
+                  </Pressable>
+                ))}
               </View>
-            </Pressable>
-          ))}
-        </ScrollView>
+            ) : null}
 
-        <View style={styles.sortRow}>
-          <Text style={styles.sortLabel}>
-            Hiển thị <Text style={styles.sortHighlight}>{filteredProducts.length}</Text> sản phẩm
-          </Text>
-          <Pressable onPress={() => setSortOpen(true)} style={styles.sortPill}>
-            <Text style={styles.sortPillText}>{activeSortLabel}</Text>
-            <ChevronDown size={16} color={colors.text} />
-          </Pressable>
-        </View>
-
-        {loading ? (
-          <View style={styles.skeletonGrid}>
-            {[1, 2, 3, 4].map((item) => (
-              <View key={item} style={styles.skeletonCard}>
-                <View style={styles.skeletonImage} />
-                <View style={styles.skeletonBody}>
-                  <View style={styles.skeletonLineWide} />
-                  <View style={styles.skeletonLineMedium} />
-                  <View style={styles.skeletonLineFull} />
-                  <View style={styles.skeletonButton} />
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : error ? (
-          <View style={styles.statusWrap}>
-            <StatusMessage message={error} actionText="Thử lại" onAction={refetch} />
-          </View>
-        ) : filteredProducts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIllustration}>
-              <Search size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.emptyTitle}>Không tìm thấy sản phẩm</Text>
-            <Text style={styles.emptyDesc}>
-              Thử thay đổi bộ lọc hoặc tìm kiếm với từ khóa khác
-            </Text>
-            <Pressable
-              onPress={() => {
-                setKeyword('');
-                setActiveCategory('all');
-                setPriceFilter('all');
-              }}
-              style={styles.emptyAction}
-            >
-              <Text style={styles.emptyActionText}>Xóa bộ lọc</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {filteredProducts.map((item) => (
-              <View key={item.id} style={styles.gridItem}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+              {parentCategories.map((category) => (
                 <Pressable
-                  onPress={() =>
-                    navigation.navigate('ProductDetail', {
-                      productSlug: item.slug || item.id,
-                      product: item,
-                    })
-                  }
-                  style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+                  key={category.key}
+                  style={[styles.chip, activeParentCategory === category.key && styles.chipActive]}
+                  onPress={() => {
+                    setActiveParentCategory(category.key);
+                    setActiveCategory(category.key);
+                  }}
                 >
-                  <View style={styles.cardImageWrap}>
-                    {item.primaryImage ? (
-                      <Image source={{ uri: item.primaryImage }} style={styles.cardImage} />
-                    ) : (
-                      <View style={styles.cardImagePlaceholder} />
-                    )}
-                    {item.isSale ? (
-                      <View style={styles.cardBadge}>
-                        <Text style={styles.cardBadgeText}>SALE</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={styles.cardBody}>
-                    <Text style={styles.cardTitle} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <View style={styles.ratingRow}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={`${item.id}-${star}`}
-                          size={12}
-                          color={star <= Math.floor(item.rating) ? '#FFB800' : '#D9D9D9'}
-                          fill={star <= Math.floor(item.rating) ? '#FFB800' : 'none'}
-                        />
-                      ))}
-                      <Text style={styles.ratingText}>({item.rating.toFixed(1)})</Text>
-                    </View>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceText}>{item.price}</Text>
-                      {item.originalPrice ? (
-                        <Text style={styles.originalPriceText}>{item.originalPrice}</Text>
-                      ) : null}
-                    </View>
-                    <Pressable
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        if (item.hasVariants) {
-                           showToast('Vui lòng chọn phân loại sản phẩm');
-                           navigation.navigate('ProductDetail', {
-                             productSlug: item.slug || item.id,
-                             product: item,
-                           });
-                           return;
-                        }
-                        addToCart(item, 1);
-                        showToast('Đã thêm sản phẩm vào giỏ hàng');
-                      }}
-                      style={({ pressed }) => [
-                        styles.cardButton,
-                        pressed && styles.cardButtonPressed,
-                      ]}
-                    >
-                      <Text style={styles.cardButtonText}>Thêm giỏ</Text>
-                    </Pressable>
-                  </View>
+                  <Sparkles size={14} color={activeParentCategory === category.key ? '#fff' : colors.text} />
+                  <Text style={[styles.chipText, activeParentCategory === category.key && styles.chipTextActive]}>
+                    {category.label}
+                  </Text>
                 </Pressable>
+              ))}
+            </ScrollView>
+
+            {childCategories.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subcategoryRow}>
+                {childCategories.map((category) => (
+                  <Pressable
+                    key={category.key}
+                    style={[styles.subChip, activeCategory === category.key && styles.subChipActive]}
+                    onPress={() => setActiveCategory(category.key)}
+                  >
+                    <Text style={[styles.subChipText, activeCategory === category.key && styles.subChipTextActive]}>
+                      {category.label}
+                      {typeof category.productCount === 'number' ? ` (${category.productCount})` : ''}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+
+            <View style={styles.sortRow}>
+              <Text style={styles.sortLabel}>
+                Hiển thị <Text style={styles.sortHighlight}>{visibleProducts.length}</Text> sản phẩm
+              </Text>
+              <Pressable style={styles.sortPill} onPress={() => setSortOpen(true)}>
+                <Text style={styles.sortPillText}>
+                  {sortOptions.find((item) => item.value === sortBy)?.label || 'Mới nhất'}
+                </Text>
+                <ChevronDown size={16} color={colors.text} />
+              </Pressable>
+            </View>
+
+            {loading ? (
+              <View style={styles.statusWrap}>
+                <StatusMessage message="Đang tải sản phẩm..." />
               </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+            ) : error ? (
+              <View style={styles.statusWrap}>
+                <StatusMessage message={error} actionText="Thử lại" onAction={refetch} />
+              </View>
+            ) : visibleProducts.length === 0 ? (
+              <View style={styles.statusWrap}>
+                <StatusMessage
+                  message="Không tìm thấy sản phẩm phù hợp"
+                  actionText="Xóa bộ lọc"
+                  onAction={() => {
+                    setKeyword('');
+                    setDebouncedKeyword('');
+                    setActiveParentCategory('all');
+                    setActiveCategory('all');
+                    setActiveBrand('all');
+                  }}
+                />
+              </View>
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={null}
+      />
+
       <Toast visible={toastVisible} message={toastMessage} />
 
       <Pressable style={styles.fab} onPress={() => navigation.navigate('Cart')}>
@@ -545,110 +370,22 @@ const ProductListScreen = () => {
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Bộ lọc</Text>
               <Pressable onPress={() => setFilterOpen(false)} style={styles.sheetClose}>
-                <X size={20} color={colors.text} />
+                <X size={18} color={colors.text} />
               </Pressable>
             </View>
-
-            <View style={styles.sheetSection}>
-              <Text style={styles.sheetLabel}>Danh mục</Text>
-              <View style={styles.sheetChipRow}>
-                {categories.map((category) => (
-                  <Pressable
-                    key={category.key}
-                    onPress={() => setActiveCategory(category.key)}
-                    style={({ pressed }) => [
-                      styles.sheetChip,
-                      activeCategory === category.key && styles.sheetChipActive,
-                      pressed && styles.sheetChipPressed,
-                    ]}
-                  >
-                    <View style={styles.sheetChipContent}>
-                      <category.icon
-                        size={13}
-                        color={activeCategory === category.key ? '#fff' : colors.text}
-                      />
-                      <Text
-                        style={[
-                          styles.sheetChipText,
-                          activeCategory === category.key && styles.sheetChipTextActive,
-                        ]}
-                      >
-                        {category.label}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {brands.length > 1 ? (
-              <View style={styles.sheetSection}>
-                <Text style={styles.sheetLabel}>Thương hiệu</Text>
-                <View style={styles.sheetChipRow}>
-                  {brands.map((brand) => (
-                    <Pressable
-                      key={brand.key}
-                      onPress={() => setActiveBrand(brand.key)}
-                      style={({ pressed }) => [
-                        styles.sheetChip,
-                        activeBrand === brand.key && styles.sheetChipActive,
-                        pressed && styles.sheetChipPressed,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.sheetChipText,
-                          activeBrand === brand.key && styles.sheetChipTextActive,
-                        ]}
-                      >
-                        {brand.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.sheetSection}>
-              <Text style={styles.sheetLabel}>Khoảng giá</Text>
-              <View style={styles.sheetChipRow}>
-                {priceOptions.map((option) => (
-                  <Pressable
-                    key={option.key}
-                    onPress={() => setPriceFilter(option.key)}
-                    style={({ pressed }) => [
-                      styles.sheetChip,
-                      priceFilter === option.key && styles.sheetChipActive,
-                      pressed && styles.sheetChipPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        priceFilter === option.key && styles.sheetChipTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.sheetActions}>
-              <Pressable style={styles.sheetApply} onPress={() => setFilterOpen(false)}>
-                <Text style={styles.sheetApplyText}>Áp dụng</Text>
-              </Pressable>
-              <Pressable
-                style={styles.sheetClear}
-                onPress={() => {
-                  setActiveCategory('all');
-                  setPriceFilter('all');
-                  setActiveBrand('all');
-                }}
-              >
-                <Text style={styles.sheetClearText}>Xóa lọc</Text>
-              </Pressable>
+            <Text style={styles.sheetLabel}>Thương hiệu</Text>
+            <View style={styles.sheetChipRow}>
+              {brands.map((brand) => (
+                <Pressable
+                  key={brand.key}
+                  style={[styles.sheetChip, activeBrand === brand.key && styles.sheetChipActive]}
+                  onPress={() => setActiveBrand(brand.key)}
+                >
+                  <Text style={[styles.sheetChipText, activeBrand === brand.key && styles.sheetChipTextActive]}>
+                    {brand.label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         </View>
@@ -657,33 +394,24 @@ const ProductListScreen = () => {
       <Modal visible={sortOpen} transparent animationType="fade" onRequestClose={() => setSortOpen(false)}>
         <View style={styles.modalWrap}>
           <Pressable style={styles.modalOverlay} onPress={() => setSortOpen(false)} />
-          <View style={styles.sortSheet}>
+          <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Sắp xếp theo</Text>
               <Pressable onPress={() => setSortOpen(false)} style={styles.sheetClose}>
-                <X size={20} color={colors.text} />
+                <X size={18} color={colors.text} />
               </Pressable>
             </View>
-            {sortOptions.map((option) => (
+            {sortOptions.map((item) => (
               <Pressable
-                key={option.value}
+                key={item.value}
+                style={[styles.sortOption, sortBy === item.value && styles.sortOptionActive]}
                 onPress={() => {
-                  setSortBy(option.value);
+                  setSortBy(item.value);
                   setSortOpen(false);
                 }}
-                style={({ pressed }) => [
-                  styles.sortOption,
-                  sortBy === option.value && styles.sortOptionActive,
-                  pressed && styles.sortOptionPressed,
-                ]}
               >
-                <Text
-                  style={[
-                    styles.sortOptionText,
-                    sortBy === option.value && styles.sortOptionTextActive,
-                  ]}
-                >
-                  {option.label}
+                <Text style={[styles.sortOptionText, sortBy === item.value && styles.sortOptionTextActive]}>
+                  {item.label}
                 </Text>
               </Pressable>
             ))}
@@ -695,418 +423,130 @@ const ProductListScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    paddingTop: 8,
-    paddingBottom: 120,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F1F1',
-    backgroundColor: '#fff',
   },
-  headerTitle: {
-    color: colors.secondary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.secondary },
   headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.softPink,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.softPink,
   },
+  listContent: { padding: 20, paddingBottom: 120 },
   searchBox: {
-    marginHorizontal: 20,
-    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f3f5',
-    borderRadius: 999,
+    gap: 8,
     paddingHorizontal: 14,
     height: 48,
+    borderRadius: 999,
+    backgroundColor: '#F3F4F6',
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.secondary,
-    fontSize: 14,
-  },
+  searchInput: { flex: 1, color: colors.secondary, fontSize: 14 },
   suggestionWrap: {
-    marginHorizontal: 20,
-    marginTop: 8,
+    marginTop: 10,
     backgroundColor: '#fff',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F1F1',
-    paddingVertical: 6,
+    overflow: 'hidden',
   },
   suggestionItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
   },
-  suggestionItemPressed: {
-    backgroundColor: '#F7F7F9',
-  },
-  suggestionImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F1F1F1',
-    marginRight: 10,
-  },
-  suggestionImagePlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F1F1F1',
-    marginRight: 10,
-  },
-  suggestionContent: {
-    flex: 1,
-  },
-  suggestionTitle: {
-    color: colors.secondary,
-    fontWeight: '600',
-  },
-  suggestionPrice: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  promoSection: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  promoCard: {
-    height: 160,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: colors.primary,
-    position: 'relative',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  promoBg: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.7,
-  },
-  promoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  promoBadge: {
+  suggestionTitle: { color: colors.secondary, fontWeight: '600', flex: 1, marginRight: 10 },
+  suggestionPrice: { color: colors.primary, fontWeight: '700' },
+  categoryRow: { paddingTop: 16, paddingBottom: 6, gap: 10 },
+  subcategoryRow: { paddingBottom: 6, gap: 10 },
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
     gap: 6,
-    marginBottom: 10,
-  },
-  promoBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  promoContentTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  promoContentSub: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  promoBtn: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  promoBtnText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  categoryRow: {
-    paddingLeft: 20,
-    marginTop: 12,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: colors.softPink,
-    marginRight: 10,
   },
-  categoryChipActive: {
-    backgroundColor: colors.primary,
+  chipActive: { backgroundColor: colors.primary },
+  chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  chipTextActive: { color: '#fff' },
+  subChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#FFF4F6',
+    borderWidth: 1,
+    borderColor: '#FFD5DE',
   },
-  categoryChipPressed: {
-    opacity: 0.85,
-  },
-  categoryChipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  categoryChipTextActive: {
-    color: '#fff',
-  },
+  subChipActive: { backgroundColor: colors.secondary, borderColor: colors.secondary },
+  subChipText: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  subChipTextActive: { color: '#fff' },
   sortRow: {
-    marginHorizontal: 20,
-    marginTop: 14,
+    marginTop: 8,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sortLabel: {
-    color: colors.text,
-    fontSize: 13,
-  },
-  sortHighlight: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
+  sortLabel: { color: colors.text, fontSize: 13 },
+  sortHighlight: { color: colors.primary, fontWeight: '700' },
   sortPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.softPink,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
+    backgroundColor: colors.softPink,
   },
-  sortPillText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  gridItem: {
-    width: '47%',
-  },
+  sortPillText: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  statusWrap: { marginBottom: 16 },
+  gridRow: { justifyContent: 'space-between', marginBottom: 14 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    width: '48%',
+    borderRadius: 22,
     overflow: 'hidden',
+    backgroundColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 4,
   },
-  cardPressed: {
-    transform: [{ scale: 0.97 }],
-  },
-  cardImageWrap: {
-    backgroundColor: colors.softPink,
-  },
-  cardImage: {
-    width: '100%',
-    height: 160,
-  },
-  cardImagePlaceholder: {
-    width: '100%',
-    height: 160,
-    backgroundColor: colors.border,
-  },
-  cardBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
+  cardPressed: { transform: [{ scale: 0.98 }] },
+  cardImage: { width: '100%', height: 170, backgroundColor: '#F8FAFC' },
+  cardImagePlaceholder: { width: '100%', height: 170, backgroundColor: '#F8FAFC' },
+  cardBody: { padding: 12 },
+  cardTitle: { fontSize: 14, lineHeight: 20, color: colors.secondary, fontWeight: '600', minHeight: 62 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 8 },
+  ratingText: { marginLeft: 4, fontSize: 11, color: colors.text },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  priceText: { color: colors.primary, fontSize: 15, fontWeight: '800' },
+  oldPriceText: { color: colors.text, fontSize: 11, textDecorationLine: 'line-through' },
+  addButton: {
+    marginTop: 12,
+    borderRadius: 999,
+    paddingVertical: 11,
     backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  cardBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  cardBody: {
-    padding: 12,
-  },
-  cardTitle: {
-    color: colors.secondary,
-    fontSize: 13,
-    fontWeight: '600',
-    minHeight: 36,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginTop: 8,
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontSize: 10,
-    color: colors.text,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-  },
-  priceText: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  originalPriceText: {
-    color: colors.text,
-    fontSize: 11,
-    textDecorationLine: 'line-through',
-  },
-  cardButton: {
-    marginTop: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 10,
     alignItems: 'center',
   },
-  cardButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  cardButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  skeletonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  skeletonCard: {
-    width: '47%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  skeletonImage: {
-    height: 160,
-    backgroundColor: colors.softPink,
-  },
-  skeletonBody: {
-    padding: 12,
-    gap: 8,
-  },
-  skeletonLineWide: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-    width: '80%',
-  },
-  skeletonLineMedium: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-    width: '60%',
-  },
-  skeletonLineFull: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-    width: '100%',
-  },
-  skeletonButton: {
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-  },
-  statusWrap: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  emptyState: {
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyIllustration: {
-    width: 140,
-    height: 140,
-    borderRadius: 32,
-    backgroundColor: colors.softPink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.secondary,
-    textAlign: 'center',
-  },
-  emptyDesc: {
-    marginTop: 8,
-    textAlign: 'center',
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  emptyAction: {
-    marginTop: 20,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-  },
-  emptyActionText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  addButtonText: { color: '#fff', fontWeight: '700' },
   fab: {
     position: 'absolute',
     right: 20,
@@ -1117,10 +557,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
   fabBadge: {
@@ -1128,41 +564,21 @@ const styles = StyleSheet.create({
     top: -6,
     right: -6,
     backgroundColor: colors.secondary,
-    borderRadius: 999,
     minWidth: 20,
     height: 20,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  fabBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  modalWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
+  fabBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  modalWrap: { flex: 1, justifyContent: 'flex-end' },
+  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: {
     backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 28,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-  },
-  sortSheet: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    padding: 20,
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -1170,106 +586,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  sheetTitle: {
-    color: colors.secondary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: colors.secondary },
   sheetClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.softPink,
   },
-  sheetSection: {
-    marginBottom: 16,
-  },
-  sheetLabel: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  sheetChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sheetChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.softPink,
-  },
-  sheetChipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sheetChipActive: {
-    backgroundColor: colors.primary,
-  },
-  sheetChipPressed: {
-    opacity: 0.85,
-  },
-  sheetChipText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sheetChipTextActive: {
-    color: '#fff',
-  },
-  sheetActions: {
-    marginTop: 6,
-    gap: 10,
-  },
-  sheetApply: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  sheetApplyText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  sheetClear: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  sheetClearText: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  sortOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 8,
-    backgroundColor: '#f7f7f7',
-  },
-  sortOptionActive: {
-    backgroundColor: colors.softPink,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  sortOptionPressed: {
-    opacity: 0.85,
-  },
-  sortOptionText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  sortOptionTextActive: {
-    color: colors.primary,
-  },
+  sheetLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 10 },
+  sheetChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sheetChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.softPink },
+  sheetChipActive: { backgroundColor: colors.primary },
+  sheetChipText: { fontSize: 12, fontWeight: '600', color: colors.text },
+  sheetChipTextActive: { color: '#fff' },
+  sortOption: { padding: 14, borderRadius: 16, backgroundColor: '#F7F7F7', marginBottom: 8 },
+  sortOptionActive: { backgroundColor: colors.softPink, borderWidth: 1, borderColor: colors.primary },
+  sortOptionText: { color: colors.text, fontWeight: '600' },
+  sortOptionTextActive: { color: colors.primary },
 });
 
 export default ProductListScreen;

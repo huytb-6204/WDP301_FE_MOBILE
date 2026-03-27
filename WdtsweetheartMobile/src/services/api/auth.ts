@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string;
   phone?: string;
   avatar?: string;
+  userType?: 'client' | 'staff';
 };
 
 type LoginResponse = ApiResponse<null> & {

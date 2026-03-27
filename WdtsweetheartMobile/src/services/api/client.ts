@@ -22,6 +22,32 @@ const buildHeaders = async () => {
   return headers;
 };
 
+const resolveBaseUrls = () => {
+  const primary = env.apiBaseUrl;
+  const local = env.localApiBaseUrl;
+
+  if (!local || local === primary) {
+    return [primary];
+  }
+
+  return [primary, local];
+};
+
+const requestWithFallback = async (path: string, init?: RequestInit) => {
+  const baseUrls = resolveBaseUrls();
+  let lastError: unknown;
+
+  for (const baseUrl of baseUrls) {
+    try {
+      return await fetch(`${baseUrl}${path}`, init);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Không thể kết nối máy chủ');
+};
+
 const parseJsonSafely = async <T>(res: Response): Promise<ApiResponse<T> | null> => {
   const text = await res.text();
   if (!text) return null;
@@ -34,12 +60,9 @@ const parseJsonSafely = async <T>(res: Response): Promise<ApiResponse<T> | null>
 
 export const apiGet = async <T>(path: string): Promise<T> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, { headers });
-  
-  // 1. Ép kiểu <any> để TypeScript không báo lỗi gạch đỏ nữa
-  const json = await parseJsonSafely<any>(res); 
+  const res = await requestWithFallback(path, { headers });
+  const json = await parseJsonSafely<any>(res);
 
-  // 2. CHỈ kiểm tra res.ok (trạng thái 200 từ backend)
   if (!json || !res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
@@ -49,13 +72,11 @@ export const apiGet = async <T>(path: string): Promise<T> => {
 
 export const apiPost = async <T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
-
-  // 3. Cũng ép kiểu <any> ở đây luôn
   const json = await parseJsonSafely<any>(res);
 
   if (!json || !res.ok) {
@@ -67,12 +88,11 @@ export const apiPost = async <T, B = unknown>(path: string, body: B): Promise<Ap
 
 export const apiPostRaw = async <T, B = unknown>(path: string, body: B): Promise<T> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
-
   const json = await parseJsonSafely<T>(res);
 
   if (!json || !res.ok) {
@@ -84,7 +104,7 @@ export const apiPostRaw = async <T, B = unknown>(path: string, body: B): Promise
 
 export const apiGetRaw = async <T>(path: string): Promise<T> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, { headers });
+  const res = await requestWithFallback(path, { headers });
   const json = await parseJsonSafely<T>(res);
 
   if (!json || !res.ok) {
@@ -96,7 +116,7 @@ export const apiGetRaw = async <T>(path: string): Promise<T> => {
 
 export const apiPatchRaw = async <T, B = unknown>(path: string, body: B): Promise<T> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(body),
@@ -112,7 +132,7 @@ export const apiPatchRaw = async <T, B = unknown>(path: string, body: B): Promis
 
 export const apiDeleteRaw = async <T>(path: string): Promise<T> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'DELETE',
     headers,
   });
@@ -124,29 +144,50 @@ export const apiDeleteRaw = async <T>(path: string): Promise<T> => {
 
   return json as T;
 };
+
 export const apiPatch = async <T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(body),
   });
   const json = await parseJsonSafely<any>(res);
+
   if (!json || !res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
+
   return json;
 };
 
 export const apiDelete = async <T>(path: string): Promise<ApiResponse<T>> => {
   const headers = await buildHeaders();
-  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+  const res = await requestWithFallback(path, {
     method: 'DELETE',
     headers,
   });
   const json = await parseJsonSafely<any>(res);
+
   if (!json || !res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
+
+  return json;
+};
+
+export const apiPut = async <T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> => {
+  const headers = await buildHeaders();
+  const res = await requestWithFallback(path, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const json = await parseJsonSafely<any>(res);
+
+  if (!json || !res.ok) {
+    throw new Error(json?.message || `Request failed (${res.status})`);
+  }
+
   return json;
 };

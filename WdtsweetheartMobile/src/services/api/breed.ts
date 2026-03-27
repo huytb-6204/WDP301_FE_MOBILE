@@ -6,12 +6,7 @@ export interface Breed {
   type: string;
   description?: string;
   image?: string;
-};
-
-type BreedResponse = {
-  success: boolean;
-  data: Breed[];
-};
+}
 
 export const getBreeds = async (type?: string, unique: boolean = false) => {
   const query = [];

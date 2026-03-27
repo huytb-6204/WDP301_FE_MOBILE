@@ -159,6 +159,10 @@ const HomeScreen = () => {
   };
 
   const handleTabPress = (tab: HomeMainTab) => {
+    if (tab === 'product') {
+      navigation.navigate('ProductList');
+      return;
+    }
     setActiveTab(tab);
   };
 
@@ -274,7 +278,11 @@ const HomeScreen = () => {
             <TouchableOpacity
               key={idx}
               style={[styles.quickItemModern, { backgroundColor: item.color }]}
-              onPress={() => setActiveTab(item.tab as HomeMainTab)}
+              onPress={() =>
+                item.tab === 'product'
+                  ? navigation.navigate('ProductList')
+                  : setActiveTab(item.tab as HomeMainTab)
+              }
             >
               <View style={styles.quickIconBox}>
                 <item.icon size={20} color={item.iconColor} />

@@ -54,8 +54,11 @@ const WelcomeChoiceScreen = () => {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home' as never)}>
-            <Text style={styles.guest}>Tiếp tục với khách</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('StaffLogin' as never)}
+            style={styles.staffPortalLink}
+          >
+            <Text style={styles.staffPortalText}>Dành cho nhân viên</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -184,6 +187,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.text,
     fontSize: 12,
+  },
+  staffPortalLink: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 99,
+    backgroundColor: '#111827',
+  },
+  staffPortalText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 

@@ -48,9 +48,11 @@ const envApiBaseUrl = API_BASE_URL?.trim();
 const shouldAutoResolve = !envApiBaseUrl || envApiBaseUrl.toLowerCase() === 'auto';
 const rawApiBaseUrl = shouldAutoResolve ? buildAutoApiBaseUrl() : envApiBaseUrl;
 const apiBaseUrl = normalizeUrl(rawApiBaseUrl);
+const localApiBaseUrl = normalizeUrl(buildAutoApiBaseUrl());
 
 export const env = {
   apiBaseUrl,
+  localApiBaseUrl,
   googleClientId: GOOGLE_CLIENT_ID,
   facebookAppId: FACEBOOK_APP_ID,
   openMapKey: OPENMAP_KEY,

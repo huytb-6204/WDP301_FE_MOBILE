@@ -174,14 +174,14 @@ const StaffWorkScheduleScreen = () => {
       </View>
 
       <View style={styles.weekSelector}>
-        <TouchableOpacity onPress={() => setViewDate(prev => prev.subtract(1, 'week'))} style={styles.arrowBtn}>
+        <TouchableOpacity onPress={() => setViewDate((prev: dayjs.Dayjs) => prev.subtract(1, 'week'))} style={styles.arrowBtn}>
           <ChevronLeft size={24} color="#637381" />
         </TouchableOpacity>
         <View style={styles.weekInfo}>
           <Text style={styles.weekLabel}>Tuần này</Text>
           <Text style={styles.weekValue}>{viewDate.startOf('week').format("DD/MM")} - {viewDate.endOf('week').format("DD/MM")}</Text>
         </View>
-        <TouchableOpacity onPress={() => setViewDate(prev => prev.add(1, 'week'))} style={styles.arrowBtn}>
+        <TouchableOpacity onPress={() => setViewDate((prev: dayjs.Dayjs) => prev.add(1, 'week'))} style={styles.arrowBtn}>
           <ChevronRight size={24} color="#637381" />
         </TouchableOpacity>
       </View>

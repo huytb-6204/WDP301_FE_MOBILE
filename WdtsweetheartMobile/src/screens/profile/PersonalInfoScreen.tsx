@@ -14,12 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-<<<<<<< HEAD
 import { ArrowLeft, Save, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-=======
-import { ArrowLeft, Save } from 'lucide-react-native';
->>>>>>> main
 import { useAuth } from '../../context/AuthContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getProfile, updateProfile } from '../../services/api/dashboard';
@@ -109,19 +105,11 @@ const PersonalInfoScreen = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-<<<<<<< HEAD
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-=======
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
->>>>>>> main
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {loading ? (
             <View style={styles.centerWrap}>
               <ActivityIndicator color={colors.primary} />
-<<<<<<< HEAD
               <Text style={styles.helperText}>Đang tải hồ sơ của bạn...</Text>
             </View>
           ) : (
@@ -198,62 +186,6 @@ const PersonalInfoScreen = () => {
                 </TouchableOpacity>
               </View>
             </>
-=======
-              <Text style={styles.helperText}>Đang tải thông tin cá nhân...</Text>
-            </View>
-          ) : (
-            <View style={styles.card}>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Họ và tên</Text>
-                <TextInput
-                  style={styles.input}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  placeholder="Nhập họ và tên"
-                  placeholderTextColor="#A0A0A0"
-                />
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={[styles.input, styles.inputDisabled]}
-                  value={email}
-                  editable={false}
-                  placeholder="Email"
-                  placeholderTextColor="#A0A0A0"
-                />
-                <Text style={styles.helperNote}>Email hiện được khóa chỉnh sửa trên mobile.</Text>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Số điện thoại</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Nhập số điện thoại"
-                  placeholderTextColor="#A0A0A0"
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Save size={16} color="#fff" />
-                    <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
->>>>>>> main
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -264,11 +196,7 @@ const PersonalInfoScreen = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-<<<<<<< HEAD
     backgroundColor: colors.background,
-=======
-    backgroundColor: '#fff',
->>>>>>> main
   },
   flex: {
     flex: 1,
@@ -278,7 +206,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-<<<<<<< HEAD
     paddingVertical: 12,
     backgroundColor: colors.background,
   },
@@ -291,60 +218,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-=======
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.softPink,
->>>>>>> main
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
     color: colors.secondary,
     fontSize: 18,
-<<<<<<< HEAD
     fontWeight: '800',
   },
   headerSpacer: {
     width: 42,
-=======
-    fontWeight: '700',
-  },
-  headerSpacer: {
-    width: 40,
->>>>>>> main
   },
   content: {
     flexGrow: 1,
     padding: 16,
-<<<<<<< HEAD
     paddingBottom: 28,
-=======
->>>>>>> main
   },
   centerWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-<<<<<<< HEAD
     paddingTop: 80,
-=======
->>>>>>> main
   },
   helperText: {
     color: colors.text,
     fontSize: 13,
   },
-<<<<<<< HEAD
   heroCard: {
     borderRadius: 28,
     padding: 22,
@@ -401,15 +301,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
-=======
-  card: {
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
-    padding: 18,
-    gap: 16,
->>>>>>> main
   },
   fieldGroup: {
     gap: 8,
@@ -417,7 +308,6 @@ const styles = StyleSheet.create({
   label: {
     color: colors.secondary,
     fontSize: 13,
-<<<<<<< HEAD
     fontWeight: '800',
   },
   input: {
@@ -426,32 +316,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.backgroundSoft,
-=======
-    fontWeight: '700',
-  },
-  input: {
-    minHeight: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
->>>>>>> main
     paddingHorizontal: 14,
     color: colors.secondary,
     fontSize: 14,
   },
   inputDisabled: {
-<<<<<<< HEAD
     backgroundColor: '#F9EFEC',
-=======
-    backgroundColor: '#F8F8F8',
->>>>>>> main
     color: colors.textLight,
   },
   helperNote: {
     color: colors.textLight,
     fontSize: 12,
-<<<<<<< HEAD
     lineHeight: 18,
   },
   saveButton: {
@@ -460,19 +335,10 @@ const styles = StyleSheet.create({
   saveButtonGradient: {
     minHeight: 52,
     borderRadius: 999,
-=======
-  },
-  saveButton: {
-    marginTop: 8,
-    minHeight: 48,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
->>>>>>> main
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-<<<<<<< HEAD
     shadowColor: colors.shadow,
     shadowOpacity: 0.22,
     shadowRadius: 16,
@@ -481,20 +347,11 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: {
     opacity: 0.84,
-=======
-  },
-  saveButtonDisabled: {
-    opacity: 0.8,
->>>>>>> main
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 15,
-<<<<<<< HEAD
     fontWeight: '800',
-=======
-    fontWeight: '700',
->>>>>>> main
   },
 });
 

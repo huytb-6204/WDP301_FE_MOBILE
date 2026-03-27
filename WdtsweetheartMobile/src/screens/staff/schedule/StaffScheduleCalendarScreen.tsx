@@ -63,11 +63,11 @@ const StaffScheduleCalendarScreen = () => {
       </View>
 
       <View style={styles.monthSelector}>
-        <TouchableOpacity onPress={() => setCurrentDate(prev => prev.subtract(1, 'month'))} style={styles.arrowBtn}>
+        <TouchableOpacity onPress={() => setCurrentDate((prev: dayjs.Dayjs) => prev.subtract(1, 'month'))} style={styles.arrowBtn}>
           <ChevronLeft size={24} color="#637381" />
         </TouchableOpacity>
         <Text style={styles.monthLabel}>Tháng {currentDate.format('M/YYYY')}</Text>
-        <TouchableOpacity onPress={() => setCurrentDate(prev => prev.add(1, 'month'))} style={styles.arrowBtn}>
+        <TouchableOpacity onPress={() => setCurrentDate((prev: dayjs.Dayjs) => prev.add(1, 'month'))} style={styles.arrowBtn}>
           <ChevronRight size={24} color="#637381" />
         </TouchableOpacity>
       </View>

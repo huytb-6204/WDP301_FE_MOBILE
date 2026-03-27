@@ -131,7 +131,7 @@ const PetCareTemplateScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={activeTab === 'food' ? filteredFood : filteredExercise}
+          data={(activeTab === 'food' ? filteredFood : filteredExercise) as Array<FoodTemplate | ExerciseTemplate>}
           keyExtractor={(item) => item._id}
           renderItem={activeTab === 'food' ? renderFoodItem as any : renderExerciseItem as any}
           contentContainerStyle={styles.list}

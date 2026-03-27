@@ -26,9 +26,11 @@ const OrderDetailScreen = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await getOrderDetail(orderId);
-        if (res.success) {
+        const res = (await getOrderDetail(orderId)) as any;
+        if (res?.success) {
           setOrder(res.order);
+        } else if (res?.data) {
+          setOrder(res.data);
         }
       } catch (error) {
         Alert.alert('Lỗi', 'Không thể tải chi tiết đơn hàng');

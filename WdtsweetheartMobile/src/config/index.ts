@@ -54,10 +54,7 @@ const localApiBaseUrl = normalizeUrl(buildAutoApiBaseUrl());
 
 export const env = {
   apiBaseUrl,
-<<<<<<< HEAD
   localApiBaseUrl,
-=======
->>>>>>> main
   googleClientId: GOOGLE_CLIENT_ID,
   facebookAppId: FACEBOOK_APP_ID,
   openMapKey: OPENMAP_KEY,

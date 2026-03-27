@@ -1,35 +1,3 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  TextInput,
-} from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import {
-  ArrowLeft,
-  Bone,
-  Flame,
-  CheckCircle2,
-  Clock,
-  Camera,
-  Trash2,
-  ChevronRight,
-  Info,
-  Calendar
-} from 'lucide-react-native';
-import { colors } from '../../../theme/colors';
-import { updateStaffCareSchedule, FeedingItem, ExerciseItem } from '../../../services/api/staffBoarding';
-import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
-=======
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
@@ -45,7 +13,6 @@ import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadMediaToCloudinary } from '../../../services/api/uploadCloudinary';
 import { useNotifier } from '../../../context/NotifierContext';
->>>>>>> main
 
 type CareDetailRouteProp = RouteProp<StaffStackParamList, 'StaffCareDetail'>;
 
@@ -53,13 +20,6 @@ const StaffCareDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute<CareDetailRouteProp>();
     const { bookingId, booking } = route.params;
-<<<<<<< HEAD
-
-    const [activeTab, setActiveTab] = useState<'feeding' | 'exercise' | 'diary'>('feeding');
-    const [feeding, setFeeding] = useState<FeedingItem[]>(booking.feedingSchedule || []);
-    const [exercise, setExercise] = useState<ExerciseItem[]>(booking.exerciseSchedule || []);
-    const [loading, setLoading] = useState(false);
-=======
     const { showToast, showAlert } = useNotifier();
 
     const [activeTab, setActiveTab] = useState<'feeding' | 'exercise' | 'diary' | 'info'>('feeding');
@@ -145,7 +105,6 @@ const StaffCareDetailScreen = () => {
         }
         showToast('Đã xóa minh chứng');
     };
->>>>>>> main
 
     const handleUpdateStatus = (type: 'feeding' | 'exercise', index: number, status: 'done' | 'pending' | 'skipped') => {
         if (type === 'feeding') {
@@ -168,19 +127,11 @@ const StaffCareDetailScreen = () => {
                 careDate: new Date().toISOString().split('T')[0]
             };
             await updateStaffCareSchedule(bookingId, payload);
-<<<<<<< HEAD
-            Alert.alert('Thành công', 'Đã cập nhật lịch trình chăm sóc!');
-            navigation.goBack();
-        } catch (error) {
-            console.error('Update failed', error);
-            Alert.alert('Lỗi', 'Không thể lưu thay đổi. Vui lòng thử lại sau.');
-=======
             showToast('Cập nhật lịch trình thành công!', 'success');
             setTimeout(() => navigation.goBack(), 1200);
         } catch (error: any) {
             console.error('Update failed', error);
             showAlert('Lỗi cập nhật', error.message || 'Hệ thống đang gặp sự cố. Vui lòng thử lại.', 'error');
->>>>>>> main
         } finally {
             setLoading(false);
         }
@@ -211,11 +162,6 @@ const StaffCareDetailScreen = () => {
             )}
 
             <View style={styles.proofRow}>
-<<<<<<< HEAD
-                <TouchableOpacity style={styles.addProofBtn}>
-                    <Camera size={20} color="#637381" />
-                    <Text style={styles.addProofText}>Tải minh chứng</Text>
-=======
                 <TouchableOpacity 
                     style={[styles.addProofBtn, uploadingIndex?.type === 'feeding' && uploadingIndex.index === index && { opacity: 0.5 }]}
                     onPress={() => handlePickImage('feeding', index)}
@@ -229,14 +175,10 @@ const StaffCareDetailScreen = () => {
                     <Text style={styles.addProofText}>
                         {uploadingIndex?.type === 'feeding' && uploadingIndex.index === index ? 'Đang tải...' : 'Tải minh chứng'}
                     </Text>
->>>>>>> main
                 </TouchableOpacity>
                 {item.proofMedia && item.proofMedia.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.proofList}>
                         {item.proofMedia.map((m, mi) => (
-<<<<<<< HEAD
-                            <Image key={mi} source={{ uri: m.url }} style={styles.proofThumb} />
-=======
                             <View key={mi} style={styles.proofThumbWrap}>
                                 <Image source={{ uri: m.url }} style={styles.proofThumb} />
                                 <TouchableOpacity 
@@ -246,7 +188,6 @@ const StaffCareDetailScreen = () => {
                                     <Trash2 size={12} color="#fff" />
                                 </TouchableOpacity>
                             </View>
->>>>>>> main
                         ))}
                     </ScrollView>
                 )}
@@ -273,12 +214,6 @@ const StaffCareDetailScreen = () => {
             </View>
 
             <View style={styles.proofRow}>
-<<<<<<< HEAD
-                <TouchableOpacity style={styles.addProofBtn}>
-                    <Camera size={20} color="#637381" />
-                    <Text style={styles.addProofText}>Tải minh chứng</Text>
-                </TouchableOpacity>
-=======
                 <TouchableOpacity 
                     style={[styles.addProofBtn, uploadingIndex?.type === 'exercise' && uploadingIndex.index === index && { opacity: 0.5 }]}
                     onPress={() => handlePickImage('exercise', index)}
@@ -308,7 +243,6 @@ const StaffCareDetailScreen = () => {
                         ))}
                     </ScrollView>
                 )}
->>>>>>> main
             </View>
         </View>
     );
@@ -327,13 +261,6 @@ const StaffCareDetailScreen = () => {
             <View style={styles.petSummary}>
                 <Image source={{ uri: booking.petIds?.[0]?.avatar || 'https://via.placeholder.com/100' }} style={styles.petAvatar} />
                 <View style={styles.petDetails}>
-<<<<<<< HEAD
-                    <Text style={styles.petName}>{booking.petIds?.[0]?.name}</Text>
-                    <View style={styles.badgeRow}>
-                       <View style={styles.cageBadge}><Text style={styles.badgeText}>{booking.cageId?.cageCode || 'N/A'}</Text></View>
-                       <View style={[styles.cageBadge, { backgroundColor: '#E7F5EF' }]}><Text style={[styles.badgeText, { color: '#007B55' }]}>ĐANG Ở</Text></View>
-                    </View>
-=======
                     <View style={styles.petHeaderTop}>
                         <Text style={styles.petName}>{booking.petIds?.[0]?.name}</Text>
                         <View style={styles.badgeRow}>
@@ -357,17 +284,12 @@ const StaffCareDetailScreen = () => {
                             </Text>
                         </View>
                     </View> */}
->>>>>>> main
                 </View>
             </View>
 
             <View style={styles.tabs}>
                 <TouchableOpacity onPress={() => setActiveTab('feeding')} style={[styles.tab, activeTab === 'feeding' && styles.activeTab]}>
-<<<<<<< HEAD
-                    <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Ăn uống ({feeding.length})</Text>
-=======
                     <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Ăn ({feeding.length})</Text>
->>>>>>> main
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveTab('exercise')} style={[styles.tab, activeTab === 'exercise' && styles.activeTab]}>
                     <Text style={[styles.tabText, activeTab === 'exercise' && styles.activeTabText]}>Vận động ({exercise.length})</Text>
@@ -375,12 +297,9 @@ const StaffCareDetailScreen = () => {
                 <TouchableOpacity onPress={() => setActiveTab('diary')} style={[styles.tab, activeTab === 'diary' && styles.activeTab]}>
                     <Text style={[styles.tabText, activeTab === 'diary' && styles.activeTabText]}>Nhật ký</Text>
                 </TouchableOpacity>
-<<<<<<< HEAD
-=======
                 <TouchableOpacity onPress={() => setActiveTab('info')} style={[styles.tab, activeTab === 'info' && styles.activeTab]}>
                     <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>Thông tin</Text>
                 </TouchableOpacity>
->>>>>>> main
             </View>
 
             <ScrollView contentContainerStyle={styles.scroll}>
@@ -406,15 +325,6 @@ const StaffCareDetailScreen = () => {
                           placeholder="Nhập tình trạng sức khỏe, tâm trạng bé hôm nay..." 
                           style={styles.diaryInput}
                           textAlignVertical="top"
-<<<<<<< HEAD
-                        />
-                         <TouchableOpacity style={styles.cameraBtnFull}>
-                            <Camera size={24} color="#637381" />
-                            <Text style={styles.cameraText}>Chụp ảnh cập nhật cho chủ bé</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-=======
                           value={diaryText}
                           onChangeText={setDiaryText}
                         />
@@ -485,7 +395,6 @@ const StaffCareDetailScreen = () => {
                         </View>
                     </View>
                 )}
->>>>>>> main
             </ScrollView>
 
             <View style={styles.footer}>
@@ -510,9 +419,6 @@ const styles = StyleSheet.create({
     petAvatar: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#E5E7EB', borderWidth: 4, borderColor: '#fff' },
     petDetails: { marginLeft: 20, flex: 1 },
     petName: { fontSize: 24, fontWeight: '900', color: '#111827' },
-<<<<<<< HEAD
-    badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-=======
     petHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' },
     infoCols: { flexDirection: 'row', marginTop: 12, alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F4F6F8' },
     infoCol: { flex: 1 },
@@ -520,7 +426,6 @@ const styles = StyleSheet.create({
     infoLabel: { fontSize: 10, fontWeight: '800', color: '#919EAB', marginBottom: 2 },
     infoValue: { fontSize: 12, fontWeight: '700', color: '#212B36' },
     badgeRow: { flexDirection: 'row', gap: 8 },
->>>>>>> main
     cageBadge: { paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#F4F6F8' },
     badgeText: { fontSize: 11, fontWeight: '800', color: '#637381' },
     tabs: { flexDirection: 'row', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F4F6F8' },
@@ -546,9 +451,6 @@ const styles = StyleSheet.create({
     addProofBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     addProofText: { marginLeft: 8, fontSize: 14, fontWeight: '700', color: '#637381' },
     proofList: { marginTop: 8 },
-<<<<<<< HEAD
-    proofThumb: { width: 60, height: 60, borderRadius: 8, marginRight: 8 },
-=======
     proofThumbWrap: { position: 'relative', marginRight: 8 },
     proofThumb: { width: 60, height: 60, borderRadius: 8 },
     removeProofBtn: { 
@@ -566,7 +468,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 2,
     },
->>>>>>> main
     diaryTitle: { fontSize: 18, fontWeight: '800', color: '#212B36', marginBottom: 16 },
     diaryInput: { minHeight: 150, padding: 16, backgroundColor: '#F4F6F8', borderRadius: 20, fontSize: 15, color: '#212B36' },
     cameraBtnFull: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: '#919EAB', marginTop: 16 },
@@ -576,8 +477,6 @@ const styles = StyleSheet.create({
     saveBtn: { backgroundColor: '#111827', paddingVertical: 18, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
     saveBtnLoading: { opacity: 0.7 },
-<<<<<<< HEAD
-=======
     
     // Additional info styles
     infoSection: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 20 },
@@ -585,7 +484,6 @@ const styles = StyleSheet.create({
     detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F4F6F8', paddingBottom: 8 },
     detailLabel: { fontSize: 14, color: '#637381', fontWeight: '600' },
     detailValue: { fontSize: 14, color: '#111827', fontWeight: '700' },
->>>>>>> main
 });
 
 export default StaffCareDetailScreen;

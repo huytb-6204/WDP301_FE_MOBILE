@@ -241,11 +241,7 @@ const MyBoardingBookingsScreen = () => {
             </TouchableOpacity>
           )}
           
-<<<<<<< HEAD
           <TouchableOpacity style={[styles.actionBtn, styles.detailBtn]} onPress={() => navigation.navigate('BoardingBookingDetail', { bookingId: item._id })}>
-=======
-          <TouchableOpacity style={[styles.actionBtn, styles.detailBtn]} onPress={() => {}}>
->>>>>>> main
             <Text style={styles.detailBtnText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>

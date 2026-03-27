@@ -1,33 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  TextInput,
-} from 'react-native';
+import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
-  ArrowLeft,
-  Bone,
-  Flame,
-  CheckCircle2,
-  Clock,
-  Camera,
-  Trash2,
-  ChevronRight,
-  Info,
-  Calendar
+  ArrowLeft, Bone, Flame, CheckCircle2,
+  Clock, Camera, Trash2, Info
 } from 'lucide-react-native';
+import dayjs from 'dayjs';
 import { colors } from '../../../theme/colors';
 import { updateStaffCareSchedule, FeedingItem, ExerciseItem } from '../../../services/api/staffBoarding';
 import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadMediaToCloudinary } from '../../../services/api/uploadCloudinary';
+import { useNotifier } from '../../../context/NotifierContext';
 
 type CareDetailRouteProp = RouteProp<StaffStackParamList, 'StaffCareDetail'>;
 
@@ -35,11 +20,91 @@ const StaffCareDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute<CareDetailRouteProp>();
     const { bookingId, booking } = route.params;
+    const { showToast, showAlert } = useNotifier();
 
-    const [activeTab, setActiveTab] = useState<'feeding' | 'exercise' | 'diary'>('feeding');
+    const [activeTab, setActiveTab] = useState<'feeding' | 'exercise' | 'diary' | 'info'>('feeding');
     const [feeding, setFeeding] = useState<FeedingItem[]>(booking.feedingSchedule || []);
     const [exercise, setExercise] = useState<ExerciseItem[]>(booking.exerciseSchedule || []);
+    const [diaryText, setDiaryText] = useState('');
     const [loading, setLoading] = useState(false);
+    const [uploadingIndex, setUploadingIndex] = useState<{type: string, index: number} | null>(null);
+
+    const handlePickImage = async (type: 'feeding' | 'exercise' | 'diary', index: number) => {
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                showAlert('Thiếu quyền', 'Cần quyền truy cập thư viện ảnh để tải minh chứng.', 'warning');
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: false,
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const asset = result.assets[0];
+                setUploadingIndex({ type, index });
+                
+                try {
+                    const uploaded = await uploadMediaToCloudinary(
+                        asset.uri,
+                        asset.mimeType || 'image/jpeg',
+                        asset.fileName || `proof_${Date.now()}.jpg`
+                    );
+
+                    if (type === 'feeding') {
+                        const newList = [...feeding];
+                        const currentProof = newList[index].proofMedia || [];
+                        newList[index] = { 
+                            ...newList[index], 
+                            proofMedia: [...currentProof, uploaded],
+                            status: 'done'
+                        };
+                        setFeeding(newList);
+                        showToast('Đã thêm minh chứng bữa ăn', 'success');
+                    } else if (type === 'exercise') {
+                        const newList = [...exercise];
+                        const currentProof = newList[index].proofMedia || [];
+                        newList[index] = { 
+                            ...newList[index], 
+                            proofMedia: [...currentProof, uploaded],
+                            status: 'done'
+                        };
+                        setExercise(newList);
+                        showToast('Đã thêm minh chứng vận động', 'success');
+                    } else if (type === 'diary') {
+                        showToast('Đã tải ảnh lên thành công', 'success');
+                    }
+                } catch (uploadError: any) {
+                    showAlert('Lỗi tải ảnh', uploadError.message || 'Không thể tải ảnh.', 'error');
+                } finally {
+                    setUploadingIndex(null);
+                }
+            }
+        } catch (error) {
+            console.error('Pick image error:', error);
+            showAlert('Lỗi', 'Có lỗi xảy ra khi chọn ảnh.', 'error');
+        }
+    };
+
+    const handleRemoveProof = (type: 'feeding' | 'exercise', itemIndex: number, proofIndex: number) => {
+        if (type === 'feeding') {
+            const newList = [...feeding];
+            const currentProof = [...(newList[itemIndex].proofMedia || [])];
+            currentProof.splice(proofIndex, 1);
+            newList[itemIndex] = { ...newList[itemIndex], proofMedia: currentProof };
+            setFeeding(newList);
+        } else {
+            const newList = [...exercise];
+            const currentProof = [...(newList[itemIndex].proofMedia || [])];
+            currentProof.splice(proofIndex, 1);
+            newList[itemIndex] = { ...newList[itemIndex], proofMedia: currentProof };
+            setExercise(newList);
+        }
+        showToast('Đã xóa minh chứng');
+    };
 
     const handleUpdateStatus = (type: 'feeding' | 'exercise', index: number, status: 'done' | 'pending' | 'skipped') => {
         if (type === 'feeding') {
@@ -62,11 +127,11 @@ const StaffCareDetailScreen = () => {
                 careDate: new Date().toISOString().split('T')[0]
             };
             await updateStaffCareSchedule(bookingId, payload);
-            Alert.alert('Thành công', 'Đã cập nhật lịch trình chăm sóc!');
-            navigation.goBack();
-        } catch (error) {
+            showToast('Cập nhật lịch trình thành công!', 'success');
+            setTimeout(() => navigation.goBack(), 1200);
+        } catch (error: any) {
             console.error('Update failed', error);
-            Alert.alert('Lỗi', 'Không thể lưu thay đổi. Vui lòng thử lại sau.');
+            showAlert('Lỗi cập nhật', error.message || 'Hệ thống đang gặp sự cố. Vui lòng thử lại.', 'error');
         } finally {
             setLoading(false);
         }
@@ -97,14 +162,32 @@ const StaffCareDetailScreen = () => {
             )}
 
             <View style={styles.proofRow}>
-                <TouchableOpacity style={styles.addProofBtn}>
-                    <Camera size={20} color="#637381" />
-                    <Text style={styles.addProofText}>Tải minh chứng</Text>
+                <TouchableOpacity 
+                    style={[styles.addProofBtn, uploadingIndex?.type === 'feeding' && uploadingIndex.index === index && { opacity: 0.5 }]}
+                    onPress={() => handlePickImage('feeding', index)}
+                    disabled={!!uploadingIndex}
+                >
+                    {uploadingIndex?.type === 'feeding' && uploadingIndex.index === index ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+                    ) : (
+                        <Camera size={20} color="#637381" />
+                    )}
+                    <Text style={styles.addProofText}>
+                        {uploadingIndex?.type === 'feeding' && uploadingIndex.index === index ? 'Đang tải...' : 'Tải minh chứng'}
+                    </Text>
                 </TouchableOpacity>
                 {item.proofMedia && item.proofMedia.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.proofList}>
                         {item.proofMedia.map((m, mi) => (
-                            <Image key={mi} source={{ uri: m.url }} style={styles.proofThumb} />
+                            <View key={mi} style={styles.proofThumbWrap}>
+                                <Image source={{ uri: m.url }} style={styles.proofThumb} />
+                                <TouchableOpacity 
+                                    style={styles.removeProofBtn}
+                                    onPress={() => handleRemoveProof('feeding', index, mi)}
+                                >
+                                    <Trash2 size={12} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
                         ))}
                     </ScrollView>
                 )}
@@ -131,10 +214,35 @@ const StaffCareDetailScreen = () => {
             </View>
 
             <View style={styles.proofRow}>
-                <TouchableOpacity style={styles.addProofBtn}>
-                    <Camera size={20} color="#637381" />
-                    <Text style={styles.addProofText}>Tải minh chứng</Text>
+                <TouchableOpacity 
+                    style={[styles.addProofBtn, uploadingIndex?.type === 'exercise' && uploadingIndex.index === index && { opacity: 0.5 }]}
+                    onPress={() => handlePickImage('exercise', index)}
+                    disabled={!!uploadingIndex}
+                >
+                    {uploadingIndex?.type === 'exercise' && uploadingIndex.index === index ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+                    ) : (
+                        <Camera size={20} color="#637381" />
+                    )}
+                    <Text style={styles.addProofText}>
+                        {uploadingIndex?.type === 'exercise' && uploadingIndex.index === index ? 'Đang tải...' : 'Tải minh chứng'}
+                    </Text>
                 </TouchableOpacity>
+                {item.proofMedia && item.proofMedia.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.proofList}>
+                        {item.proofMedia.map((m, mi) => (
+                            <View key={mi} style={styles.proofThumbWrap}>
+                                <Image source={{ uri: m.url }} style={styles.proofThumb} />
+                                <TouchableOpacity 
+                                    style={styles.removeProofBtn}
+                                    onPress={() => handleRemoveProof('exercise', index, mi)}
+                                >
+                                    <Trash2 size={12} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </ScrollView>
+                )}
             </View>
         </View>
     );
@@ -153,23 +261,44 @@ const StaffCareDetailScreen = () => {
             <View style={styles.petSummary}>
                 <Image source={{ uri: booking.petIds?.[0]?.avatar || 'https://via.placeholder.com/100' }} style={styles.petAvatar} />
                 <View style={styles.petDetails}>
-                    <Text style={styles.petName}>{booking.petIds?.[0]?.name}</Text>
-                    <View style={styles.badgeRow}>
-                       <View style={styles.cageBadge}><Text style={styles.badgeText}>{booking.cageId?.cageCode || 'N/A'}</Text></View>
-                       <View style={[styles.cageBadge, { backgroundColor: '#E7F5EF' }]}><Text style={[styles.badgeText, { color: '#007B55' }]}>ĐANG Ở</Text></View>
+                    <View style={styles.petHeaderTop}>
+                        <Text style={styles.petName}>{booking.petIds?.[0]?.name}</Text>
+                        <View style={styles.badgeRow}>
+                            <View style={styles.cageBadge}><Text style={styles.badgeText}>{booking.cageId?.cageCode || 'N/A'}</Text></View>
+                            <View style={[styles.cageBadge, { backgroundColor: '#E7F5EF' }]}><Text style={[styles.badgeText, { color: '#007B55' }]}>ĐANG Ở</Text></View>
+                        </View>
                     </View>
+                    
+                    {/* <View style={styles.infoCols}>
+                        <View style={styles.infoCol}>
+                            <Text style={styles.infoLabel}>GIỐNG/CÂN NẶNG</Text>
+                            <Text style={styles.infoValue}>
+                                {booking.petIds?.[0]?.breed || 'N/A'} • {booking.petIds?.[0]?.weight || '?'} kg
+                            </Text>
+                        </View>
+                        <View style={styles.infoDivider} />
+                        <View style={styles.infoCol}>
+                            <Text style={styles.infoLabel}>CHỦ SỞ HỮU</Text>
+                            <Text style={styles.infoValue} numberOfLines={1}>
+                                {booking.fullName || 'User'} • {booking.phone || ''}
+                            </Text>
+                        </View>
+                    </View> */}
                 </View>
             </View>
 
             <View style={styles.tabs}>
                 <TouchableOpacity onPress={() => setActiveTab('feeding')} style={[styles.tab, activeTab === 'feeding' && styles.activeTab]}>
-                    <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Ăn uống ({feeding.length})</Text>
+                    <Text style={[styles.tabText, activeTab === 'feeding' && styles.activeTabText]}>Ăn ({feeding.length})</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveTab('exercise')} style={[styles.tab, activeTab === 'exercise' && styles.activeTab]}>
                     <Text style={[styles.tabText, activeTab === 'exercise' && styles.activeTabText]}>Vận động ({exercise.length})</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setActiveTab('diary')} style={[styles.tab, activeTab === 'diary' && styles.activeTab]}>
                     <Text style={[styles.tabText, activeTab === 'diary' && styles.activeTabText]}>Nhật ký</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setActiveTab('info')} style={[styles.tab, activeTab === 'info' && styles.activeTab]}>
+                    <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>Thông tin</Text>
                 </TouchableOpacity>
             </View>
 
@@ -196,11 +325,74 @@ const StaffCareDetailScreen = () => {
                           placeholder="Nhập tình trạng sức khỏe, tâm trạng bé hôm nay..." 
                           style={styles.diaryInput}
                           textAlignVertical="top"
+                          value={diaryText}
+                          onChangeText={setDiaryText}
                         />
-                         <TouchableOpacity style={styles.cameraBtnFull}>
+                         <TouchableOpacity style={styles.cameraBtnFull} onPress={() => handlePickImage('diary', 0)}>
                             <Camera size={24} color="#637381" />
-                            <Text style={styles.cameraText}>Chụp ảnh cập nhật cho chủ bé</Text>
+                            <Text style={styles.cameraText}>Đính kèm ảnh hôm nay</Text>
                         </TouchableOpacity>
+                    </View>
+                )}
+                {activeTab === 'info' && (
+                    <View style={styles.list}>
+                        <View style={styles.infoSection}>
+                            <Text style={styles.sectionTitle}>Thông tin thú cưng</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Tên:</Text>
+                                <Text style={styles.detailValue}>{booking.petIds?.[0]?.name}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Giống:</Text>
+                                <Text style={styles.detailValue}>{booking.petIds?.[0]?.breed || 'N/A'}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Cây cân nặng:</Text>
+                                <Text style={styles.detailValue}>{booking.petIds?.[0]?.weight || '?'} kg</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Giới tính:</Text>
+                                <Text style={styles.detailValue}>{booking.petIds?.[0]?.gender === 'male' ? 'Đực' : 'Cái'}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Ngày sinh:</Text>
+                                <Text style={styles.detailValue}>{booking.petIds?.[0]?.birthday ? dayjs(booking.petIds[0].birthday).format('DD/MM/YYYY') : 'N/A'}</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.infoSection, { marginTop: 20 }]}>
+                            <Text style={styles.sectionTitle}>Thông tin chủ nhân</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Họ tên:</Text>
+                                <Text style={styles.detailValue}>{booking.fullName}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>SĐT:</Text>
+                                <Text style={styles.detailValue}>{booking.phone}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Email:</Text>
+                                <Text style={styles.detailValue}>{booking.email || 'N/A'}</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.infoSection, { marginTop: 20 }]}>
+                            <Text style={styles.sectionTitle}>Chi tiết đặt chỗ</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Mã đơn:</Text>
+                                <Text style={styles.detailValue}>#{booking.code}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Thời gian:</Text>
+                                <Text style={styles.detailValue}>
+                                    {dayjs(booking.checkInDate).format('DD/MM')} - {dayjs(booking.checkOutDate).format('DD/MM')}
+                                </Text>
+                            </View>
+                             <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Trạng thái:</Text>
+                                <Text style={[styles.detailValue, { color: colors.primary, fontWeight: '800' }]}>{booking.boardingStatus}</Text>
+                            </View>
+                        </View>
                     </View>
                 )}
             </ScrollView>
@@ -227,7 +419,13 @@ const styles = StyleSheet.create({
     petAvatar: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#E5E7EB', borderWidth: 4, borderColor: '#fff' },
     petDetails: { marginLeft: 20, flex: 1 },
     petName: { fontSize: 24, fontWeight: '900', color: '#111827' },
-    badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+    petHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' },
+    infoCols: { flexDirection: 'row', marginTop: 12, alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F4F6F8' },
+    infoCol: { flex: 1 },
+    infoDivider: { width: 1, height: 20, backgroundColor: '#F4F6F8', marginHorizontal: 12 },
+    infoLabel: { fontSize: 10, fontWeight: '800', color: '#919EAB', marginBottom: 2 },
+    infoValue: { fontSize: 12, fontWeight: '700', color: '#212B36' },
+    badgeRow: { flexDirection: 'row', gap: 8 },
     cageBadge: { paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#F4F6F8' },
     badgeText: { fontSize: 11, fontWeight: '800', color: '#637381' },
     tabs: { flexDirection: 'row', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F4F6F8' },
@@ -253,7 +451,23 @@ const styles = StyleSheet.create({
     addProofBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     addProofText: { marginLeft: 8, fontSize: 14, fontWeight: '700', color: '#637381' },
     proofList: { marginTop: 8 },
-    proofThumb: { width: 60, height: 60, borderRadius: 8, marginRight: 8 },
+    proofThumbWrap: { position: 'relative', marginRight: 8 },
+    proofThumb: { width: 60, height: 60, borderRadius: 8 },
+    removeProofBtn: { 
+        position: 'absolute', 
+        top: -5, 
+        right: -5, 
+        backgroundColor: '#FF4842', 
+        width: 20, 
+        height: 20, 
+        borderRadius: 10, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
     diaryTitle: { fontSize: 18, fontWeight: '800', color: '#212B36', marginBottom: 16 },
     diaryInput: { minHeight: 150, padding: 16, backgroundColor: '#F4F6F8', borderRadius: 20, fontSize: 15, color: '#212B36' },
     cameraBtnFull: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: '#919EAB', marginTop: 16 },
@@ -263,6 +477,13 @@ const styles = StyleSheet.create({
     saveBtn: { backgroundColor: '#111827', paddingVertical: 18, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
     saveBtnLoading: { opacity: 0.7 },
+    
+    // Additional info styles
+    infoSection: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 12 },
+    detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F4F6F8', paddingBottom: 8 },
+    detailLabel: { fontSize: 14, color: '#637381', fontWeight: '600' },
+    detailValue: { fontSize: 14, color: '#111827', fontWeight: '700' },
 });
 
 export default StaffCareDetailScreen;

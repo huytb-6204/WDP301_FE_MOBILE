@@ -8,4 +8,6 @@ declare module '@env' {
   export const ZALOPAY_DOMAIN: string;
   export const VNPAY_TMN_CODE: string;
   export const VNPAY_URL: string;
+  export const CLOUDINARY_URL: string;
+  export const UPLOAD_PRESET: string;
 }

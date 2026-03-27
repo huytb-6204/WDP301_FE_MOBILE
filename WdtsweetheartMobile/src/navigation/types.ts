@@ -56,4 +56,12 @@ export type RootStackParamList = {
   StaffCages: undefined;
   StaffChat: undefined;
   StaffProfile: undefined;
+  StaffWorkSchedule: undefined;
+  StaffScheduleCalendar: undefined;
+  StaffShiftList: undefined;
+  PetCareTemplate: undefined;
+  StaffBoardingBookingList: undefined;
+  StaffBoardingBookingCreate: undefined;
+  StaffReviewList: undefined;
+  DepartmentList: undefined;
 };

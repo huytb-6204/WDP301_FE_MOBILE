@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, ApiResponse } from './client';
+import { apiGet, apiPost, apiPut, apiPatch, ApiResponse } from './client';
 
 export type FeedingItem = {
   _id?: string;
@@ -47,18 +47,25 @@ export type BoardingBooking = {
 
 export const getStaffBoardingBookings = async (params?: { limit?: number; page?: number }) => {
   const query = params ? `?limit=${params.limit || 1000}&page=${params.page || 1}` : '';
-  const res = (await apiGet<BoardingBooking[]>(`/api/v1/admin/boarding-booking${query}`)) as ApiResponse<BoardingBooking[]>;
-  return res.data;
+  const data = await apiGet<any>(`/api/v1/admin/boarding-booking${query}`);
+  return data?.recordList || data || [];
 };
 
+export const getCages = async (params?: { limit?: number; page?: number }) => {
+  const query = new URLSearchParams(params as any).toString();
+  const data = await apiGet<any>(`/api/v1/admin/cages?${query}`);
+  return data?.recordList || data || [];
+};
+
+
 export const updateStaffCareSchedule = async (id: string, payload: any) => {
-  const res = (await apiPut<any>(`/api/v1/admin/boarding-booking/update-care-schedule/${id}`, payload)) as ApiResponse<any>;
+  const res = await apiPatch<any>(`/api/v1/admin/boarding-booking/${id}/care-schedule`, payload);
   return res.data;
 };
 
 export const getStaffMeData = async () => {
-    const res = await apiGet<any>('/api/v1/admin/auth/me');
-    return res.data;
+    const data = await apiGet<any>('/api/v1/admin/auth/me');
+    return data;
 };
 
 export const getBoardingStats = async (date: string) => {

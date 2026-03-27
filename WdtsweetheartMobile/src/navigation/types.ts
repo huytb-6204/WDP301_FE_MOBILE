@@ -46,4 +46,14 @@ export type RootStackParamList = {
   MyBoardingBookings: undefined;
   Overview: undefined;
   AccountFeature: { title: string; description?: string };
+
+  // Staff Screens
+  StaffLogin: undefined;
+  StaffHome: undefined;
+  StaffTaskList: { date?: string } | undefined;
+  StaffCareDetail: { bookingId: string; booking: any };
+  StaffCustomerList: undefined;
+  StaffCages: undefined;
+  StaffChat: undefined;
+  StaffProfile: undefined;
 };

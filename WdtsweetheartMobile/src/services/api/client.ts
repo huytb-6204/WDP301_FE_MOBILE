@@ -150,3 +150,17 @@ export const apiDelete = async <T>(path: string): Promise<ApiResponse<T>> => {
   }
   return json;
 };
+
+export const apiPut = async <T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> => {
+  const headers = await buildHeaders();
+  const res = await fetch(`${env.apiBaseUrl}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const json = await parseJsonSafely<any>(res);
+  if (!json || !res.ok) {
+    throw new Error(json?.message || `Request failed (${res.status})`);
+  }
+  return json;
+};

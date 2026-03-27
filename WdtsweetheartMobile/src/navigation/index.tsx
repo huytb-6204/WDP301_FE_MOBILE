@@ -43,6 +43,12 @@ import BoardingBookingDetailScreen from '../screens/boarding/BoardingBookingDeta
 import CouponListScreen from '../screens/coupon/CouponListScreen';
 import BreedListScreen from '../screens/pet/BreedListScreen';
 import BoardingCagesScreen from '../screens/boarding/BoardingCagesScreen';
+import StaffLoginScreen from '../screens/staff/auth/StaffLoginScreen';
+import StaffHomeScreen from '../screens/staff/home/StaffHomeScreen';
+import StaffTaskListScreen from '../screens/staff/task/StaffTaskListScreen';
+import StaffCareDetailScreen from '../screens/staff/boarding/StaffCareDetailScreen';
+import StaffCustomerListScreen from '../screens/staff/customer/StaffCustomerListScreen';
+import StaffCagesScreen from '../screens/staff/boarding/StaffCagesScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -211,12 +217,20 @@ const RootNavigator = () => {
             component={BoardingCagesScreen}
             options={{ animation: 'slide_from_right', animationDuration: 300 }}
           />
-          <Stack.Screen
-            name="BoardingBookings"
-            component={MyBoardingBookingsScreen}
-            options={{ animation: 'slide_from_right', animationDuration: 300 }}
-          />
-        </Stack.Navigator>
+            <Stack.Screen
+              name="BoardingBookings"
+              component={MyBoardingBookingsScreen}
+              options={{ animation: 'slide_from_right', animationDuration: 300 }}
+            />
+
+            {/* Staff Navigation */}
+            <Stack.Screen name="StaffLogin" component={StaffLoginScreen} />
+            <Stack.Screen name="StaffHome" component={StaffHomeScreen} />
+            <Stack.Screen name="StaffTaskList" component={StaffTaskListScreen} />
+            <Stack.Screen name="StaffCareDetail" component={StaffCareDetailScreen} />
+            <Stack.Screen name="StaffCustomerList" component={StaffCustomerListScreen} />
+            <Stack.Screen name="StaffCages" component={StaffCagesScreen} />
+          </Stack.Navigator>
       </NavigationContainer>
       </FavoritesProvider>
     </CartProvider>

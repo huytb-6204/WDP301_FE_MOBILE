@@ -151,6 +151,10 @@ const HomeScreen = () => {
       await logoutApi();
       setProfile(null);
       setProfileError(null);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'WelcomeChoice' as any }],
+      });
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Đăng xuất thất bại');
     } finally {

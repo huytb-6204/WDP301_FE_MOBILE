@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ImageBackground,
   Modal,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SvgXml } from 'react-native-svg';
 
 const subtitleIconXml = `<?xml version="1.0" encoding="utf-8"?>
@@ -67,6 +69,8 @@ const formatDateLabel = (value: string) => {
 
 const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const phoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])[0-9]{7}$/;
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dxyuuul0q/image/upload';
+const UPLOAD_PRESET = 'teddypet';
 
 const serviceVisuals = {
   hero: require('../../../assets/service-hero.jpg'),
@@ -127,6 +131,8 @@ const BookingScreen = () => {
   const [petColor, setPetColor] = useState('');
   const [petNotes, setPetNotes] = useState('');
   const [petGender, setPetGender] = useState<'male' | 'female' | 'unknown'>('unknown');
+  const [petAvatar, setPetAvatar] = useState('');
+  const [petUploading, setPetUploading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -547,6 +553,7 @@ const BookingScreen = () => {
         color: petColor.trim() || undefined,
         gender: petGender,
         notes: petNotes.trim() || undefined,
+        avatar: petAvatar || undefined,
       });
       setPets((prev) => [res.data, ...prev]);
       setSelectedPetIds((prev) => [...prev, res.data._id]);
@@ -555,6 +562,7 @@ const BookingScreen = () => {
       setPetBreed('');
       setPetColor('');
       setPetNotes('');
+      setPetAvatar('');
       setPetType('dog');
       setPetGender('unknown');
       setShowCreatePetModal(false);
@@ -562,6 +570,78 @@ const BookingScreen = () => {
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể tạo thú cưng');
     }
+  };
+
+  const uploadPetImage = async (asset: ImagePicker.ImagePickerAsset) => {
+    setPetUploading(true);
+    try {
+      const formData = new FormData();
+      const fileUri = asset.uri.startsWith('file://') ? asset.uri : `file://${asset.uri}`;
+
+      // @ts-ignore React Native file object
+      formData.append('file', {
+        uri: fileUri,
+        type: asset.mimeType || 'image/jpeg',
+        name: asset.fileName || `pet_${Date.now()}.jpg`,
+      });
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+      const data = await response.json();
+      if (!response.ok || !data.secure_url) {
+        showToast('Không thể tải ảnh thú cưng lên');
+        return;
+      }
+      setPetAvatar(data.secure_url);
+      showToast('Đã thêm ảnh thú cưng');
+    } catch {
+      showToast('Lỗi khi tải ảnh lên');
+    } finally {
+      setPetUploading(false);
+    }
+  };
+
+  const pickPetImageFromLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showToast('Cần cấp quyền truy cập thư viện ảnh');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      await uploadPetImage(result.assets[0]);
+    }
+  };
+
+  const takePetPhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      showToast('Cần cấp quyền truy cập camera');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      cameraType: ImagePicker.CameraType.front,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      await uploadPetImage(result.assets[0]);
+    }
+  };
+
+  const openPetImageActions = () => {
+    Alert.alert('Ảnh thú cưng', 'Chọn cách thêm ảnh', [
+      { text: 'Chụp ảnh', onPress: () => void takePetPhoto() },
+      { text: 'Chọn từ thư viện', onPress: () => void pickPetImageFromLibrary() },
+      ...(petAvatar ? [{ text: 'Xóa ảnh', style: 'destructive' as const, onPress: () => setPetAvatar('') }] : []),
+      { text: 'Hủy', style: 'cancel' },
+    ]);
   };
 
   const handleSelectDate = (day: number) => {
@@ -1274,6 +1354,23 @@ const BookingScreen = () => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Thêm thú cưng</Text>
+            <TouchableOpacity style={styles.petImagePicker} onPress={openPetImageActions} disabled={petUploading}>
+              {petAvatar ? (
+                <Image source={{ uri: petAvatar }} style={styles.petImagePreview} />
+              ) : (
+                <View style={styles.petImagePlaceholder}>
+                  {petUploading ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <>
+                      <Text style={styles.petImagePlus}>+</Text>
+                      <Text style={styles.petImageText}>Them anh</Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.petImageHint}>Cham de chup anh hoac chon tu thu vien</Text>
             <TextInput style={styles.input} placeholder="Tên thú cưng" value={petName} onChangeText={setPetName} />
             <TextInput style={styles.input} placeholder="Giống thú cưng" value={petBreed} onChangeText={setPetBreed} />
             <View style={styles.row}>
@@ -1322,7 +1419,7 @@ const BookingScreen = () => {
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowCreatePetModal(false)}>
                 <Text style={styles.secondaryBtnText}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.primarySmallBtn} onPress={handleCreatePet}>
+              <TouchableOpacity style={styles.primarySmallBtn} onPress={handleCreatePet} disabled={petUploading}>
                 <Text style={styles.primaryBtnText}>Lưu</Text>
               </TouchableOpacity>
             </View>
@@ -1350,6 +1447,23 @@ const styles = StyleSheet.create({
   rightButton: { minWidth: 68, alignItems: 'flex-end' },
   rightButtonText: { color: colors.primary, fontWeight: '600', fontSize: 12 },
   headerTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
+  petImagePicker: {
+    width: 112,
+    height: 112,
+    alignSelf: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.cardBorder || colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: colors.backgroundSoft || colors.softPink,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  petImagePreview: { width: '100%', height: '100%' },
+  petImagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  petImagePlus: { fontSize: 28, lineHeight: 30, color: colors.primary, fontWeight: '400' },
+  petImageText: { marginTop: 4, color: colors.primary, fontSize: 12, fontWeight: '700' },
+  petImageHint: { textAlign: 'center', color: colors.textLight, fontSize: 11, marginBottom: 10 },
   content: { padding: 16, paddingBottom: 30, gap: 12 },
   heroBanner: {
     borderRadius: 18,
@@ -2084,3 +2198,5 @@ const styles = StyleSheet.create({
 });
 
 export default BookingScreen;
+
+

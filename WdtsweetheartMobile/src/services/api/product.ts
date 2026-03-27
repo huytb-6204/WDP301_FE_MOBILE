@@ -41,6 +41,8 @@ export type ProductCategory = {
   _id?: string;
   name: string;
   slug: string;
+  parent?: string | null;
+  productCount?: number;
 };
 
 export type ProductBrand = {
@@ -95,7 +97,6 @@ const buildQuery = (params?: Record<string, string | number | undefined>) => {
 
 const readList = <T>(payload: unknown): T[] => {
   if (Array.isArray(payload)) return payload as T[];
-
   if (typeof payload !== 'object' || !payload) return [];
 
   const envelope = payload as ApiEnvelope<T[]>;
@@ -143,7 +144,7 @@ const readProductDetail = (payload: unknown): ProductDetailResponse => {
 
 export const getProducts = async (params?: GetProductsParams) => {
   const query = buildQuery(params);
-  const res = await apiGetRaw<unknown>(`/api/v1/client/product/${query}`);
+  const res = await apiGetRaw<unknown>(`/api/v1/client/product${query}`);
   return readList<Product>(res);
 };
 
@@ -172,3 +173,5 @@ export const getProductDetail = async (slug: string): Promise<ProductDetailRespo
   const res = await apiGetRaw<unknown>(`/api/v1/client/product/detail/${slug}`);
   return readProductDetail(res);
 };
+
+

@@ -1,4 +1,4 @@
-import { apiGetRaw, apiPostRaw } from './client';
+import { apiGetRaw, apiPatchRaw, apiPostRaw } from './client';
 
 export type CreateOrderItem = {
   productId: string;
@@ -69,4 +69,11 @@ export const createOrder = async (payload: CreateOrderPayload) => {
 export const getOrderSuccess = async (orderCode: string, phone: string) => {
   const query = new URLSearchParams({ orderCode, phone }).toString();
   return apiGetRaw<OrderSuccessResponse>(`/api/v1/client/order/success?${query}`);
+};
+
+export const cancelOrder = async (id: string, reason?: string) => {
+  return apiPatchRaw<{ code?: 'success' | 'error'; message?: string }, { reason?: string }>(
+    `/api/v1/client/order/${id}/cancel`,
+    { reason }
+  );
 };

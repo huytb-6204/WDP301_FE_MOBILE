@@ -33,7 +33,7 @@ const FavoriteListScreen = () => {
 
       <FlatList
         data={favorites}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.productId}
         contentContainerStyle={styles.content}
         ListEmptyComponent={
           <View style={styles.emptyCard}>
@@ -54,23 +54,23 @@ const FavoriteListScreen = () => {
             style={styles.favoriteCard}
             activeOpacity={0.9}
             onPress={() => {
-              if (item.slug) {
-                navigation.navigate('ProductDetail', { productSlug: item.slug, product: item });
+              if (item.detail.slug) {
+                navigation.navigate('ProductDetail', { productSlug: item.detail.slug, product: item.detail });
               }
             }}
           >
             <Image
-              source={{ uri: item.primaryImage || 'https://via.placeholder.com/120' }}
+              source={{ uri: item.detail.primaryImage || 'https://via.placeholder.com/120' }}
               style={styles.favoriteImage}
             />
 
             <View style={styles.favoriteContent}>
               <Text style={styles.favoriteTitle} numberOfLines={2}>
-                {item.title}
+                {item.detail.title}
               </Text>
-              <Text style={styles.favoritePrice}>{item.price}</Text>
-              {item.originalPrice ? (
-                <Text style={styles.favoriteOriginalPrice}>{item.originalPrice}</Text>
+              <Text style={styles.favoritePrice}>{item.detail.price}</Text>
+              {item.detail.originalPrice ? (
+                <Text style={styles.favoriteOriginalPrice}>{item.detail.originalPrice}</Text>
               ) : null}
 
               <View style={styles.favoriteMetaRow}>
@@ -80,7 +80,7 @@ const FavoriteListScreen = () => {
                 </View>
                 <TouchableOpacity
                   style={styles.removeButton}
-                  onPress={() => removeFavorite(item.id)}
+                  onPress={() => removeFavorite(item.productId, item.variant)}
                 >
                   <Trash2 size={14} color="#D14343" />
                 </TouchableOpacity>

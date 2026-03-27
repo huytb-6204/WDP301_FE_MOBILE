@@ -25,11 +25,11 @@ export type RootStackParamList = {
   MyBookings: undefined;
   BookingDetail: { bookingId: string };
   AddressList: undefined;
-  AddressForm: { address?: any }; // any for SavedAddress to avoid circular if not imported
+  AddressForm: { address?: any };
   OrderList: undefined;
   OrderDetail: { orderId: string };
   PetList: undefined;
-  PetForm: { pet?: any }; 
+  PetForm: { pet?: any };
   PetDetail: { petId: string };
   TransactionHistory: undefined;
   ReviewList: undefined;
@@ -46,8 +46,6 @@ export type RootStackParamList = {
   MyBoardingBookings: undefined;
   Overview: undefined;
   AccountFeature: { title: string; description?: string };
-
-  // Staff Screens
   StaffLogin: undefined;
   StaffHome: undefined;
   StaffTaskList: { date?: string } | undefined;
@@ -56,12 +54,4 @@ export type RootStackParamList = {
   StaffCages: undefined;
   StaffChat: undefined;
   StaffProfile: undefined;
-  StaffWorkSchedule: undefined;
-  StaffScheduleCalendar: undefined;
-  StaffShiftList: undefined;
-  PetCareTemplate: undefined;
-  StaffBoardingBookingList: undefined;
-  StaffBoardingBookingCreate: undefined;
-  StaffReviewList: undefined;
-  DepartmentList: undefined;
 };

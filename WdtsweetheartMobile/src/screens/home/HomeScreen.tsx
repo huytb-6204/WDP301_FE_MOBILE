@@ -151,6 +151,10 @@ const HomeScreen = () => {
       await logoutApi();
       setProfile(null);
       setProfileError(null);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'WelcomeChoice' as any }],
+      });
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Đăng xuất thất bại');
     } finally {
@@ -750,6 +754,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
+<<<<<<< HEAD
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -758,6 +763,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
+=======
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+>>>>>>> main
   },
   favoriteHintTextModern: {
     flex: 1,
@@ -769,11 +784,19 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 24,
     overflow: 'hidden',
+<<<<<<< HEAD
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.16,
     shadowRadius: 20,
     elevation: 7,
+=======
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 6,
+>>>>>>> main
   },
   heroBackground: {
     flex: 1,
@@ -783,7 +806,11 @@ const styles = StyleSheet.create({
   },
   heroGlassOverlay: {
     flex: 1,
+<<<<<<< HEAD
     backgroundColor: colors.heroDark,
+=======
+    backgroundColor: 'rgba(16, 41, 55, 0.45)',
+>>>>>>> main
     padding: 20,
     justifyContent: 'space-between',
   },
@@ -820,7 +847,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroBtn: {
+<<<<<<< HEAD
     backgroundColor: colors.white,
+=======
+    backgroundColor: '#fff',
+>>>>>>> main
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 12,
@@ -831,7 +862,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   heroFloatingBadge: {
+<<<<<<< HEAD
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
+=======
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+>>>>>>> main
     padding: 8,
     borderRadius: 12,
   },
@@ -840,11 +875,19 @@ const styles = StyleSheet.create({
     height: 16,
   },
   quickActionCard: {
+<<<<<<< HEAD
     backgroundColor: colors.white,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+=======
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+>>>>>>> main
   },
   quickActionTitle: {
     color: colors.secondary,
@@ -909,7 +952,11 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
+<<<<<<< HEAD
     backgroundColor: colors.primaryDeep,
+=======
+    backgroundColor: colors.primary,
+>>>>>>> main
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -927,7 +974,11 @@ const styles = StyleSheet.create({
   titleIndicator: {
     width: 6,
     height: 18,
+<<<<<<< HEAD
     backgroundColor: colors.primaryDeep,
+=======
+    backgroundColor: colors.primary,
+>>>>>>> main
     borderRadius: 3,
   },
   homeSectionTitle: {
@@ -939,6 +990,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
+<<<<<<< HEAD
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -950,6 +1002,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 2,
+=======
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+>>>>>>> main
   },
   homeSeeAllText: {
     color: colors.primary,
@@ -960,6 +1025,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   blogCardModern: {
+<<<<<<< HEAD
     backgroundColor: colors.white,
     borderRadius: 20,
     overflow: 'hidden',
@@ -970,6 +1036,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 14,
     elevation: 3,
+=======
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+>>>>>>> main
     flexDirection: 'row',
   },
   blogCardFeatured: {
@@ -999,7 +1077,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     color: colors.primary,
+<<<<<<< HEAD
     backgroundColor: colors.softPink,
+=======
+    backgroundColor: '#FFF1F2',
+>>>>>>> main
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1034,7 +1116,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   browseButtonModern: {
+<<<<<<< HEAD
     backgroundColor: colors.primaryDeep,
+=======
+    backgroundColor: colors.primary,
+>>>>>>> main
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 14,
@@ -1106,7 +1192,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+<<<<<<< HEAD
     backgroundColor: colors.primaryDeep,
+=======
+    backgroundColor: colors.primary,
+>>>>>>> main
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1134,7 +1224,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   servicePrimaryBtn: {
+<<<<<<< HEAD
     backgroundColor: colors.primaryDeep,
+=======
+    backgroundColor: colors.primary,
+>>>>>>> main
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 14,
@@ -1162,7 +1256,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   premiumBadge: {
+<<<<<<< HEAD
     backgroundColor: colors.softCream,
+=======
+    backgroundColor: '#F7EDDF',
+>>>>>>> main
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1170,7 +1268,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   premiumBadgeText: {
+<<<<<<< HEAD
     color: colors.primaryDeep,
+=======
+    color: colors.primary,
+>>>>>>> main
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
@@ -1179,6 +1281,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+<<<<<<< HEAD
     backgroundColor: colors.white,
     padding: 20,
     borderRadius: 24,
@@ -1190,6 +1293,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 14,
     elevation: 3,
+=======
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+>>>>>>> main
   },
   appointmentInfo: {
     flex: 1,
@@ -1408,17 +1524,29 @@ const styles = StyleSheet.create({
   },
   tabIconWrapActive: { backgroundColor: colors.primaryDeep },
   tabLabel: { color: colors.text, fontSize: 11, fontWeight: '600' },
+<<<<<<< HEAD
   tabLabelActive: { color: colors.primaryDeep },
+=======
+  tabLabelActive: { color: colors.primary },
+>>>>>>> main
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+<<<<<<< HEAD
     backgroundColor: colors.white,
+=======
+    backgroundColor: '#fff',
+>>>>>>> main
     padding: 20,
     borderRadius: 20,
     marginBottom: 16,
     borderWidth: 1,
+<<<<<<< HEAD
     borderColor: colors.cardBorder,
+=======
+    borderColor: '#F0F0F0',
+>>>>>>> main
   },
   profileAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#f5f5f5' },
   profileInfoText: { flex: 1, gap: 4 },
@@ -1427,7 +1555,11 @@ const styles = StyleSheet.create({
   menuSection: { marginBottom: 20 },
   menuSectionHeader: { paddingLeft: 8, marginBottom: 10 },
   menuSectionTitle: { fontSize: 13, fontWeight: '800', color: '#BBB', letterSpacing: 0.5 },
+<<<<<<< HEAD
   menuGroup: { backgroundColor: colors.white, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.cardBorder },
+=======
+  menuGroup: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+>>>>>>> main
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1441,7 +1573,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
+<<<<<<< HEAD
     backgroundColor: colors.softPink,
+=======
+    backgroundColor: '#fff4f6',
+>>>>>>> main
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1452,10 +1588,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     paddingVertical: 14,
+<<<<<<< HEAD
     backgroundColor: colors.white,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+=======
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFEBEA',
+>>>>>>> main
     marginTop: 10,
   },
   logoutBtnTextModern: { fontSize: 14, fontWeight: '700', color: '#FF4D4D' },

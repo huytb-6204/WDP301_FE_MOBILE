@@ -38,6 +38,7 @@ const LoginScreen = () => {
   const [socialLoading, setSocialLoading] = useState<null | 'google'>(null);
   const [error, setError] = useState<string | null>(null);
 
+<<<<<<< HEAD
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -47,6 +48,12 @@ const LoginScreen = () => {
   };
 
   const redirectUri = AuthSession.makeRedirectUri();
+=======
+  const redirectUri = AuthSession.makeRedirectUri({
+    useProxy: true,
+    projectNameForProxy: '@huytran62044/wdtsweetheart-mobile',
+  });
+>>>>>>> main
 
   const handleSubmit = async () => {
     setError(null);
@@ -104,7 +111,14 @@ const LoginScreen = () => {
       });
 
       const discovery = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
+<<<<<<< HEAD
       const result = await request.promptAsync(discovery);
+=======
+      const result = await request.promptAsync(discovery, {
+        useProxy: true,
+        projectNameForProxy: '@huytran62044/wdtsweetheart-mobile',
+      });
+>>>>>>> main
 
       if (result.type !== 'success') {
         setError('Đăng nhập Google bị hủy hoặc chưa hoàn tất.');
@@ -119,9 +133,19 @@ const LoginScreen = () => {
         return;
       }
 
+<<<<<<< HEAD
       const { token } = await loginWithGoogleToken(accessToken ? { accessToken } : { authCode: authCode!, redirectUri });
       if (!token) {
         setError('Đăng nhập Google thất bại.');
+=======
+      const { token } = await loginWithGoogleToken(
+        accessToken
+          ? { accessToken }
+          : { authCode: authCode!, redirectUri }
+      );
+      if (!token) {
+        setError('Đăng nhập Google thất bại!');
+>>>>>>> main
         return;
       }
       const storedToken = await tokenStorage.get();
@@ -131,7 +155,11 @@ const LoginScreen = () => {
       }
       navigation.navigate('Home', { initialTab: 'home' });
     } catch (err) {
+<<<<<<< HEAD
       const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
+=======
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại sau!';
+>>>>>>> main
       setError(message);
       console.warn('Google login error:', err);
     } finally {
@@ -250,16 +278,37 @@ const LoginScreen = () => {
 
                 <TouchableOpacity
                   onPress={handleGoogleLogin}
+<<<<<<< HEAD
                   style={[styles.socialButton, socialLoading && styles.socialButtonDisabled]}
+=======
+                  style={[
+                    styles.socialButton,
+                    styles.socialButtonGoogle,
+                    socialLoading && styles.socialButtonDisabled,
+                  ]}
+>>>>>>> main
                   disabled={!!socialLoading}
                   activeOpacity={0.9}
                 >
                   <View style={styles.socialButtonContent}>
                     <GoogleLogo width={20} height={20} />
+<<<<<<< HEAD
                     <Text style={styles.socialButtonText}>Tiếp tục với Google</Text>
                   </View>
                   {socialLoading === 'google' ? (
                     <ActivityIndicator size="small" color={colors.secondary} style={styles.socialButtonLoadingIndicator} />
+=======
+                    <Text style={[styles.socialButtonText, styles.socialButtonTextDark]}>
+                      Tiếp tục với Google
+                    </Text>
+                  </View>
+                  {socialLoading === 'google' ? (
+                    <ActivityIndicator
+                      size="small"
+                      color="#1f1f1f"
+                      style={styles.socialButtonLoadingIndicator}
+                    />
+>>>>>>> main
                   ) : null}
                 </TouchableOpacity>
               </View>
@@ -476,6 +525,7 @@ const styles = StyleSheet.create({
   socialDividerLine: {
     flex: 1,
     height: 1,
+<<<<<<< HEAD
     backgroundColor: colors.cardBorder,
   },
   socialDividerText: {
@@ -486,11 +536,24 @@ const styles = StyleSheet.create({
   socialButton: {
     borderRadius: 18,
     paddingVertical: 14,
+=======
+    backgroundColor: '#e7e7e7',
+  },
+  socialDividerText: {
+    color: '#9a9a9a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  socialButton: {
+    borderRadius: 16,
+    paddingVertical: 12,
+>>>>>>> main
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+<<<<<<< HEAD
     borderColor: colors.cardBorder,
     backgroundColor: colors.white,
     shadowColor: colors.shadow,
@@ -498,6 +561,13 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
+=======
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+>>>>>>> main
   },
   socialButtonContent: {
     flexDirection: 'row',
@@ -512,9 +582,22 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   socialButtonText: {
+<<<<<<< HEAD
     color: colors.secondary,
     fontSize: 14,
     fontWeight: '800',
+=======
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  socialButtonTextDark: {
+    color: '#1f1f1f',
+  },
+  socialButtonGoogle: {
+    backgroundColor: '#fff',
+    borderColor: '#e1e1e1',
+>>>>>>> main
   },
 });
 

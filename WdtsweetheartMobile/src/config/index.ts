@@ -8,6 +8,8 @@ import {
   VNPAY_URL,
   ZALOPAY_APPID,
   ZALOPAY_DOMAIN,
+  CLOUDINARY_URL,
+  UPLOAD_PRESET,
 } from '@env';
 import { NativeModules, Platform } from 'react-native';
 
@@ -52,7 +54,10 @@ const localApiBaseUrl = normalizeUrl(buildAutoApiBaseUrl());
 
 export const env = {
   apiBaseUrl,
+<<<<<<< HEAD
   localApiBaseUrl,
+=======
+>>>>>>> main
   googleClientId: GOOGLE_CLIENT_ID,
   facebookAppId: FACEBOOK_APP_ID,
   openMapKey: OPENMAP_KEY,
@@ -60,4 +65,6 @@ export const env = {
   zalopayDomain: ZALOPAY_DOMAIN,
   vnpayTmnCode: VNPAY_TMN_CODE,
   vnpayUrl: VNPAY_URL,
+  cloudinaryUrl: CLOUDINARY_URL || 'https://api.cloudinary.com/v1_1/dxyuuul0q/image/upload',
+  uploadPreset: UPLOAD_PRESET || 'teddypet',
 };

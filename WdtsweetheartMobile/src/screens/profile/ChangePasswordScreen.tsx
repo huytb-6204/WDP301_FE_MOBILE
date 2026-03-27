@@ -24,30 +24,58 @@ const ChangePasswordScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
+  const validate = () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin.');
-      return;
+      return 'Vui lòng nhập đầy đủ thông tin.';
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu mới không khớp.');
-      return;
+      return 'Mật khẩu mới không khớp.';
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 6 ký tự.');
+    if (newPassword.length < 8) {
+      return 'Mật khẩu mới phải có ít nhất 8 ký tự.';
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      return 'Mật khẩu mới phải có ít nhất một chữ hoa.';
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      return 'Mật khẩu mới phải có ít nhất một chữ thường.';
+    }
+
+    if (!/\d/.test(newPassword)) {
+      return 'Mật khẩu mới phải có ít nhất một chữ số.';
+    }
+
+    if (!/[~!@#$%^&*]/.test(newPassword)) {
+      return 'Mật khẩu mới phải có ít nhất một ký tự đặc biệt.';
+    }
+
+    return null;
+  };
+
+  const handleSave = async () => {
+    const error = validate();
+
+    if (error) {
+      Alert.alert('Lỗi', error);
       return;
     }
 
     setSaving(true);
     try {
-      await changePassword({ oldPassword, newPassword });
+      await changePassword({
+        newPassword: newPassword.trim(),
+        confirmPassword: confirmPassword.trim(),
+      });
+
       Alert.alert('Thành công', 'Đã đổi mật khẩu thành công.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
-      Alert.alert('Lỗi', error instanceof Error ? error.message : 'Không thể đổi mật khẩu.');
+    } catch (submitError) {
+      Alert.alert('Lỗi', submitError instanceof Error ? submitError.message : 'Không thể đổi mật khẩu.');
     } finally {
       setSaving(false);
     }
@@ -70,9 +98,11 @@ const ChangePasswordScreen = () => {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-                <Lock size={40} color={colors.primary} />
+              <Lock size={40} color={colors.primary} />
             </View>
-            <Text style={styles.helperText}>Mật khẩu của bạn nên bao gồm cả chữ và số để tăng tính bảo mật.</Text>
+            <Text style={styles.helperText}>
+              Mật khẩu của bạn nên bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt để tăng tính bảo mật.
+            </Text>
           </View>
 
           <View style={styles.card}>
@@ -157,8 +187,21 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 40 },
   content: { flexGrow: 1, padding: 16 },
   iconContainer: { alignItems: 'center', marginVertical: 30, gap: 16 },
-  iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.softPink, alignItems: 'center', justifyContent: 'center' },
-  helperText: { textAlign: 'center', color: colors.textLight, fontSize: 13, paddingHorizontal: 40, lineHeight: 20 },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.softPink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helperText: {
+    textAlign: 'center',
+    color: colors.textLight,
+    fontSize: 13,
+    paddingHorizontal: 40,
+    lineHeight: 20,
+  },
   card: {
     borderRadius: 22,
     borderWidth: 1,

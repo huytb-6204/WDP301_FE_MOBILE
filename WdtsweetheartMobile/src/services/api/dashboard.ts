@@ -36,8 +36,14 @@ export const updateProfile = async (data: Partial<ProfileUser>) => {
   return apiPatch<any>('/api/v1/client/dashboard/profile/edit', data);
 };
 
-export const changePassword = async (data: any) => {
-  return apiPatch<any>('/api/v1/client/dashboard/change-password', data);
+export const changePassword = async (data: { newPassword: string; confirmPassword: string }) => {
+  const res = await apiPatch<any>('/api/v1/client/dashboard/change-password', data);
+
+  if (!res.success) {
+    throw new Error(res.message || 'Khong the doi mat khau');
+  }
+
+  return res;
 };
 
 export const changeAvatar = async (avatar: string) => {

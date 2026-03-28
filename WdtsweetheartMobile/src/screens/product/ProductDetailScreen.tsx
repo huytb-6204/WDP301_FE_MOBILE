@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F2F2F2',
   },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.secondary },
   statusContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   statusText: { fontSize: 14, color: '#666', textAlign: 'center' },
   scrollContent: { paddingBottom: 40 },

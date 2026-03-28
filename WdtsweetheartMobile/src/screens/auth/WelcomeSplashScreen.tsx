@@ -1,7 +1,8 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, StatusBar } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { colors } from '../../theme/colors';
 
 const WelcomeSplashScreen = () => {
@@ -9,7 +10,7 @@ const WelcomeSplashScreen = () => {
 
   return (
     <LinearGradient colors={[colors.primary, '#FF9466']} style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar style="light" translucent backgroundColor="transparent" />
       <View style={styles.blobTop} />
       <View style={styles.blobBottom} />
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useRef } from 'react';
 import Toast, { ToastType } from '../components/common/Toast';
 import AppAlert, { AlertType } from '../components/common/AppAlert';
 
@@ -19,13 +19,19 @@ export const NotifierProvider = ({ children }: { children: ReactNode }) => {
     onConfirm: undefined as (() => void) | undefined
   });
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    setToast({ visible: true, message, type });
-  }, []);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const hideToast = useCallback(() => {
     setToast(prev => ({ ...prev, visible: false }));
   }, []);
+
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast({ visible: true, message, type });
+    timerRef.current = setTimeout(() => {
+      hideToast();
+    }, 1800);
+  }, [hideToast]);
 
   const showAlert = useCallback((title: string, message: string, type: AlertType = 'info', onConfirm?: () => void) => {
     setAlert({ visible: true, title, message, type, onConfirm });

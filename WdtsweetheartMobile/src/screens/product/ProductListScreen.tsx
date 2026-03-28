@@ -74,6 +74,7 @@ const ProductListScreen = () => {
 
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
+  const [activeParentCategory, setActiveParentCategory] = useState('all');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<SortKey>('newest');
@@ -99,9 +100,20 @@ const ProductListScreen = () => {
     [apiCategories]
   );
 
+  const parentCategoryId = useMemo(() => {
+    if (activeParentCategory === 'all') return '';
+    const item = apiCategories.find((category) => (category.slug || category._id || category.name) === activeParentCategory);
+    return item?._id || '';
+  }, [activeParentCategory, apiCategories]);
+
   const parentCategories = useMemo(
     () => categories.filter((item) => item.key === 'all' || !item.parent),
     [categories]
+  );
+
+  const childCategories = useMemo(
+    () => (parentCategoryId ? categories.filter((item) => item.parent === parentCategoryId) : []),
+    [categories, parentCategoryId]
   );
 
   const productParams = useMemo<GetProductsParams>(() => {
@@ -227,56 +239,6 @@ const ProductListScreen = () => {
         </Pressable>
       </View>
 
-      <View style={styles.topControls}>
-        <View style={styles.searchBox}>
-          <Search size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm sản phẩm"
-            placeholderTextColor="#9CA3AF"
-            value={keyword}
-            onChangeText={setKeyword}
-          />
-        </View>
-
-        {keyword.trim().length > 1 && suggestions.length > 0 ? (
-          <View style={styles.suggestionWrap}>
-            {suggestions.map((item) => (
-              <Pressable
-                key={item._id}
-                style={styles.suggestionItem}
-                onPress={() => {
-                  setKeyword(item.name);
-                  navigation.navigate('ProductDetail', { productSlug: item.slug || item._id || item.name });
-                }}
-              >
-                <Text style={styles.suggestionTitle}>{item.name}</Text>
-                <Text style={styles.suggestionPrice}>{formatPrice(item.priceNew ?? item.priceOld ?? 0)}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        <View style={styles.categoryBarWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryBarContent}>
-            {parentCategories.map((category) => (
-              <Pressable
-                key={category.key}
-                style={[styles.chip, activeCategory === category.key && styles.chipActive]}
-                onPress={() => {
-                  setActiveCategory(category.key);
-                }}
-              >
-                <Sparkles size={14} color={activeCategory === category.key ? '#fff' : colors.text} />
-                <Text style={[styles.chipText, activeCategory === category.key && styles.chipTextActive]}>
-                  {category.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-
       <FlatList
         data={visibleProducts}
         keyExtractor={(item) => item.id}
@@ -286,6 +248,70 @@ const ProductListScreen = () => {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
+            <View style={styles.searchBox}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm kiếm sản phẩm"
+                placeholderTextColor="#9CA3AF"
+                value={keyword}
+                onChangeText={setKeyword}
+              />
+            </View>
+
+            {keyword.trim().length > 1 && suggestions.length > 0 ? (
+              <View style={styles.suggestionWrap}>
+                {suggestions.map((item) => (
+                  <Pressable
+                    key={item._id}
+                    style={styles.suggestionItem}
+                    onPress={() => {
+                      setKeyword(item.name);
+                      navigation.navigate('ProductDetail', { productSlug: item.slug || item._id || item.name });
+                    }}
+                  >
+                    <Text style={styles.suggestionTitle}>{item.name}</Text>
+                    <Text style={styles.suggestionPrice}>{formatPrice(item.priceNew ?? item.priceOld ?? 0)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+              {parentCategories.map((category) => (
+                <Pressable
+                  key={category.key}
+                  style={[styles.chip, activeParentCategory === category.key && styles.chipActive]}
+                  onPress={() => {
+                    setActiveParentCategory(category.key);
+                    setActiveCategory(category.key);
+                  }}
+                >
+                  <Sparkles size={14} color={activeParentCategory === category.key ? '#fff' : colors.text} />
+                  <Text style={[styles.chipText, activeParentCategory === category.key && styles.chipTextActive]}>
+                    {category.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {childCategories.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subcategoryRow}>
+                {childCategories.map((category) => (
+                  <Pressable
+                    key={category.key}
+                    style={[styles.subChip, activeCategory === category.key && styles.subChipActive]}
+                    onPress={() => setActiveCategory(category.key)}
+                  >
+                    <Text style={[styles.subChipText, activeCategory === category.key && styles.subChipTextActive]}>
+                      {category.label}
+                      {typeof category.productCount === 'number' ? ` (${category.productCount})` : ''}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+
             <View style={styles.sortRow}>
               <Text style={styles.sortLabel}>
                 Hiển thị <Text style={styles.sortHighlight}>{visibleProducts.length}</Text> sản phẩm
@@ -314,6 +340,7 @@ const ProductListScreen = () => {
                   onAction={() => {
                     setKeyword('');
                     setDebouncedKeyword('');
+                    setActiveParentCategory('all');
                     setActiveCategory('all');
                     setActiveBrand('all');
                   }}
@@ -416,13 +443,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.softPink,
   },
-  topControls: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 10,
-    backgroundColor: colors.background,
-  },
-  listContent: { paddingHorizontal: 20, paddingBottom: 120 },
+  listContent: { padding: 20, paddingBottom: 120 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -451,12 +472,8 @@ const styles = StyleSheet.create({
   },
   suggestionTitle: { color: colors.secondary, fontWeight: '600', flex: 1, marginRight: 10 },
   suggestionPrice: { color: colors.primary, fontWeight: '700' },
-  categoryBarWrap: {
-    marginTop: 12,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  categoryBarContent: { gap: 10, paddingRight: 20 },
+  categoryRow: { paddingTop: 16, paddingBottom: 6, gap: 10 },
+  subcategoryRow: { paddingBottom: 6, gap: 10 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,8 +486,19 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary },
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: '#fff' },
+  subChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#FFF4F6',
+    borderWidth: 1,
+    borderColor: '#FFD5DE',
+  },
+  subChipActive: { backgroundColor: colors.secondary, borderColor: colors.secondary },
+  subChipText: { color: colors.text, fontSize: 12, fontWeight: '600' },
+  subChipTextActive: { color: '#fff' },
   sortRow: {
-    marginTop: 14,
+    marginTop: 8,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',

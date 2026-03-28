@@ -26,6 +26,8 @@ export type DashboardOrder = {
   createdAt: string;
   paymentStatus?: string;
   status?: string;
+  fullName?: string;
+  items?: any[];
 };
 
 export const getProfile = async () => apiGet<ProfileUser>('/api/v1/client/dashboard/profile');

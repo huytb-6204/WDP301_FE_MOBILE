@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -752,20 +752,38 @@ const BoardingHotelScreen = () => {
                 {pets.map((pet) => {
                   const active = selectedPetIds.includes(pet._id);
                   return (
-                    <TouchableOpacity key={pet._id} style={[styles.petRow, active && styles.petRowActive]} onPress={() => togglePet(pet._id)}>
-                      <View style={styles.petRowInfo}>
-                        <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
-                          {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
-                        </Text>
-                        <Text style={styles.petRowMeta}>
-                          {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
-                        </Text>
+                    <View key={pet._id} style={[styles.petRow, active && styles.petRowActive]}>
+                      <View style={{ flex: 1 }}>
+                        <TouchableOpacity 
+                          onPress={() => togglePet(pet._id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
+                            {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
+                          </Text>
+                          <Text style={styles.petRowMeta}>
+                            {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
+                          </Text>
+                        </TouchableOpacity>
+                        
                         <View style={styles.petRowActions}>
-                          <TouchableOpacity style={styles.petActionButton} onPress={() => openPetDetail(pet)}>
+                          <TouchableOpacity 
+                            style={styles.petActionButton} 
+                            onPress={() => {
+                              console.log('Detail pressed for pet:', pet.name);
+                              openPetDetail(pet);
+                            }}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          >
                             <Eye size={14} color={colors.primary} />
                             <Text style={styles.petActionText}>Chi tiết</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={[styles.petActionButton, styles.petDeleteButton]} onPress={() => handleDeletePet(pet)} disabled={deletingPetId === pet._id}>
+                          <TouchableOpacity 
+                            style={[styles.petActionButton, styles.petDeleteButton]} 
+                            onPress={() => handleDeletePet(pet)} 
+                            disabled={deletingPetId === pet._id}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          >
                             {deletingPetId === pet._id ? (
                               <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
@@ -777,6 +795,7 @@ const BoardingHotelScreen = () => {
                           </TouchableOpacity>
                         </View>
                       </View>
+
                       {pet.avatar ? (
                         <Image source={{ uri: pet.avatar }} style={styles.petRowAvatar} />
                       ) : (
@@ -784,7 +803,7 @@ const BoardingHotelScreen = () => {
                           <PawPrint size={18} color={colors.primary} />
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </View>
                   );
                 })}
               </ScrollView>

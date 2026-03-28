@@ -31,8 +31,8 @@ const StaffDatePickerModal = ({ visible, date, onClose, onSelect }: StaffDatePic
     daysArray.push(i);
   }
 
-  const handlePrevMonth = () => setCurrentMonth((prev) => prev.subtract(1, 'month'));
-  const handleNextMonth = () => setCurrentMonth((prev) => prev.add(1, 'month'));
+  const handlePrevMonth = () => setCurrentMonth((prev: dayjs.Dayjs) => prev.subtract(1, 'month'));
+  const handleNextMonth = () => setCurrentMonth((prev: dayjs.Dayjs) => prev.add(1, 'month'));
 
   const selectDate = (day: number) => {
     const newDate = currentMonth.date(day);

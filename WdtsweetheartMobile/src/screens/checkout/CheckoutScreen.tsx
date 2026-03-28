@@ -147,9 +147,28 @@ const CheckoutScreen = () => {
     setShippingCalculated(false);
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Home');
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
+        const token = await tokenStorage.get();
+        if (!token) {
+          Alert.alert('Cần đăng nhập', 'Bạn cần đăng nhập để đặt hàng.', [
+            {
+              text: 'Đăng nhập',
+              onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+            },
+          ]);
+          return;
+        }
+
         const [profileResult, addressResult, couponResult] = await Promise.allSettled([
           getProfile(),
           getAddresses(),
@@ -310,7 +329,7 @@ const CheckoutScreen = () => {
 
   useEffect(() => {
     if (checkedCartItems.length === 0) {
-      navigation.goBack();
+      handleBack();
     }
   }, [checkedCartItems.length, navigation]);
 
@@ -375,6 +394,17 @@ const CheckoutScreen = () => {
   };
 
   const handleSubmit = async () => {
+    const token = await tokenStorage.get();
+    if (!token) {
+      Alert.alert('Cần đăng nhập', 'Bạn cần đăng nhập để đặt hàng.', [
+        {
+          text: 'Đăng nhập',
+          onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+        },
+      ]);
+      return;
+    }
+
     if (items.length === 0) {
       Alert.alert('Gi\u1ecf h\u00e0ng tr\u1ed1ng', 'Vui l\u00f2ng th\u00eam s\u1ea3n ph\u1ea9m tr\u01b0\u1edbc khi thanh to\u00e1n.');
       return;
@@ -468,7 +498,7 @@ const CheckoutScreen = () => {
     <SafeAreaView style={styles.safe}>
       <LinearGradient colors={['#FFF7F6', '#FFFFFF']} style={styles.hero}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+          <TouchableOpacity onPress={handleBack} style={styles.iconBtn}>
             <ArrowLeft size={20} color={colors.secondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{'Thanh to\u00e1n'}</Text>

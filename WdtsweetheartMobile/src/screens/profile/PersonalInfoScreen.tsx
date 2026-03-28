@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, Save } from 'lucide-react-native';
+import { ArrowLeft, Save, Sparkles } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getProfile, updateProfile } from '../../services/api/dashboard';
@@ -104,68 +105,87 @@ const PersonalInfoScreen = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {loading ? (
             <View style={styles.centerWrap}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.helperText}>Đang tải thông tin cá nhân...</Text>
+              <Text style={styles.helperText}>Đang tải hồ sơ của bạn...</Text>
             </View>
           ) : (
-            <View style={styles.card}>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Họ và tên</Text>
-                <TextInput
-                  style={styles.input}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  placeholder="Nhập họ và tên"
-                  placeholderTextColor="#A0A0A0"
-                />
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={[styles.input, styles.inputDisabled]}
-                  value={email}
-                  editable={false}
-                  placeholder="Email"
-                  placeholderTextColor="#A0A0A0"
-                />
-                <Text style={styles.helperNote}>Email hiện được khóa chỉnh sửa trên mobile.</Text>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Số điện thoại</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Nhập số điện thoại"
-                  placeholderTextColor="#A0A0A0"
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={saving}
+            <>
+              <LinearGradient
+                colors={[colors.gradientSoftStart, colors.gradientSoftEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroCard}
               >
-                {saving ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Save size={16} color="#fff" />
-                    <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                <View style={styles.heroGlow} />
+                <View style={styles.heroBadge}>
+                  <Sparkles size={14} color={colors.primaryDeep} />
+                  <Text style={styles.heroBadgeText}>Hồ sơ của bạn</Text>
+                </View>
+                <Text style={styles.heroTitle}>Làm hồ sơ nổi bật và đáng tin hơn</Text>
+                <Text style={styles.heroSubtitle}>
+                  Cập nhật tên và số điện thoại để đặt dịch vụ, mua hàng và theo dõi đơn thuận tiện hơn.
+                </Text>
+              </LinearGradient>
+
+              <View style={styles.card}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Họ và tên</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Nhập họ và tên"
+                    placeholderTextColor={colors.textLight}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={[styles.input, styles.inputDisabled]}
+                    value={email}
+                    editable={false}
+                    placeholder="Email"
+                    placeholderTextColor={colors.textLight}
+                  />
+                  <Text style={styles.helperNote}>Email hiện được khóa chỉnh sửa trên mobile.</Text>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Số điện thoại</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Nhập số điện thoại"
+                    placeholderTextColor={colors.textLight}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+                  <LinearGradient
+                    colors={[colors.gradientPrimaryStart, colors.gradientPrimaryEnd]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.saveButtonGradient, saving && styles.saveButtonDisabled]}
+                  >
+                    {saving ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Save size={16} color="#fff" />
+                        <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -176,7 +196,7 @@ const PersonalInfoScreen = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
@@ -186,49 +206,101 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.softPink,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
     color: colors.secondary,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   headerSpacer: {
-    width: 40,
+    width: 42,
   },
   content: {
     flexGrow: 1,
     padding: 16,
+    paddingBottom: 28,
   },
   centerWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    paddingTop: 80,
   },
   helperText: {
     color: colors.text,
     fontSize: 13,
   },
-  card: {
-    borderRadius: 22,
+  heroCard: {
+    borderRadius: 28,
+    padding: 22,
+    marginBottom: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
+    borderColor: colors.cardBorder,
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: -28,
+    right: -8,
+    width: 120,
+    height: 120,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginBottom: 14,
+  },
+  heroBadgeText: {
+    color: colors.primaryDeep,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  heroTitle: {
+    color: colors.secondary,
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 21,
+  },
+  card: {
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.white,
     padding: 18,
     gap: 16,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   fieldGroup: {
     gap: 8,
@@ -236,43 +308,50 @@ const styles = StyleSheet.create({
   label: {
     color: colors.secondary,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   input: {
-    minHeight: 48,
-    borderRadius: 14,
+    minHeight: 52,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.backgroundSoft,
     paddingHorizontal: 14,
     color: colors.secondary,
     fontSize: 14,
   },
   inputDisabled: {
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#F9EFEC',
     color: colors.textLight,
   },
   helperNote: {
     color: colors.textLight,
     fontSize: 12,
+    lineHeight: 18,
   },
   saveButton: {
     marginTop: 8,
-    minHeight: 48,
+  },
+  saveButtonGradient: {
+    minHeight: 52,
     borderRadius: 999,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   saveButtonDisabled: {
-    opacity: 0.8,
+    opacity: 0.84,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
 

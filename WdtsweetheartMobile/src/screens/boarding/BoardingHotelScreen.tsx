@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Modal,
@@ -11,14 +12,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Hotel, PawPrint, ShieldCheck } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Eye, Hotel, PawPrint, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
-import { createPet, getMyPets } from '../../services/api/booking';
+import { createPet, deleteMyPet, getMyPets, updateMyPet } from '../../services/api/booking';
 import {
   createBoardingBooking,
   getAvailableBoardingCages,
@@ -38,6 +40,8 @@ const phoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])[0-9]{7
 const typeOptions = ['standard', 'vip'] as const;
 const sizeOptions = ['S', 'M', 'L', 'XL_XXL'] as const;
 const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dxyuuul0q/image/upload';
+const UPLOAD_PRESET = 'teddypet';
 
 const formatDisplayDate = (date: Date) => {
   const d = `${date.getDate()}`.padStart(2, '0');
@@ -108,6 +112,8 @@ const formatRoomSizeLabel = (value?: string) => {
 
 const BoardingHotelScreen = () => {
   const navigation = useNavigation<Navigation>();
+  const [imageActionMode, setImageActionMode] = useState<'create' | 'detail'>('create');
+  const [showImageActionModal, setShowImageActionModal] = useState(false);
   const [checkInDate, setCheckInDate] = useState(formatDisplayDate(addDays(new Date(), 1)));
   const [checkOutDate, setCheckOutDate] = useState(formatDisplayDate(addDays(new Date(), 2)));
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
@@ -125,6 +131,16 @@ const BoardingHotelScreen = () => {
   const [selectedCageId, setSelectedCageId] = useState('');
   const [showPetModal, setShowPetModal] = useState(false);
   const [showCreatePetModal, setShowCreatePetModal] = useState(false);
+  const [detailPet, setDetailPet] = useState<Pet | null>(null);
+  const [deletingPetId, setDeletingPetId] = useState<string | null>(null);
+  const [savingDetailPet, setSavingDetailPet] = useState(false);
+  const [detailPetName, setDetailPetName] = useState('');
+  const [detailPetType, setDetailPetType] = useState<'dog' | 'cat'>('dog');
+  const [detailPetWeight, setDetailPetWeight] = useState('');
+  const [detailPetBreed, setDetailPetBreed] = useState('');
+  const [detailPetColor, setDetailPetColor] = useState('');
+  const [detailPetNotes, setDetailPetNotes] = useState('');
+  const [detailPetAvatar, setDetailPetAvatar] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -138,6 +154,8 @@ const BoardingHotelScreen = () => {
   const [petBreed, setPetBreed] = useState('');
   const [petColor, setPetColor] = useState('');
   const [petNotes, setPetNotes] = useState('');
+  const [petAvatar, setPetAvatar] = useState('');
+  const [petUploading, setPetUploading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -246,6 +264,97 @@ const BoardingHotelScreen = () => {
     setSelectedPetIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat(id)));
   };
 
+  const openPetDetail = (pet: Pet) => {
+    setDetailPet(pet);
+    setDetailPetName(pet.name || '');
+    setDetailPetType(pet.type === 'cat' ? 'cat' : 'dog');
+    setDetailPetWeight(String(pet.weight || ''));
+    setDetailPetBreed(pet.breed || '');
+    setDetailPetColor(pet.color || '');
+    setDetailPetNotes(pet.notes || '');
+    setDetailPetAvatar(pet.avatar || '');
+  };
+
+  const closePetDetail = () => {
+    setDetailPet(null);
+    setSavingDetailPet(false);
+    setDetailPetName('');
+    setDetailPetType('dog');
+    setDetailPetWeight('');
+    setDetailPetBreed('');
+    setDetailPetColor('');
+    setDetailPetNotes('');
+    setDetailPetAvatar('');
+  };
+
+  const handleUpdateDetailPet = async () => {
+    if (!detailPet) return;
+
+    const normalizedName = detailPetName.trim();
+    const normalizedWeight = Number(detailPetWeight);
+
+    if (!normalizedName) {
+      Alert.alert('Lỗi', 'Vui lòng nhập tên thú cưng');
+      return;
+    }
+
+    if (!normalizedWeight || normalizedWeight <= 0) {
+      Alert.alert('Lỗi', 'Cân nặng phải lớn hơn 0');
+      return;
+    }
+
+    try {
+      setSavingDetailPet(true);
+      const res = await updateMyPet(detailPet._id, {
+        name: normalizedName,
+        type: detailPetType,
+        weight: normalizedWeight,
+        breed: detailPetBreed.trim() || undefined,
+        color: detailPetColor.trim() || undefined,
+        notes: detailPetNotes.trim() || undefined,
+        avatar: detailPetAvatar || undefined,
+      });
+
+      setPets((prev) => prev.map((item) => (item._id === detailPet._id ? res.data : item)));
+      setDetailPet(res.data);
+      showToast('Đã cập nhật thú cưng');
+    } catch (err) {
+      Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể cập nhật thú cưng');
+    } finally {
+      setSavingDetailPet(false);
+    }
+  };
+
+  const handleDeletePet = (pet: Pet) => {
+    Alert.alert(
+      'Xóa thú cưng',
+      `Bạn có chắc muốn xóa ${pet.name || 'thú cưng này'} không?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingPetId(pet._id);
+              await deleteMyPet(pet._id);
+              setPets((prev) => prev.filter((item) => item._id !== pet._id));
+              setSelectedPetIds((prev) => prev.filter((id) => id !== pet._id));
+              if (detailPet?._id === pet._id) {
+                closePetDetail();
+              }
+              showToast('Đã xóa thú cưng');
+            } catch (err) {
+              Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể xóa thú cưng');
+            } finally {
+              setDeletingPetId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const openDatePicker = (field: 'checkIn' | 'checkOut') => {
     setDateField(field);
     setCurrentMonth(parseDisplayDate(field === 'checkIn' ? checkInDate : checkOutDate));
@@ -280,6 +389,7 @@ const BoardingHotelScreen = () => {
         weight: Number(petWeight),
         color: petColor.trim() || undefined,
         notes: petNotes.trim() || undefined,
+        avatar: petAvatar || undefined,
       });
       setPets((prev) => [res.data].concat(prev));
       setSelectedPetIds((prev) => (prev.includes(res.data._id) ? prev : prev.concat(res.data._id)));
@@ -289,12 +399,95 @@ const BoardingHotelScreen = () => {
       setPetBreed('');
       setPetColor('');
       setPetNotes('');
+      setPetAvatar('');
       setShowCreatePetModal(false);
       showToast('Đã thêm thú cưng');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể tạo thú cưng');
     }
   };
+
+
+  const uploadPetImage = async (
+    asset: ImagePicker.ImagePickerAsset,
+    onUploaded: (url: string) => void,
+    successMessage = 'Da them anh thu cung'
+  ) => {
+    setPetUploading(true);
+    try {
+      const formData = new FormData();
+      const fileUri = asset.uri.startsWith('file://') ? asset.uri : 'file://' + asset.uri;
+      const fileName = asset.fileName || 'pet_' + Date.now() + '.jpg';
+
+      formData.append('file', {
+        uri: fileUri,
+        type: asset.mimeType || 'image/jpeg',
+        name: fileName,
+      } as any);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+      const data = await response.json();
+      if (!response.ok || !data.secure_url) {
+        showToast('Khong the tai anh thu cung len');
+        return;
+      }
+      onUploaded(data.secure_url);
+      showToast(successMessage);
+    } catch {
+      showToast('Loi khi tai anh len');
+    } finally {
+      setPetUploading(false);
+    }
+  };
+
+  const pickPetImageFromLibrary = async (
+    onUploaded: (url: string) => void,
+    successMessage?: string
+  ) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showToast('Cần cấp quyền truy cập thư viện ảnh');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      await uploadPetImage(result.assets[0], onUploaded, successMessage);
+    }
+  };
+
+  const takePetPhoto = async (
+    onUploaded: (url: string) => void,
+    successMessage?: string
+  ) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      showToast('Cần cấp quyền truy cập camera');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      cameraType: ImagePicker.CameraType.front,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      await uploadPetImage(result.assets[0], onUploaded, successMessage);
+    }
+  };
+
+  const openPetImageActions = (mode: 'create' | 'detail' = 'create') => {
+    setImageActionMode(mode);
+    setShowImageActionModal(true);
+  };
+  const closeImageActionModal = () => setShowImageActionModal(false);
+  const currentImageActionAvatar = imageActionMode === 'detail' ? detailPetAvatar : petAvatar;
+  const currentImageActionSetter = imageActionMode === 'detail' ? setDetailPetAvatar : setPetAvatar;
 
   const validate = () => {
     if (!checkInDate || !checkOutDate) return 'Vui lòng nhập ngày nhận và ngày trả phòng';
@@ -560,12 +753,37 @@ const BoardingHotelScreen = () => {
                   const active = selectedPetIds.includes(pet._id);
                   return (
                     <TouchableOpacity key={pet._id} style={[styles.petRow, active && styles.petRowActive]} onPress={() => togglePet(pet._id)}>
-                      <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
-                        {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
-                      </Text>
-                      <Text style={styles.petRowMeta}>
-                        {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
-                      </Text>
+                      <View style={styles.petRowInfo}>
+                        <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
+                          {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
+                        </Text>
+                        <Text style={styles.petRowMeta}>
+                          {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
+                        </Text>
+                        <View style={styles.petRowActions}>
+                          <TouchableOpacity style={styles.petActionButton} onPress={() => openPetDetail(pet)}>
+                            <Eye size={14} color={colors.primary} />
+                            <Text style={styles.petActionText}>Chi tiết</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[styles.petActionButton, styles.petDeleteButton]} onPress={() => handleDeletePet(pet)} disabled={deletingPetId === pet._id}>
+                            {deletingPetId === pet._id ? (
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            ) : (
+                              <>
+                                <Trash2 size={14} color={colors.primary} />
+                                <Text style={styles.petActionText}>Xóa</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      {pet.avatar ? (
+                        <Image source={{ uri: pet.avatar }} style={styles.petRowAvatar} />
+                      ) : (
+                        <View style={styles.petRowAvatarFallback}>
+                          <PawPrint size={18} color={colors.primary} />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -578,7 +796,6 @@ const BoardingHotelScreen = () => {
           </View>
         </View>
       </Modal>
-
       <Modal visible={showDatePickerModal} animationType="fade" transparent onRequestClose={() => setShowDatePickerModal(false)}>
         <View style={styles.centerModalBackdrop}>
           <View style={styles.calendarModalCard}>
@@ -642,6 +859,23 @@ const BoardingHotelScreen = () => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Thêm thú cưng</Text>
+            <TouchableOpacity style={styles.petImagePicker} onPress={() => openPetImageActions('create')} disabled={petUploading}>
+              {petAvatar ? (
+                <Image source={{ uri: petAvatar }} style={styles.petImagePreview} />
+              ) : (
+                <View style={styles.petImagePlaceholder}>
+                  {petUploading ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <>
+                      <Text style={styles.petImagePlus}>+</Text>
+                      <Text style={styles.petImageText}>Thêm ảnh</Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.petImageHint}>Chạm để chụp ảnh hoặc chọn từ thư viện</Text>
             <TextInput style={styles.input} value={petName} onChangeText={setPetName} placeholder="Tên thú cưng" />
             <TextInput style={styles.input} value={petBreed} onChangeText={setPetBreed} placeholder="Giống thú cưng" />
             <View style={styles.toggleRow}>
@@ -660,10 +894,151 @@ const BoardingHotelScreen = () => {
               <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowCreatePetModal(false)}>
                 <Text style={styles.secondaryButtonText}>Đóng</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleCreatePet}>
+              <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleCreatePet} disabled={petUploading}>
                 <Text style={styles.primaryButtonText}>Lưu</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!detailPet} animationType="fade" transparent onRequestClose={closePetDetail}>
+        <View style={styles.centerModalBackdrop}>
+          <View style={styles.petDetailModalCard}>
+            <Text style={styles.modalTitle}>Chi tiết thú cưng</Text>
+            <TouchableOpacity
+              style={styles.petDetailAvatarButton}
+              onPress={() => {
+                openPetImageActions('detail');
+              }}
+              disabled={petUploading}
+            >
+              {detailPetAvatar ? (
+                <Image source={{ uri: detailPetAvatar }} style={styles.petDetailAvatar} />
+              ) : (
+                <View style={styles.petDetailAvatarFallback}>
+                  {petUploading ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <>
+                      <PawPrint size={28} color={colors.primary} />
+                      <Text style={styles.petDetailAvatarHint}>Đổi ảnh</Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.petDetailInfo}>
+              <Text style={styles.petDetailName}>Chỉnh sửa thông tin</Text>
+              <TextInput
+                style={styles.input}
+                value={detailPetName}
+                onChangeText={setDetailPetName}
+                placeholder="Tên thú cưng"
+              />
+              <View style={styles.toggleRow}>
+                {(['dog', 'cat'] as const).map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.toggleButton, detailPetType === item && styles.toggleButtonActive]}
+                    onPress={() => setDetailPetType(item)}
+                  >
+                    <Text style={[styles.toggleText, detailPetType === item && styles.toggleTextActive]}>
+                      {item === 'dog' ? 'Chó' : 'Mèo'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                style={styles.input}
+                value={detailPetWeight}
+                onChangeText={setDetailPetWeight}
+                placeholder="Cân nặng (kg)"
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={styles.input}
+                value={detailPetBreed}
+                onChangeText={setDetailPetBreed}
+                placeholder="Giống thú cưng"
+              />
+              <TextInput
+                style={styles.input}
+                value={detailPetColor}
+                onChangeText={setDetailPetColor}
+                placeholder="Màu lông"
+              />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={detailPetNotes}
+                onChangeText={setDetailPetNotes}
+                placeholder="Ghi chú"
+                multiline
+              />
+            </View>
+            <View style={styles.row}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={closePetDetail} disabled={savingDetailPet}>
+                <Text style={styles.secondaryButtonText}>Đóng</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleUpdateDetailPet} disabled={savingDetailPet}>
+                {savingDetailPet ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Lưu</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showImageActionModal} animationType="fade" transparent onRequestClose={closeImageActionModal}>
+        <View style={styles.centerModalBackdrop}>
+          <View style={styles.imageActionModalCard}>
+            <View style={styles.imageActionIconWrap}>
+              <PawPrint size={24} color={colors.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Ảnh thú cưng</Text>
+            <Text style={styles.imageActionSubtitle}>Chọn cách cập nhật ảnh cho thú cưng của bạn</Text>
+            <View style={styles.imageActionList}>
+              <TouchableOpacity
+                style={styles.imageActionItem}
+                onPress={() => {
+                  closeImageActionModal();
+                  void takePetPhoto(
+                    currentImageActionSetter,
+                    imageActionMode === 'detail' ? 'Đã cập nhật ảnh thú cưng' : 'Đã thêm ảnh thú cưng'
+                  );
+                }}
+              >
+                <Text style={styles.imageActionItemTitle}>Chụp ảnh</Text>
+                <Text style={styles.imageActionItemText}>Dùng camera để chụp ảnh mới</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.imageActionItem}
+                onPress={() => {
+                  closeImageActionModal();
+                  void pickPetImageFromLibrary(
+                    currentImageActionSetter,
+                    imageActionMode === 'detail' ? 'Đã cập nhật ảnh thú cưng' : 'Đã thêm ảnh thú cưng'
+                  );
+                }}
+              >
+                <Text style={styles.imageActionItemTitle}>Chọn từ thư viện</Text>
+                <Text style={styles.imageActionItemText}>Lấy ảnh có sẵn trên thiết bị</Text>
+              </TouchableOpacity>
+              {currentImageActionAvatar ? (
+                <TouchableOpacity
+                  style={[styles.imageActionItem, styles.imageActionDanger]}
+                  onPress={() => {
+                    currentImageActionSetter('');
+                    closeImageActionModal();
+                  }}
+                >
+                  <Text style={styles.imageActionDangerTitle}>Xóa ảnh hiện tại</Text>
+                  <Text style={styles.imageActionDangerText}>Gỡ ảnh thú cưng khỏi hồ sơ</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <TouchableOpacity style={styles.secondaryButton} onPress={closeImageActionModal}>
+              <Text style={styles.secondaryButtonText}>Đóng</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -688,6 +1063,23 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.secondary, fontSize: 18, fontWeight: '700' },
   linkButton: { minWidth: 72, alignItems: 'flex-end' },
   linkText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  petImagePicker: {
+    width: 112,
+    height: 112,
+    alignSelf: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.cardBorder || colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: colors.backgroundSoft || colors.softPink,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  petImagePreview: { width: '100%', height: '100%' },
+  petImagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  petImagePlus: { fontSize: 28, lineHeight: 30, color: colors.primary, fontWeight: '400' },
+  petImageText: { marginTop: 4, color: colors.primary, fontSize: 12, fontWeight: '700' },
+  petImageHint: { textAlign: 'center', color: colors.textLight, fontSize: 11, marginBottom: 10 },
   content: { padding: 16, paddingBottom: 34, gap: 12 },
   heroCard: { borderRadius: 18, padding: 14, backgroundColor: '#102937', flexDirection: 'row', gap: 12 },
   heroIconWrap: {
@@ -847,7 +1239,7 @@ const styles = StyleSheet.create({
   summaryLine: { color: colors.secondary, fontSize: 13, fontWeight: '600' },
   centerModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(64, 43, 46, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -855,10 +1247,17 @@ const styles = StyleSheet.create({
   calendarModalCard: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    padding: 16,
+    borderRadius: 28,
+    backgroundColor: '#FFFDFB',
+    padding: 18,
     gap: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 9,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -898,18 +1297,29 @@ const styles = StyleSheet.create({
   dayCellActive: { backgroundColor: colors.primary },
   dayCellText: { color: colors.secondary, fontSize: 14, fontWeight: '600' },
   dayCellTextActive: { color: '#fff' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(64, 43, 46, 0.28)', justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    gap: 10,
+    backgroundColor: '#FFFDFB',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 18,
+    gap: 12,
     minHeight: 240,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 10,
   },
-  modalTitle: { color: colors.secondary, fontSize: 16, fontWeight: '700' },
+  modalTitle: { color: colors.secondary, fontSize: 18, fontWeight: '800', textAlign: 'center' },
   modalList: { maxHeight: 280 },
   petRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -919,9 +1329,189 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   petRowActive: { borderColor: colors.primary, backgroundColor: '#fff7f7' },
+  petRowInfo: { flex: 1 },
   petRowText: { color: colors.secondary, fontSize: 13, fontWeight: '600' },
   petRowTextActive: { color: colors.primary },
   petRowMeta: { color: colors.text, fontSize: 11, marginTop: 4 },
+  petRowActions: { flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' },
+  petActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#FFD5DE',
+    backgroundColor: '#FFF5F7',
+  },
+  petDeleteButton: {
+    backgroundColor: '#FFF1F4',
+  },
+  petActionText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  petRowAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F7D9DE',
+  },
+  petRowAvatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF1F4',
+    borderWidth: 1,
+    borderColor: '#FFD5DE',
+  },
+  petDetailModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 30,
+    backgroundColor: '#FFFDFB',
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 9,
+  },
+  petDetailAvatarButton: {
+    alignSelf: 'center',
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  petDetailAvatar: {
+    width: 104,
+    height: 104,
+    borderRadius: 24,
+    alignSelf: 'center',
+    backgroundColor: '#F7D9DE',
+  },
+  petDetailAvatarFallback: {
+    width: 104,
+    height: 104,
+    borderRadius: 24,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF1F4',
+    borderWidth: 1,
+    borderColor: '#FFD5DE',
+  },
+  petDetailAvatarHint: {
+    marginTop: 6,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  petDetailInfo: {
+    borderRadius: 20,
+    backgroundColor: '#FFF6F7',
+    borderWidth: 1,
+    borderColor: '#FFE1E7',
+    padding: 14,
+    gap: 10,
+  },
+  petDetailName: {
+    color: colors.secondary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  petDetailMeta: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  imageActionModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 30,
+    backgroundColor: '#FFFDFB',
+    padding: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 10,
+  },
+  imageActionIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF1F4',
+    borderWidth: 1,
+    borderColor: '#FFD8E0',
+  },
+  imageActionSubtitle: {
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  imageActionList: {
+    gap: 10,
+  },
+  imageActionItem: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFF6F2',
+    borderWidth: 1,
+    borderColor: '#FFE2D7',
+  },
+  imageActionItemTitle: {
+    color: colors.secondary,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  imageActionItemText: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  imageActionDanger: {
+    backgroundColor: '#FFF1F4',
+    borderColor: '#FFD4DD',
+  },
+  imageActionDangerTitle: {
+    color: colors.danger,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  imageActionDangerText: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
 });
 
 export default BoardingHotelScreen;
+
+
+
+
+
+
+
+
+
+

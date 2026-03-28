@@ -120,3 +120,4 @@ export const useProductSuggestions = (keyword: string) => {
 
   return { data, loading, error, refetch: fetchSuggestions };
 };
+

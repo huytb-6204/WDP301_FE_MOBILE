@@ -1,7 +1,7 @@
 import { apiGet, apiPost } from './client';
 
 export const getAdminUsers = async () => {
-  const res = await apiGet<any>('/api/v1/admin/account-user?limit=1000');
+  const res = await apiGet<any>('/api/v1/admin/account-user/list?limit=1000');
   return res.data?.recordList || res.data || [];
 };
 
@@ -16,6 +16,6 @@ export const getAdminCages = async () => {
 };
 
 export const createAdminBoardingBooking = async (payload: any) => {
-  const res = await apiPost<any>('/api/v1/admin/boarding-booking', payload);
+  const res = await apiPost<any>('/api/v1/admin/boarding-booking/create', payload);
   return res.data;
 };

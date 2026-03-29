@@ -8,13 +8,12 @@ import StaffCagesScreen from '../screens/staff/boarding/StaffCagesScreen';
 import StaffWorkScheduleScreen from '../screens/staff/schedule/StaffWorkScheduleScreen';
 import StaffScheduleCalendarScreen from '../screens/staff/schedule/StaffScheduleCalendarScreen';
 import StaffShiftListScreen from '../screens/staff/schedule/StaffShiftListScreen';
-import PetCareTemplateScreen from '../screens/staff/boarding/PetCareTemplateScreen';
 import StaffBoardingBookingListScreen from '../screens/staff/boarding/StaffBoardingBookingListScreen';
 import StaffBoardingBookingCreateScreen from '../screens/staff/boarding/StaffBoardingBookingCreateScreen';
+import PetCareTemplateScreen from '../screens/staff/boarding/PetCareTemplateScreen';
 import StaffReviewListScreen from '../screens/staff/review/StaffReviewListScreen';
 import DepartmentListScreen from '../screens/staff/department/DepartmentListScreen';
 import StaffProfileScreen from '../screens/staff/home/StaffProfileScreen';
-// import ChatScreen from '../screens/review/ReviewScreen'; // Assuming chat can reuse or we create new
 
 export type StaffStackParamList = {
   StaffHome: undefined;
@@ -22,14 +21,13 @@ export type StaffStackParamList = {
   StaffCareDetail: { bookingId: string; booking: any };
   StaffCustomerList: undefined;
   StaffCages: undefined;
-  StaffChat: undefined;
   StaffProfile: undefined;
   StaffWorkSchedule: undefined;
   StaffScheduleCalendar: undefined;
   StaffShiftList: undefined;
-  PetCareTemplate: undefined;
   StaffBoardingBookingList: undefined;
   StaffBoardingBookingCreate: undefined;
+  PetCareTemplate: undefined;
   StaffReviewList: undefined;
   DepartmentList: undefined;
 };
@@ -47,9 +45,9 @@ const StaffNavigator = () => {
       <Stack.Screen name="StaffWorkSchedule" component={StaffWorkScheduleScreen} />
       <Stack.Screen name="StaffScheduleCalendar" component={StaffScheduleCalendarScreen} />
       <Stack.Screen name="StaffShiftList" component={StaffShiftListScreen} />
-      <Stack.Screen name="PetCareTemplate" component={PetCareTemplateScreen} />
       <Stack.Screen name="StaffBoardingBookingList" component={StaffBoardingBookingListScreen} />
       <Stack.Screen name="StaffBoardingBookingCreate" component={StaffBoardingBookingCreateScreen} />
+      <Stack.Screen name="PetCareTemplate" component={PetCareTemplateScreen} />
       <Stack.Screen name="StaffReviewList" component={StaffReviewListScreen} />
       <Stack.Screen name="DepartmentList" component={DepartmentListScreen} />
       <Stack.Screen name="StaffProfile" component={StaffProfileScreen} />

@@ -52,14 +52,13 @@ export type RootStackParamList = {
   StaffCareDetail: { bookingId: string; booking: any };
   StaffCustomerList: undefined;
   StaffCages: undefined;
-  StaffChat: undefined;
   StaffProfile: undefined;
   StaffWorkSchedule: undefined;
   StaffScheduleCalendar: undefined;
   StaffShiftList: undefined;
-  PetCareTemplate: undefined;
   StaffBoardingBookingList: undefined;
   StaffBoardingBookingCreate: undefined;
+  PetCareTemplate: undefined;
   StaffReviewList: undefined;
   DepartmentList: undefined;
 };

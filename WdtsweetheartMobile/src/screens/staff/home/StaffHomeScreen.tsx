@@ -7,8 +7,9 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  Bell,
   Calendar,
+  CalendarDays,
+  Bell,
   Settings,
   Users,
   ChevronRight,
@@ -17,7 +18,11 @@ import {
   Building2,
   Clock,
   Eye,
-  CloudSun
+  CloudSun,
+  LayoutGrid,
+  ClipboardList,
+  PlusCircle,
+  Star
 } from 'lucide-react-native';
 import { colors } from '../../../theme/colors';
 import { useAuth } from '../../../context/AuthContext';
@@ -25,8 +30,16 @@ import { useTheme } from '../../../context/ThemeContext';
 import { getStaffThemeColors } from '../../../theme/staffTheme';
 import { apiGet } from '../../../services/api/client';
 import { getStaffBoardingBookings } from '../../../services/api/staffBoarding';
-import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
+import {
+  archiveAllNotifications,
+  deleteNotification,
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type StaffNotification,
+} from '../../../services/api/notification';
 import NotificationModal from '../../../components/common/NotificationModal';
+import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
 import dayjs from 'dayjs';
 
 type MenuItemProps = {
@@ -38,6 +51,15 @@ type MenuItemProps = {
   isDarkMode: boolean;
 };
 
+type ShortcutItemProps = {
+  title: string;
+  subtitle: string;
+  icon: any;
+  screen: keyof StaffStackParamList;
+  color: string;
+  staffTheme: ReturnType<typeof getStaffThemeColors>;
+};
+
 const StaffHomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<StaffStackParamList>>();
   const { user } = useAuth();
@@ -46,9 +68,10 @@ const StaffHomeScreen = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [totalCages, setTotalCages] = useState(20);
+  const [notifications, setNotifications] = useState<StaffNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
 
   const efficiency = useMemo(() => {
     if (!bookings || bookings.length === 0 || !(user as any)?._id) return 0;
@@ -89,15 +112,14 @@ const StaffHomeScreen = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, notiRes, cagesRes] = await Promise.all([
+      const [bookingsRes, cagesRes] = await Promise.all([
         getStaffBoardingBookings({ limit: 100 }).catch(() => []),
-        apiGet<any>('/api/v1/admin/notifications?status=unread').catch(() => []),
         apiGet<any>('/api/v1/admin/boarding-cage?limit=1').catch(() => null)
       ]);
 
       const arrBookings = bookingsRes || [];
       setBookings(arrBookings.slice(0, 10));
-      setNotificationCount(Array.isArray(notiRes) ? notiRes.length : notiRes?.data?.length || 0);
+      if (cagesRes?.data?.pagination?.totalRecords) setTotalCages(cagesRes.data.pagination.totalRecords);
       if (cagesRes?.pagination?.totalRecords) setTotalCages(cagesRes.pagination.totalRecords);
 
       const todayStr = dayjs().format('YYYY-MM-DD');
@@ -130,9 +152,60 @@ const StaffHomeScreen = () => {
     }
   };
 
+  const fetchNotifications = async () => {
+    setNotificationLoading(true);
+    try {
+      const data = await getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Failed to fetch notifications', error);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchNotifications();
   }, []);
+
+  const unreadCount = notifications.filter((item) => item.status === 'unread').length;
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all notifications read', error);
+    }
+  };
+
+  const handleMarkOneRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark notification read', error);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await deleteNotification(id);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Failed to delete notification', error);
+    }
+  };
+
+  const handleArchiveAll = async () => {
+    try {
+      await archiveAllNotifications();
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Failed to archive notifications', error);
+    }
+  };
 
   const MenuItem = ({ title, icon, screen, color, staffTheme, isDarkMode }: MenuItemProps) => (
     <TouchableOpacity
@@ -145,6 +218,20 @@ const StaffHomeScreen = () => {
       </View>
       <Text style={[styles.menuText, { color: staffTheme.textStrong }]}>{title}</Text>
       <ChevronRight size={18} color={staffTheme.textSoft} />
+    </TouchableOpacity>
+  );
+
+  const ShortcutItem = ({ title, subtitle, icon, screen, color, staffTheme }: ShortcutItemProps) => (
+    <TouchableOpacity
+      style={[styles.shortcutCard, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}
+      onPress={() => (navigation as any).navigate(screen)}
+      activeOpacity={0.75}
+    >
+      <View style={[styles.shortcutIconWrap, { backgroundColor: color + '15' }]}>
+        {React.createElement(icon, { size: 20, color })}
+      </View>
+      <Text style={[styles.shortcutTitle, { color: staffTheme.textStrong }]} numberOfLines={2}>{title}</Text>
+      <Text style={[styles.shortcutSubtitle, { color: staffTheme.textMuted }]} numberOfLines={2}>{subtitle}</Text>
     </TouchableOpacity>
   );
 
@@ -171,17 +258,15 @@ const StaffHomeScreen = () => {
             style={[styles.headerIconBtn, { backgroundColor: staffTheme.iconSurface }]}
             onPress={() => setShowNotifications(true)}
           >
-            <Bell size={22} color={staffTheme.text} />
-            {notificationCount > 0 && (
-              <View style={[styles.badgeCount, { borderColor: staffTheme.badgeBorder }]}> 
-                <Text style={styles.badgeCountText}>{notificationCount > 99 ? '99+' : notificationCount}</Text>
+            <Bell size={20} color={staffTheme.textMuted} />
+            {unreadCount > 0 && (
+              <View style={[styles.badgeCount, { borderColor: staffTheme.badgeBorder }]}>
+                <Text style={styles.badgeCountText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
         </View>
       </View>
-
-      <NotificationModal visible={showNotifications} onClose={() => setShowNotifications(false)} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.topDashboardHeader}>
@@ -297,12 +382,37 @@ const StaffHomeScreen = () => {
             <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
             <MenuItem title="Lịch trực" icon={Clock} screen="StaffShiftList" color="#FFAB00" staffTheme={staffTheme} isDarkMode={isDarkMode} />
             <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
-            <MenuItem title="Cài đặt hệ thống" icon={Settings} screen="StaffProfile" color="#637381" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            <MenuItem title="Ho so nhan vien" icon={Settings} screen="StaffProfile" color="#637381" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionHeader, { color: staffTheme.textSoft }]}>QUẢN LÝ NỘI TRÚ</Text>
+          <View style={styles.shortcutGrid}>
+            <ShortcutItem title="Danh sách đặt chỗ" subtitle="Xem toàn bộ booking nội trú" icon={ClipboardList} screen="StaffBoardingBookingList" color="#0C53B7" staffTheme={staffTheme} />
+            <ShortcutItem title="Tạo đặt chỗ" subtitle="Lập booking tại quầy" icon={PlusCircle} screen="StaffBoardingBookingCreate" color={colors.primary} staffTheme={staffTheme} />
+            <ShortcutItem title="Chuồng nội trú" subtitle="Theo dõi trạng thái chuồng" icon={LayoutGrid} screen="StaffCages" color="#007B55" staffTheme={staffTheme} />
+            <ShortcutItem title="Mẫu chăm sóc" subtitle="Tra cứu đồ ăn và vận động" icon={Settings} screen="PetCareTemplate" color="#7A4100" staffTheme={staffTheme} />
+            <ShortcutItem title="Lịch chung" subtitle="Xem lịch theo tháng" icon={CalendarDays} screen="StaffScheduleCalendar" color="#FFAB00" staffTheme={staffTheme} />
+            <ShortcutItem title="Đánh giá" subtitle="Kiểm duyệt phản hồi khách" icon={Star} screen="StaffReviewList" color="#B78103" staffTheme={staffTheme} />
           </View>
         </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <NotificationModal
+        visible={showNotifications}
+        isDarkMode={isDarkMode}
+        notifications={notifications}
+        loading={notificationLoading}
+        onClose={() => setShowNotifications(false)}
+        onRefresh={() => void fetchNotifications()}
+        onMarkAllRead={() => void handleMarkAllRead()}
+        onArchiveAll={() => void handleArchiveAll()}
+        onDeleteOne={(id) => void handleDeleteNotification(id)}
+        onMarkOneRead={(id) => void handleMarkOneRead(id)}
+      />
     </SafeAreaView>
   );
 };
@@ -387,7 +497,38 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 11, fontWeight: '700', color: '#007B55' },
   eyeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { padding: 40, alignItems: 'center', backgroundColor: '#fff', borderRadius: 20 },
-  emptyText: { color: '#919EAB', fontSize: 14, fontWeight: '500' }
+  emptyText: { color: '#919EAB', fontSize: 14, fontWeight: '500' },
+  shortcutGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  shortcutCard: {
+    width: '48%',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    minHeight: 132,
+  },
+  shortcutIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  shortcutTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  shortcutSubtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
 });
 
 export default StaffHomeScreen;

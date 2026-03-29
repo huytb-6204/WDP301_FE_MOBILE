@@ -38,11 +38,21 @@ const StaffBoardingBookingListScreen = () => {
     }
   };
 
-  const filteredBookings = bookings.filter(b =>
-    b.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.phone.includes(searchQuery)
-  );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const filteredBookings = bookings.filter((b) => {
+    if (!normalizedSearch) return true;
+
+    const code = String(b.code || '').toLowerCase();
+    const fullName = String(b.fullName || b.userId?.fullName || '').toLowerCase();
+    const phone = String(b.phone || b.userId?.phone || '').toLowerCase();
+
+    return (
+      code.includes(normalizedSearch) ||
+      fullName.includes(normalizedSearch) ||
+      phone.includes(normalizedSearch)
+    );
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,7 +73,7 @@ const StaffBoardingBookingListScreen = () => {
         onPress={() => navigation.navigate('StaffCareDetail', { bookingId: item._id, booking: item })}
       >
         <View style={styles.cardHeader}>
-          <Text style={[styles.bookingCode, { color: staffTheme.textStrong }]}>Mã: {item.code}</Text>
+          <Text style={[styles.bookingCode, { color: staffTheme.textStrong }]}>Mã: {item.code || 'N/A'}</Text>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
@@ -72,7 +82,9 @@ const StaffBoardingBookingListScreen = () => {
         <View style={[styles.cardBody, { borderTopColor: staffTheme.border }]}> 
           <View style={styles.infoRow}>
             <UserIcon size={16} color={staffTheme.textMuted} />
-            <Text style={[styles.infoText, { color: staffTheme.textMuted }]}>{item.fullName} - {item.phone}</Text>
+            <Text style={[styles.infoText, { color: staffTheme.textMuted }]}>
+              {item.fullName || item.userId?.fullName || 'Chưa có tên'} - {item.phone || item.userId?.phone || 'Chưa có SĐT'}
+            </Text>
           </View>
           <View style={styles.infoRow}>
             <Calendar size={16} color={staffTheme.textMuted} />
@@ -82,7 +94,9 @@ const StaffBoardingBookingListScreen = () => {
           <View style={styles.petContainer}>
             {item.petIds?.map((pet: any, idx) => (
               <View key={idx} style={[styles.petBadge, { backgroundColor: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8' }]}> 
-                <Text style={[styles.petBadgeText, { color: staffTheme.textStrong }]}>{pet.name} ({pet.species === 'dog' ? 'Chó' : pet.species === 'cat' ? 'Mèo' : 'Thú cưng'})</Text>
+                <Text style={[styles.petBadgeText, { color: staffTheme.textStrong }]}>
+                  {(pet?.name || 'Thú cưng')} ({pet?.species === 'dog' ? 'Chó' : pet?.species === 'cat' ? 'Mèo' : pet?.type === 'dog' ? 'Chó' : pet?.type === 'cat' ? 'Mèo' : 'Thú cưng'})
+                </Text>
               </View>
             ))}
           </View>

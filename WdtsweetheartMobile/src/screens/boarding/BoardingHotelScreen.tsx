@@ -16,7 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Eye, Hotel, PawPrint, ShieldCheck, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, Hotel, PawPrint, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
@@ -136,7 +136,9 @@ const BoardingHotelScreen = () => {
   const [savingDetailPet, setSavingDetailPet] = useState(false);
   const [detailPetName, setDetailPetName] = useState('');
   const [detailPetType, setDetailPetType] = useState<'dog' | 'cat'>('dog');
+  const [detailPetGender, setDetailPetGender] = useState<'male' | 'female'>('male');
   const [detailPetWeight, setDetailPetWeight] = useState('');
+  const [detailPetAge, setDetailPetAge] = useState('');
   const [detailPetBreed, setDetailPetBreed] = useState('');
   const [detailPetColor, setDetailPetColor] = useState('');
   const [detailPetNotes, setDetailPetNotes] = useState('');
@@ -150,7 +152,9 @@ const BoardingHotelScreen = () => {
   const [paymentGateway, setPaymentGateway] = useState<BoardingGateway>('vnpay');
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState<'dog' | 'cat'>('dog');
+  const [petGender, setPetGender] = useState<'male' | 'female'>('male');
   const [petWeight, setPetWeight] = useState('');
+  const [petAge, setPetAge] = useState('');
   const [petBreed, setPetBreed] = useState('');
   const [petColor, setPetColor] = useState('');
   const [petNotes, setPetNotes] = useState('');
@@ -158,6 +162,8 @@ const BoardingHotelScreen = () => {
   const [petUploading, setPetUploading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [successPopupVisible, setSuccessPopupVisible] = useState(false);
+  const [successPopupMessage, setSuccessPopupMessage] = useState('');
 
   const stayDays = useMemo(() => getStayDays(checkInDate, checkOutDate), [checkInDate, checkOutDate]);
   const monthMeta = useMemo(() => {
@@ -268,7 +274,9 @@ const BoardingHotelScreen = () => {
     setDetailPet(pet);
     setDetailPetName(pet.name || '');
     setDetailPetType(pet.type === 'cat' ? 'cat' : 'dog');
+    setDetailPetGender(pet.gender === 'female' ? 'female' : 'male');
     setDetailPetWeight(String(pet.weight || ''));
+    setDetailPetAge(String(pet.age || ''));
     setDetailPetBreed(pet.breed || '');
     setDetailPetColor(pet.color || '');
     setDetailPetNotes(pet.notes || '');
@@ -280,7 +288,9 @@ const BoardingHotelScreen = () => {
     setSavingDetailPet(false);
     setDetailPetName('');
     setDetailPetType('dog');
+    setDetailPetGender('male');
     setDetailPetWeight('');
+    setDetailPetAge('');
     setDetailPetBreed('');
     setDetailPetColor('');
     setDetailPetNotes('');
@@ -308,7 +318,9 @@ const BoardingHotelScreen = () => {
       const res = await updateMyPet(detailPet._id, {
         name: normalizedName,
         type: detailPetType,
+        gender: detailPetGender,
         weight: normalizedWeight,
+        age: detailPetAge ? Number(detailPetAge) : undefined,
         breed: detailPetBreed.trim() || undefined,
         color: detailPetColor.trim() || undefined,
         notes: detailPetNotes.trim() || undefined,
@@ -317,7 +329,8 @@ const BoardingHotelScreen = () => {
 
       setPets((prev) => prev.map((item) => (item._id === detailPet._id ? res.data : item)));
       setDetailPet(res.data);
-      showToast('Đã cập nhật thú cưng');
+      setSuccessPopupMessage('Cập nhật thú cưng thành công!');
+      setSuccessPopupVisible(true);
     } catch (err) {
       Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể cập nhật thú cưng');
     } finally {
@@ -385,8 +398,10 @@ const BoardingHotelScreen = () => {
       const res = await createPet({
         name: petName.trim(),
         type: petType,
+        gender: petGender,
         breed: petBreed.trim() || undefined,
         weight: Number(petWeight),
+        age: petAge ? Number(petAge) : undefined,
         color: petColor.trim() || undefined,
         notes: petNotes.trim() || undefined,
         avatar: petAvatar || undefined,
@@ -395,15 +410,18 @@ const BoardingHotelScreen = () => {
       setSelectedPetIds((prev) => (prev.includes(res.data._id) ? prev : prev.concat(res.data._id)));
       setPetName('');
       setPetType('dog');
+      setPetGender('male');
       setPetWeight('');
+      setPetAge('');
       setPetBreed('');
       setPetColor('');
       setPetNotes('');
       setPetAvatar('');
       setShowCreatePetModal(false);
-      showToast('Đã thêm thú cưng');
+      setSuccessPopupMessage('Đã lưu thú cưng thành công!');
+      setSuccessPopupVisible(true);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể tạo thú cưng');
+      Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể tạo thú cưng');
     }
   };
 
@@ -739,7 +757,7 @@ const BoardingHotelScreen = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPetModal} animationType="slide" transparent>
+      <Modal visible={showPetModal && !detailPet} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Chọn thú cưng</Text>
@@ -895,20 +913,63 @@ const BoardingHotelScreen = () => {
               )}
             </TouchableOpacity>
             <Text style={styles.petImageHint}>Chạm để chụp ảnh hoặc chọn từ thư viện</Text>
-            <TextInput style={styles.input} value={petName} onChangeText={setPetName} placeholder="Tên thú cưng" />
-            <TextInput style={styles.input} value={petBreed} onChangeText={setPetBreed} placeholder="Giống thú cưng" />
-            <View style={styles.toggleRow}>
-              {(['dog', 'cat'] as const).map((item) => (
-                <TouchableOpacity key={item} style={[styles.toggleButton, petType === item && styles.toggleButtonActive]} onPress={() => setPetType(item)}>
-                  <Text style={[styles.toggleText, petType === item && styles.toggleTextActive]}>
-                    {item === 'dog' ? 'Chó' : 'Mèo'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            
+            <View style={{ gap: 12, marginTop: 4 }}>
+              <View>
+                <Text style={styles.label}>Tên thú cưng *</Text>
+                <TextInput style={[styles.input, { marginTop: 6 }]} value={petName} onChangeText={setPetName} placeholder="Tên thú cưng" />
+              </View>
+              
+              <View style={styles.row}>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Loài</Text>
+                  <View style={[styles.toggleRow, { marginTop: 6 }]}>
+                    {(['dog', 'cat'] as const).map((item) => (
+                      <TouchableOpacity key={item} style={[styles.toggleButton, petType === item && styles.toggleButtonActive]} onPress={() => setPetType(item)}>
+                        <Text style={[styles.toggleText, petType === item && styles.toggleTextActive]}>{item === 'dog' ? 'Chó' : 'Mèo'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Giới tính</Text>
+                  <View style={[styles.toggleRow, { marginTop: 6 }]}>
+                    {(['male', 'female'] as const).map((item) => (
+                      <TouchableOpacity key={item} style={[styles.toggleButton, petGender === item && styles.toggleButtonActive]} onPress={() => setPetGender(item)}>
+                        <Text style={[styles.toggleText, petGender === item && styles.toggleTextActive]}>{item === 'male' ? 'Đực' : 'Cái'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Cân nặng (kg) *</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petWeight} onChangeText={setPetWeight} placeholder="0.0" keyboardType="numeric" />
+                </View>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Tuổi</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petAge} onChangeText={setPetAge} placeholder="0" keyboardType="numeric" />
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Giống</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petBreed} onChangeText={setPetBreed} placeholder="VD: Poodle" />
+                </View>
+                <View style={styles.fieldHalf}>
+                  <Text style={styles.label}>Màu lông</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petColor} onChangeText={setPetColor} placeholder="VD: Vàng" />
+                </View>
+              </View>
+
+              <View>
+                <Text style={styles.label}>Ghi chú</Text>
+                <TextInput style={[styles.input, styles.textArea, { marginTop: 6 }]} value={petNotes} onChangeText={setPetNotes} placeholder="Tình trạng sức khỏe, thói quen..." multiline />
+              </View>
             </View>
-            <TextInput style={styles.input} value={petWeight} onChangeText={setPetWeight} keyboardType="numeric" placeholder="Cân nặng (kg) *" />
-            <TextInput style={styles.input} value={petColor} onChangeText={setPetColor} placeholder="Màu lông" />
-            <TextInput style={[styles.input, styles.textArea]} value={petNotes} onChangeText={setPetNotes} placeholder="Ghi chú thú cưng" multiline />
             <View style={styles.row}>
               <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowCreatePetModal(false)}>
                 <Text style={styles.secondaryButtonText}>Đóng</Text>
@@ -919,6 +980,54 @@ const BoardingHotelScreen = () => {
             </View>
           </View>
         </View>
+        {showImageActionModal && imageActionMode === 'create' && (
+          <View style={[StyleSheet.absoluteFill, styles.centerModalBackdrop, { backgroundColor: 'rgba(64,43,46,0.5)', zIndex: 100 }]}>
+            <View style={styles.imageActionModalCard}>
+              <View style={styles.imageActionIconWrap}>
+                <PawPrint size={24} color={colors.primary} />
+              </View>
+              <Text style={styles.modalTitle}>Ảnh thú cưng</Text>
+              <Text style={styles.imageActionSubtitle}>Chọn cách cập nhật ảnh cho thú cưng của bạn</Text>
+              <View style={styles.imageActionList}>
+                <TouchableOpacity
+                  style={styles.imageActionItem}
+                  onPress={() => {
+                    closeImageActionModal();
+                    void takePetPhoto(setPetAvatar, 'Đã thêm ảnh thú cưng');
+                  }}
+                >
+                  <Text style={styles.imageActionItemTitle}>Chụp ảnh</Text>
+                  <Text style={styles.imageActionItemText}>Dùng camera để chụp ảnh mới</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.imageActionItem}
+                  onPress={() => {
+                    closeImageActionModal();
+                    void pickPetImageFromLibrary(setPetAvatar, 'Đã thêm ảnh thú cưng');
+                  }}
+                >
+                  <Text style={styles.imageActionItemTitle}>Chọn từ thư viện</Text>
+                  <Text style={styles.imageActionItemText}>Lấy ảnh có sẵn trên thiết bị</Text>
+                </TouchableOpacity>
+                {petAvatar ? (
+                  <TouchableOpacity
+                    style={[styles.imageActionItem, styles.imageActionDanger]}
+                    onPress={() => {
+                      setPetAvatar('');
+                      closeImageActionModal();
+                    }}
+                  >
+                    <Text style={styles.imageActionDangerTitle}>Xóa ảnh hiện tại</Text>
+                    <Text style={styles.imageActionDangerText}>Gỡ ảnh thú cưng khỏi hồ sơ</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <TouchableOpacity style={styles.secondaryButton} onPress={closeImageActionModal}>
+                <Text style={styles.secondaryButtonText}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </Modal>
 
       <Modal visible={!!detailPet} animationType="fade" transparent onRequestClose={closePetDetail}>
@@ -948,52 +1057,64 @@ const BoardingHotelScreen = () => {
               )}
             </TouchableOpacity>
             <View style={styles.petDetailInfo}>
-              <Text style={styles.petDetailName}>Chỉnh sửa thông tin</Text>
-              <TextInput
-                style={styles.input}
-                value={detailPetName}
-                onChangeText={setDetailPetName}
-                placeholder="Tên thú cưng"
-              />
-              <View style={styles.toggleRow}>
-                {(['dog', 'cat'] as const).map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.toggleButton, detailPetType === item && styles.toggleButtonActive]}
-                    onPress={() => setDetailPetType(item)}
-                  >
-                    <Text style={[styles.toggleText, detailPetType === item && styles.toggleTextActive]}>
-                      {item === 'dog' ? 'Chó' : 'Mèo'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={styles.sectionTitle}>Thông tin thú cưng</Text>
+              
+              <View style={{ gap: 12, marginTop: 8 }}>
+                <View>
+                  <Text style={styles.label}>Tên thú cưng *</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetName} onChangeText={setDetailPetName} placeholder="Tên thú cưng" />
+                </View>
+                
+                <View style={styles.row}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Loài</Text>
+                    <View style={[styles.toggleRow, { marginTop: 6 }]}>
+                      {(['dog', 'cat'] as const).map((item) => (
+                        <TouchableOpacity key={item} style={[styles.toggleButton, detailPetType === item && styles.toggleButtonActive]} onPress={() => setDetailPetType(item)}>
+                          <Text style={[styles.toggleText, detailPetType === item && styles.toggleTextActive]}>{item === 'dog' ? 'Chó' : 'Mèo'}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Giới tính</Text>
+                    <View style={[styles.toggleRow, { marginTop: 6 }]}>
+                      {(['male', 'female'] as const).map((item) => (
+                        <TouchableOpacity key={item} style={[styles.toggleButton, detailPetGender === item && styles.toggleButtonActive]} onPress={() => setDetailPetGender(item)}>
+                          <Text style={[styles.toggleText, detailPetGender === item && styles.toggleTextActive]}>{item === 'male' ? 'Đực' : 'Cái'}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Cân nặng (kg) *</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetWeight} onChangeText={setDetailPetWeight} placeholder="0.0" keyboardType="numeric" />
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Tuổi</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetAge} onChangeText={setDetailPetAge} placeholder="0" keyboardType="numeric" />
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Giống</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetBreed} onChangeText={setDetailPetBreed} placeholder="VD: Poodle" />
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>Màu lông</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetColor} onChangeText={setDetailPetColor} placeholder="VD: Vàng" />
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={styles.label}>Ghi chú</Text>
+                  <TextInput style={[styles.input, styles.textArea, { marginTop: 6 }]} value={detailPetNotes} onChangeText={setDetailPetNotes} placeholder="Tình trạng sức khỏe..." multiline />
+                </View>
               </View>
-              <TextInput
-                style={styles.input}
-                value={detailPetWeight}
-                onChangeText={setDetailPetWeight}
-                placeholder="Cân nặng (kg)"
-                keyboardType="numeric"
-              />
-              <TextInput
-                style={styles.input}
-                value={detailPetBreed}
-                onChangeText={setDetailPetBreed}
-                placeholder="Giống thú cưng"
-              />
-              <TextInput
-                style={styles.input}
-                value={detailPetColor}
-                onChangeText={setDetailPetColor}
-                placeholder="Màu lông"
-              />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={detailPetNotes}
-                onChangeText={setDetailPetNotes}
-                placeholder="Ghi chú"
-                multiline
-              />
             </View>
             <View style={styles.row}>
               <TouchableOpacity style={styles.secondaryButton} onPress={closePetDetail} disabled={savingDetailPet}>
@@ -1005,58 +1126,66 @@ const BoardingHotelScreen = () => {
             </View>
           </View>
         </View>
-      </Modal>
-
-      <Modal visible={showImageActionModal} animationType="fade" transparent onRequestClose={closeImageActionModal}>
-        <View style={styles.centerModalBackdrop}>
-          <View style={styles.imageActionModalCard}>
-            <View style={styles.imageActionIconWrap}>
-              <PawPrint size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.modalTitle}>Ảnh thú cưng</Text>
-            <Text style={styles.imageActionSubtitle}>Chọn cách cập nhật ảnh cho thú cưng của bạn</Text>
-            <View style={styles.imageActionList}>
-              <TouchableOpacity
-                style={styles.imageActionItem}
-                onPress={() => {
-                  closeImageActionModal();
-                  void takePetPhoto(
-                    currentImageActionSetter,
-                    imageActionMode === 'detail' ? 'Đã cập nhật ảnh thú cưng' : 'Đã thêm ảnh thú cưng'
-                  );
-                }}
-              >
-                <Text style={styles.imageActionItemTitle}>Chụp ảnh</Text>
-                <Text style={styles.imageActionItemText}>Dùng camera để chụp ảnh mới</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.imageActionItem}
-                onPress={() => {
-                  closeImageActionModal();
-                  void pickPetImageFromLibrary(
-                    currentImageActionSetter,
-                    imageActionMode === 'detail' ? 'Đã cập nhật ảnh thú cưng' : 'Đã thêm ảnh thú cưng'
-                  );
-                }}
-              >
-                <Text style={styles.imageActionItemTitle}>Chọn từ thư viện</Text>
-                <Text style={styles.imageActionItemText}>Lấy ảnh có sẵn trên thiết bị</Text>
-              </TouchableOpacity>
-              {currentImageActionAvatar ? (
+        {showImageActionModal && imageActionMode === 'detail' && (
+          <View style={[StyleSheet.absoluteFill, styles.centerModalBackdrop, { backgroundColor: 'rgba(64,43,46,0.6)', zIndex: 100 }]}>
+            <View style={styles.imageActionModalCard}>
+              <View style={styles.imageActionIconWrap}>
+                <PawPrint size={24} color={colors.primary} />
+              </View>
+              <Text style={styles.modalTitle}>Ảnh thú cưng</Text>
+              <Text style={styles.imageActionSubtitle}>Chọn cách cập nhật ảnh cho thú cưng của bạn</Text>
+              <View style={styles.imageActionList}>
                 <TouchableOpacity
-                  style={[styles.imageActionItem, styles.imageActionDanger]}
+                  style={styles.imageActionItem}
                   onPress={() => {
-                    currentImageActionSetter('');
                     closeImageActionModal();
+                    void takePetPhoto(setDetailPetAvatar, 'Đã cập nhật ảnh thú cưng');
                   }}
                 >
-                  <Text style={styles.imageActionDangerTitle}>Xóa ảnh hiện tại</Text>
-                  <Text style={styles.imageActionDangerText}>Gỡ ảnh thú cưng khỏi hồ sơ</Text>
+                  <Text style={styles.imageActionItemTitle}>Chụp ảnh</Text>
+                  <Text style={styles.imageActionItemText}>Dùng camera để chụp ảnh mới</Text>
                 </TouchableOpacity>
-              ) : null}
+                <TouchableOpacity
+                  style={styles.imageActionItem}
+                  onPress={() => {
+                    closeImageActionModal();
+                    void pickPetImageFromLibrary(setDetailPetAvatar, 'Đã cập nhật ảnh thú cưng');
+                  }}
+                >
+                  <Text style={styles.imageActionItemTitle}>Chọn từ thư viện</Text>
+                  <Text style={styles.imageActionItemText}>Lấy ảnh có sẵn trên thiết bị</Text>
+                </TouchableOpacity>
+                {detailPetAvatar ? (
+                  <TouchableOpacity
+                    style={[styles.imageActionItem, styles.imageActionDanger]}
+                    onPress={() => {
+                      setDetailPetAvatar('');
+                      closeImageActionModal();
+                    }}
+                  >
+                    <Text style={styles.imageActionDangerTitle}>Xóa ảnh hiện tại</Text>
+                    <Text style={styles.imageActionDangerText}>Gỡ ảnh thú cưng khỏi hồ sơ</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <TouchableOpacity style={styles.secondaryButton} onPress={closeImageActionModal}>
+                <Text style={styles.secondaryButtonText}>Đóng</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.secondaryButton} onPress={closeImageActionModal}>
-              <Text style={styles.secondaryButtonText}>Đóng</Text>
+          </View>
+        )}
+      </Modal>
+
+      <Modal visible={successPopupVisible} animationType="fade" transparent onRequestClose={() => setSuccessPopupVisible(false)}>
+        <View style={styles.successModalBackdrop}>
+          <View style={styles.successModalCard}>
+            <View style={styles.successIconWrap}>
+              <Check size={32} color="#fff" />
+            </View>
+            <Text style={styles.successModalTitle}>Thành công</Text>
+            <Text style={styles.successModalMessage}>{successPopupMessage}</Text>
+            <TouchableOpacity style={styles.successModalButton} onPress={() => setSuccessPopupVisible(false)}>
+              <Text style={styles.successModalButtonText}>Tuyệt vời</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1520,6 +1649,61 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     lineHeight: 18,
+  },
+  successModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  successModalCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  successIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#34C759',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  successModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.secondary,
+    marginBottom: 8,
+  },
+  successModalMessage: {
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  successModalButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successModalButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
 

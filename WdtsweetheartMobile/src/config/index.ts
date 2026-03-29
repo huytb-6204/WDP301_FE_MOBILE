@@ -33,8 +33,11 @@ const buildAutoApiBaseUrl = () => {
 
   const metroHost = readMetroHost();
 
-  // On Android emulator, always use the special host IP to reach the dev machine.
-  // This avoids cases where metroHost is a LAN IP that the emulator can't resolve.
+  if (metroHost && metroHost !== 'localhost' && metroHost !== '127.0.0.1') {
+    return `http://${metroHost}:${API_PORT}`;
+  }
+
+  // On Android emulator or when running locally on Android, use the special host IP.
   if (Platform.OS === 'android') {
     return `http://10.0.2.2:${API_PORT}`;
   }

@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, FlatList, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { ArrowLeft, Search, Plus, Building2, UserCircle } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../../context/ThemeContext';
 import { colors } from '../../../theme/colors';
+import { getStaffThemeColors } from '../../../theme/staffTheme';
 import { getDepartments, Department } from '../../../services/api/department';
 
 const DepartmentListScreen = () => {
   const navigation = useNavigation();
+  const { isDarkMode } = useTheme();
+  const staffTheme = getStaffThemeColors(isDarkMode);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,19 +33,19 @@ const DepartmentListScreen = () => {
     }
   };
 
-  const filteredDepartments = departments.filter(d => 
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredDepartments = departments.filter(d =>
+    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (d.managerId?.fullName && d.managerId.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const renderDepartmentItem = ({ item }: { item: Department }) => (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: staffTheme.surface, shadowColor: staffTheme.shadow, shadowOpacity: isDarkMode ? 0 : 0.05 }]}>
       <View style={styles.cardHeader}>
-        <View style={styles.iconWrap}>
+        <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
           <Building2 size={20} color={colors.primary} />
         </View>
         <View style={styles.cardInfo}>
-          <Text style={styles.itemTitle}>{item.name}</Text>
+          <Text style={[styles.itemTitle, { color: staffTheme.textStrong }]}>{item.name}</Text>
           <View style={[styles.statusBadge, { backgroundColor: item.status === 'active' ? '#E7F5EF' : '#FFE7E6' }]}>
             <Text style={[styles.statusText, { color: item.status === 'active' ? '#007B55' : '#FF4842' }]}>
               {item.status === 'active' ? 'Hoạt động' : 'Ngừng'}
@@ -49,34 +53,35 @@ const DepartmentListScreen = () => {
           </View>
         </View>
       </View>
-      
-      <View style={styles.cardBody}>
+
+      <View style={[styles.cardBody, { borderTopColor: staffTheme.border }]}>
         <View style={styles.infoRow}>
-          <UserCircle size={16} color="#637381" />
-          <Text style={styles.infoText}>Trưởng phòng: <Text style={{fontWeight: '600'}}>{item.managerId?.fullName || 'Chưa có'}</Text></Text>
+          <UserCircle size={16} color={staffTheme.textMuted} />
+          <Text style={[styles.infoText, { color: staffTheme.textMuted }]}>Trưởng phòng: <Text style={[styles.managerText, { color: staffTheme.textStrong }]}>{item.managerId?.fullName || 'Chưa có'}</Text></Text>
         </View>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: staffTheme.screen }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, { backgroundColor: staffTheme.surface, borderBottomColor: staffTheme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={24} color="#111827" />
+          <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Phòng ban</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Phòng ban</Text>
         <TouchableOpacity style={styles.addBtn}>
           <Plus size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#919EAB" />
-        <TextInput 
-          placeholder="Tìm kiếm phòng ban..." 
-          style={styles.searchInput}
+      <View style={[styles.searchContainer, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}> 
+        <Search size={20} color={staffTheme.textSoft} />
+        <TextInput
+          placeholder="Tìm kiếm phòng ban..."
+          placeholderTextColor={staffTheme.textSoft}
+          style={[styles.searchInput, { color: staffTheme.text }]}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -94,7 +99,7 @@ const DepartmentListScreen = () => {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>Chưa có phòng ban nào</Text>
+              <Text style={[styles.emptyText, { color: staffTheme.textSoft }]}>Chưa có phòng ban nào</Text>
             </View>
           }
         />
@@ -105,11 +110,11 @@ const DepartmentListScreen = () => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
@@ -131,6 +136,7 @@ const styles = StyleSheet.create({
   cardBody: { paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F4F6F8' },
   infoRow: { flexDirection: 'row', alignItems: 'center' },
   infoText: { fontSize: 14, color: '#637381', marginLeft: 8, fontWeight: '400' },
+  managerText: { fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { padding: 40, alignItems: 'center' },
   emptyText: { color: '#919EAB', fontSize: 15, fontWeight: '600' }

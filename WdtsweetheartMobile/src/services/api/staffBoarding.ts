@@ -53,7 +53,7 @@ export const getStaffBoardingBookings = async (params?: { limit?: number; page?:
 
 export const getCages = async (params?: { limit?: number; page?: number }) => {
   const query = new URLSearchParams(params as any).toString();
-  const data = await apiGet<any>(`/api/v1/admin/cages?${query}`);
+  const data = await apiGet<any>(`/api/v1/admin/boarding-cage?${query}`);
   return data?.recordList || data || [];
 };
 

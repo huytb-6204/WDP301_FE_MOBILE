@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, FlatList, ActivityIndicator, TextInput, Alert } from 'react-native';
-import { ArrowLeft, Search, Plus, Calendar, Clock, User as UserIcon } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Calendar, User as UserIcon } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTheme } from '../../../context/ThemeContext';
 import { colors } from '../../../theme/colors';
+import { getStaffThemeColors } from '../../../theme/staffTheme';
 import { getStaffBoardingBookings, BoardingBooking } from '../../../services/api/staffBoarding';
 import { StaffStackParamList } from '../../../navigation/StaffNavigator';
 import dayjs from 'dayjs';
@@ -13,6 +15,8 @@ type NavigationProp = NativeStackNavigationProp<StaffStackParamList, 'StaffBoard
 
 const StaffBoardingBookingListScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { isDarkMode } = useTheme();
+  const staffTheme = getStaffThemeColors(isDarkMode);
   const [bookings, setBookings] = useState<BoardingBooking[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,8 +38,8 @@ const StaffBoardingBookingListScreen = () => {
     }
   };
 
-  const filteredBookings = bookings.filter(b => 
-    b.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredBookings = bookings.filter(b =>
+    b.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.phone.includes(searchQuery)
   );
@@ -45,40 +49,40 @@ const StaffBoardingBookingListScreen = () => {
       case 'pending': return { bg: '#FFF7CD', color: '#B78103', label: 'Chờ xác nhận' };
       case 'confirmed': return { bg: '#D0F2FF', color: '#0C53B7', label: 'Đã xác nhận' };
       case 'checked_in': return { bg: '#C8FACD', color: '#007B55', label: 'Check-in' };
-      case 'checked_out': return { bg: '#F4F6F8', color: '#637381', label: 'Check-out' };
+      case 'checked_out': return { bg: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8', color: staffTheme.textMuted, label: 'Check-out' };
       case 'cancelled': return { bg: '#FFE7E6', color: '#FF4842', label: 'Đã hủy' };
-      default: return { bg: '#F4F6F8', color: '#637381', label: status };
+      default: return { bg: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8', color: staffTheme.textMuted, label: status };
     }
   };
 
   const renderBookingItem = ({ item }: { item: BoardingBooking }) => {
     const status = getStatusColor(item.boardingStatus);
     return (
-      <TouchableOpacity 
-        style={styles.card}
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: staffTheme.surface, shadowColor: staffTheme.shadow, shadowOpacity: isDarkMode ? 0 : 0.05 }]}
         onPress={() => navigation.navigate('StaffCareDetail', { bookingId: item._id, booking: item })}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.bookingCode}>Mã: {item.code}</Text>
+          <Text style={[styles.bookingCode, { color: staffTheme.textStrong }]}>Mã: {item.code}</Text>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
         </View>
 
-        <View style={styles.cardBody}>
+        <View style={[styles.cardBody, { borderTopColor: staffTheme.border }]}> 
           <View style={styles.infoRow}>
-            <UserIcon size={16} color="#637381" />
-            <Text style={styles.infoText}>{item.fullName} - {item.phone}</Text>
+            <UserIcon size={16} color={staffTheme.textMuted} />
+            <Text style={[styles.infoText, { color: staffTheme.textMuted }]}>{item.fullName} - {item.phone}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Calendar size={16} color="#637381" />
-            <Text style={styles.infoText}>{dayjs(item.checkInDate).format('DD/MM/YYYY')} - {dayjs(item.checkOutDate).format('DD/MM/YYYY')}</Text>
+            <Calendar size={16} color={staffTheme.textMuted} />
+            <Text style={[styles.infoText, { color: staffTheme.textMuted }]}>{dayjs(item.checkInDate).format('DD/MM/YYYY')} - {dayjs(item.checkOutDate).format('DD/MM/YYYY')}</Text>
           </View>
-          
+
           <View style={styles.petContainer}>
             {item.petIds?.map((pet: any, idx) => (
-              <View key={idx} style={styles.petBadge}>
-                <Text style={styles.petBadgeText}>{pet.name} ({pet.species === 'dog' ? 'Chó' : pet.species === 'cat' ? 'Mèo' : 'Thú cưng'})</Text>
+              <View key={idx} style={[styles.petBadge, { backgroundColor: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8' }]}> 
+                <Text style={[styles.petBadgeText, { color: staffTheme.textStrong }]}>{pet.name} ({pet.species === 'dog' ? 'Chó' : pet.species === 'cat' ? 'Mèo' : 'Thú cưng'})</Text>
               </View>
             ))}
           </View>
@@ -88,14 +92,14 @@ const StaffBoardingBookingListScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: staffTheme.screen }]}> 
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, { backgroundColor: staffTheme.surface, borderBottomColor: staffTheme.border }]}> 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={24} color="#111827" />
+          <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đặt chỗ khách sạn</Text>
-        <TouchableOpacity 
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Đặt chỗ khách sạn</Text>
+        <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate('StaffBoardingBookingCreate')}
         >
@@ -103,11 +107,12 @@ const StaffBoardingBookingListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#919EAB" />
-        <TextInput 
-          placeholder="Tìm theo mã, tên, SĐT..." 
-          style={styles.searchInput}
+      <View style={[styles.searchContainer, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}> 
+        <Search size={20} color={staffTheme.textSoft} />
+        <TextInput
+          placeholder="Tìm theo mã, tên, SĐT..."
+          placeholderTextColor={staffTheme.textSoft}
+          style={[styles.searchInput, { color: staffTheme.text }]}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -125,7 +130,7 @@ const StaffBoardingBookingListScreen = () => {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>Chưa có booking nào</Text>
+              <Text style={[styles.emptyText, { color: staffTheme.textSoft }]}>Chưa có booking nào</Text>
             </View>
           }
         />
@@ -136,11 +141,11 @@ const StaffBoardingBookingListScreen = () => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,

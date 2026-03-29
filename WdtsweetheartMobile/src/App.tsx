@@ -3,15 +3,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './navigation';
 import { AuthProvider } from './context/AuthContext';
 import { NotifierProvider } from './context/NotifierContext';
-
+import { ThemeProvider } from './context/ThemeContext';
 const App = () => {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NotifierProvider>
-          <RootNavigator />
-        </NotifierProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotifierProvider>
+            <RootNavigator />
+          </NotifierProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 };

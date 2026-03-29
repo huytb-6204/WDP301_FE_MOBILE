@@ -29,6 +29,18 @@ const StaffCareDetailScreen = () => {
     const [loading, setLoading] = useState(false);
     const [uploadingIndex, setUploadingIndex] = useState<{type: string, index: number} | null>(null);
 
+    const silentSave = async (payloadFeeding: FeedingItem[], payloadExercise: ExerciseItem[]) => {
+        try {
+            await updateStaffCareSchedule(bookingId, {
+                feedingSchedule: payloadFeeding,
+                exerciseSchedule: payloadExercise,
+                careDate: new Date().toISOString().split('T')[0]
+            });
+        } catch (error) {
+            console.error('Auto save failed', error);
+        }
+    };
+
     const handlePickImage = async (type: 'feeding' | 'exercise' | 'diary', index: number) => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -64,6 +76,7 @@ const StaffCareDetailScreen = () => {
                         };
                         setFeeding(newList);
                         showToast('Đã thêm minh chứng bữa ăn', 'success');
+                        silentSave(newList, exercise);
                     } else if (type === 'exercise') {
                         const newList = [...exercise];
                         const currentProof = newList[index].proofMedia || [];
@@ -74,6 +87,7 @@ const StaffCareDetailScreen = () => {
                         };
                         setExercise(newList);
                         showToast('Đã thêm minh chứng vận động', 'success');
+                        silentSave(feeding, newList);
                     } else if (type === 'diary') {
                         showToast('Đã tải ảnh lên thành công', 'success');
                     }
@@ -96,12 +110,14 @@ const StaffCareDetailScreen = () => {
             currentProof.splice(proofIndex, 1);
             newList[itemIndex] = { ...newList[itemIndex], proofMedia: currentProof };
             setFeeding(newList);
+            silentSave(newList, exercise);
         } else {
             const newList = [...exercise];
             const currentProof = [...(newList[itemIndex].proofMedia || [])];
             currentProof.splice(proofIndex, 1);
             newList[itemIndex] = { ...newList[itemIndex], proofMedia: currentProof };
             setExercise(newList);
+            silentSave(feeding, newList);
         }
         showToast('Đã xóa minh chứng');
     };
@@ -111,10 +127,12 @@ const StaffCareDetailScreen = () => {
             const newList = [...feeding];
             newList[index] = { ...newList[index], status };
             setFeeding(newList);
+            silentSave(newList, exercise);
         } else {
             const newList = [...exercise];
             newList[index] = { ...newList[index], status };
             setExercise(newList);
+            silentSave(feeding, newList);
         }
     };
 

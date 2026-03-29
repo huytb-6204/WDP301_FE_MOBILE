@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiPatch, ApiResponse } from './client';
+import { apiGet, apiPatch } from './client';
 
 export type FeedingItem = {
   _id?: string;
@@ -43,6 +43,15 @@ export type BoardingBooking = {
     exerciseCount: number;
     hasMyAssigned: boolean;
   };
+  userId?: any;
+  actualCheckInDate?: string;
+  actualCheckOutDate?: string;
+  notes?: string;
+  specialCare?: string;
+  total?: number;
+  paidAmount?: number;
+  depositAmount?: number;
+  numberOfDays?: number;
 };
 
 export const getStaffBoardingBookings = async (params?: { limit?: number; page?: number }) => {
@@ -53,7 +62,7 @@ export const getStaffBoardingBookings = async (params?: { limit?: number; page?:
 
 export const getCages = async (params?: { limit?: number; page?: number }) => {
   const query = new URLSearchParams(params as any).toString();
-  const data = await apiGet<any>(`/api/v1/admin/cages?${query}`);
+  const data = await apiGet<any>(`/api/v1/admin/boarding-cage?${query}`);
   return data?.recordList || data || [];
 };
 
@@ -63,12 +72,22 @@ export const updateStaffCareSchedule = async (id: string, payload: any) => {
   return res.data;
 };
 
+export const getStaffBoardingBookingDetail = async (id: string) => {
+  const data = await apiGet<any>(`/api/v1/admin/boarding-booking/${id}`);
+  return data as BoardingBooking;
+};
+
+export const updateStaffBoardingBookingStatus = async (id: string, boardingStatus: string) => {
+  const res = await apiPatch<any>(`/api/v1/admin/boarding-booking/${id}/status`, { boardingStatus });
+  return res.data;
+};
+
+export const updateStaffBoardingPaymentStatus = async (id: string, paymentStatus: string) => {
+  const res = await apiPatch<any>(`/api/v1/admin/boarding-booking/${id}/payment-status`, { paymentStatus });
+  return res.data;
+};
+
 export const getStaffMeData = async () => {
     const data = await apiGet<any>('/api/v1/admin/auth/me');
     return data;
-};
-
-export const getBoardingStats = async (date: string) => {
-    const res = await apiGet<any>(`/api/v1/admin/dashboard/boarding-stats?date=${date}`);
-    return res;
 };

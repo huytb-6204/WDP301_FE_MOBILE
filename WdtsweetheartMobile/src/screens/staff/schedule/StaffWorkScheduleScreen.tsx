@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { colors } from '../../../theme/colors';
-import { getMySchedules, checkInSchedule, checkOutSchedule, WorkSchedule } from '../../../services/api/workSchedule';
+import { getMySchedules, WorkSchedule } from '../../../services/api/workSchedule';
 import StaffDatePickerModal from '../../../components/common/StaffDatePickerModal';
 
 dayjs.locale('vi');
@@ -27,7 +27,6 @@ const StaffWorkScheduleScreen = () => {
   const [viewDate, setViewDate] = useState(dayjs());
   const [loading, setLoading] = useState(false);
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const startDate = viewDate.startOf('week').format("YYYY-MM-DD");
@@ -70,32 +69,6 @@ const StaffWorkScheduleScreen = () => {
     }
   };
 
-  const handleCheckIn = async (id: string) => {
-    setActionLoading(id);
-    try {
-      await checkInSchedule(id);
-      Alert.alert('Thành công', 'Đã check-in thành công!');
-      fetchSchedules();
-    } catch (error) {
-      Alert.alert('Lỗi', 'Không thể check-in');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleCheckOut = async (id: string) => {
-    setActionLoading(id);
-    try {
-      await checkOutSchedule(id);
-      Alert.alert('Thành công', 'Đã check-out thành công!');
-      fetchSchedules();
-    } catch (error) {
-      Alert.alert('Lỗi', 'Không thể check-out');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const renderDayItem = (day: dayjs.Dayjs) => {
     const shift = schedules.find(s => dayjs(s.date).isSame(day, 'day'));
     const isToday = day.isSame(dayjs(), 'day');
@@ -119,38 +92,6 @@ const StaffWorkScheduleScreen = () => {
                 <Text style={[styles.statusText, { color: statusStyle?.color }]}>{statusStyle?.label}</Text>
               </View>
 
-              {isToday && (
-                <View style={styles.actionRow}>
-                  {shift.status === 'scheduled' && (
-                    <TouchableOpacity 
-                      style={styles.checkBtn} 
-                      onPress={() => handleCheckIn(shift._id)}
-                      disabled={actionLoading === shift._id}
-                    >
-                      {actionLoading === shift._id ? <ActivityIndicator size="small" color="#fff" /> : (
-                        <>
-                          <LogIn size={16} color="#fff" />
-                          <Text style={styles.checkBtnText}>Check-in</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  {shift.status === 'checked-in' && (
-                    <TouchableOpacity 
-                      style={[styles.checkBtn, { backgroundColor: '#FFAB00' }]} 
-                      onPress={() => handleCheckOut(shift._id)}
-                      disabled={actionLoading === shift._id}
-                    >
-                      {actionLoading === shift._id ? <ActivityIndicator size="small" color="#fff" /> : (
-                        <>
-                          <LogOut size={16} color="#fff" />
-                          <Text style={styles.checkBtnText}>Check-out</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
             </View>
           ) : (
             <Text style={styles.offText}>Nghỉ</Text>

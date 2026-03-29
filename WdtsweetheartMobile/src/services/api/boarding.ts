@@ -137,3 +137,14 @@ export const checkBoardingPaymentStatus = async (id: string) => {
     paymentStatus: res.booking?.paymentStatus || 'unpaid',
   };
 };
+
+export const createBoardingCageReview = async (
+  id: string,
+  payload: { rating: number; comment: string; fullName?: string }
+) => {
+  const res = await apiPostRaw<unknown, typeof payload>(`${CLIENT_CAGE_BASE}/boarding-cages/${id}/reviews`, payload);
+  return {
+    message: readMessage(res, 'Danh gia thanh cong'),
+    data: readObject<any>(res),
+  };
+};

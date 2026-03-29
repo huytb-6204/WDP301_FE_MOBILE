@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, TouchableOpacity, StatusBar,
@@ -6,7 +6,9 @@ import {
 } from 'react-native';
 import { ArrowLeft, Search, LayoutGrid, CheckCircle, XCircle, Clock } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../../context/ThemeContext';
 import { colors } from '../../../theme/colors';
+import { getStaffThemeColors } from '../../../theme/staffTheme';
 import { getCages } from '../../../services/api/staffBoarding';
 
 type Cage = {
@@ -21,6 +23,8 @@ type Cage = {
 
 const StaffCagesScreen = () => {
   const navigation = useNavigation();
+  const { isDarkMode } = useTheme();
+  const staffTheme = getStaffThemeColors(isDarkMode);
   const [cages, setCages] = useState<Cage[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +52,7 @@ const StaffCagesScreen = () => {
       case 'available': return { bg: '#E7F5EF', color: '#007B55', label: 'Trống', icon: CheckCircle };
       case 'occupied': return { bg: '#D0F2FF', color: '#0C53B7', label: 'Đang dùng', icon: Clock };
       case 'maintenance': return { bg: '#FFE7E6', color: '#FF4842', label: 'Bảo trì', icon: XCircle };
-      default: return { bg: '#F4F6F8', color: '#637381', label: status, icon: Clock };
+      default: return { bg: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8', color: staffTheme.textMuted, label: status, icon: Clock };
     }
   };
 
@@ -79,14 +83,14 @@ const StaffCagesScreen = () => {
     const StatusIcon = statusInfo.icon;
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: staffTheme.surface, shadowColor: staffTheme.shadow, shadowOpacity: isDarkMode ? 0 : 0.1 }]}> 
         <View style={styles.cardTop}>
           <View style={styles.cageIconWrap}>
             <LayoutGrid size={22} color={colors.primary} />
           </View>
           <View style={styles.cageInfo}>
-            <Text style={styles.cageCode}>{item.cageCode}</Text>
-            <Text style={styles.cageMeta}>
+            <Text style={[styles.cageCode, { color: staffTheme.textStrong }]}>{item.cageCode}</Text>
+            <Text style={[styles.cageMeta, { color: staffTheme.textMuted }]}> 
               {getSizeLabel(item.size)} • {item.petType === 'dog' ? 'Chó' : item.petType === 'cat' ? 'Mèo' : 'Đa loài'}
             </Text>
           </View>
@@ -96,8 +100,8 @@ const StaffCagesScreen = () => {
           </View>
         </View>
         {item.currentBookingId && (
-          <View style={styles.occupiedInfo}>
-            <Text style={styles.occupiedLabel}>Đang ở: {item.currentBookingId.code || 'N/A'}</Text>
+          <View style={[styles.occupiedInfo, { borderTopColor: staffTheme.border }]}>
+            <Text style={[styles.occupiedLabel, { color: staffTheme.textMuted }]}>Đang ở: {item.currentBookingId.code || 'N/A'}</Text>
           </View>
         )}
       </View>
@@ -105,18 +109,17 @@ const StaffCagesScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: staffTheme.screen }]}> 
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, { backgroundColor: staffTheme.surface, borderBottomColor: staffTheme.border }]}> 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={24} color="#111827" />
+          <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chuồng nội trú</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Chuồng nội trú</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      {/* Stats row */}
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, { backgroundColor: staffTheme.surface, borderBottomColor: staffTheme.border }]}> 
         <View style={[styles.statCard, { backgroundColor: '#E7F5EF' }]}>
           <Text style={[styles.statNum, { color: '#007B55' }]}>{stats.available}</Text>
           <Text style={[styles.statLabel, { color: '#007B55' }]}>Trống</Text>
@@ -132,11 +135,12 @@ const StaffCagesScreen = () => {
       </View>
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBar}>
-          <Search size={18} color="#919EAB" />
+        <View style={[styles.searchBar, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}> 
+          <Search size={18} color={staffTheme.textSoft} />
           <TextInput
             placeholder="Tìm theo mã chuồng..."
-            style={styles.searchInput}
+            placeholderTextColor={staffTheme.textSoft}
+            style={[styles.searchInput, { color: staffTheme.text }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -147,10 +151,14 @@ const StaffCagesScreen = () => {
         {(['all', 'available', 'occupied', 'maintenance'] as const).map(f => (
           <TouchableOpacity
             key={f}
-            style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+            style={[
+              styles.filterBtn,
+              { backgroundColor: isDarkMode ? staffTheme.surfaceMuted : '#F4F6F8' },
+              filter === f && styles.filterBtnActive,
+            ]}
             onPress={() => setFilter(f)}
           >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+            <Text style={[styles.filterText, { color: staffTheme.textMuted }, filter === f && styles.filterTextActive]}>
               {f === 'all' ? 'Tất cả' : f === 'available' ? 'Trống' : f === 'occupied' ? 'Đang dùng' : 'Bảo trì'}
             </Text>
           </TouchableOpacity>
@@ -160,7 +168,7 @@ const StaffCagesScreen = () => {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Đang tải...</Text>
+          <Text style={[styles.loadingText, { color: staffTheme.textMuted }]}>Đang tải...</Text>
         </View>
       ) : (
         <FlatList
@@ -172,8 +180,8 @@ const StaffCagesScreen = () => {
           columnWrapperStyle={styles.columnWrapper}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <LayoutGrid size={64} color="#DFE3E8" strokeWidth={1} />
-              <Text style={styles.emptyText}>Không tìm thấy chuồng nào</Text>
+              <LayoutGrid size={64} color={staffTheme.textSoft} strokeWidth={1} />
+              <Text style={[styles.emptyText, { color: staffTheme.textSoft }]}>Không tìm thấy chuồng nào</Text>
             </View>
           }
         />

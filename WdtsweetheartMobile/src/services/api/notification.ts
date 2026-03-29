@@ -1,55 +1,47 @@
-import { apiGetRaw, apiPatch, apiDelete } from './client';
+import { apiDelete, apiGet, apiPatch } from './client';
 
-export type NotificationStatus = 'read' | 'unread' | 'archived';
-
-export interface Notification {
+export type StaffNotification = {
   _id: string;
-  title: string;
-  content: string;
-  status: NotificationStatus;
+  title?: string;
+  message?: string;
+  content?: string;
   type?: string;
-  category?: string;
+  status?: 'unread' | 'read' | 'archived' | string;
   senderId?: {
-    fullName: string;
+    _id?: string;
+    fullName?: string;
     avatar?: string;
   };
-  createdAt: string;
-}
-
-const BASE_PATH = '/api/v1/admin/notifications';
-
-export const getNotifications = async (status?: NotificationStatus) => {
-  const query = status ? `?status=${status}` : '';
-  const res = await apiGetRaw<any>(`${BASE_PATH}${query}`);
-  return res.data as Notification[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export const markAsRead = async (id: string) => {
-  const res = await apiPatch(`${BASE_PATH}/mark-read/${id}`, {});
-  return res.success;
+export const getNotifications = async (status?: string) => {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const data = await apiGet<StaffNotification[]>(`/api/v1/admin/notifications${query}`);
+  return Array.isArray(data) ? data : [];
 };
 
-export const markAllAsRead = async () => {
-  const res = await apiPatch(`${BASE_PATH}/mark-read/all`, {});
-  return res.success;
+export const markNotificationRead = async (id: string) => {
+  return apiPatch(`/api/v1/admin/notifications/mark-read/${id}`, {});
+};
+
+export const markAllNotificationsRead = async () => {
+  return apiPatch('/api/v1/admin/notifications/mark-read/all', {});
 };
 
 export const archiveNotification = async (id: string) => {
-  const res = await apiPatch(`${BASE_PATH}/archive/${id}`, {});
-  return res.success;
+  return apiPatch(`/api/v1/admin/notifications/archive/${id}`, {});
 };
 
 export const archiveAllNotifications = async () => {
-    const res = await apiPatch(`${BASE_PATH}/archive/all`, {});
-    return res.success;
+  return apiPatch('/api/v1/admin/notifications/archive/all', {});
 };
 
 export const deleteNotification = async (id: string) => {
-  const res = await apiDelete(`${BASE_PATH}/${id}`);
-  return res.success;
+  return apiDelete(`/api/v1/admin/notifications/${id}`);
 };
 
 export const deleteAllNotifications = async () => {
-  const res = await apiDelete(`${BASE_PATH}/all`);
-  return res.success;
+  return apiDelete('/api/v1/admin/notifications/all');
 };

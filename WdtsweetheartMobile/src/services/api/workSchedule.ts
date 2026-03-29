@@ -23,15 +23,7 @@ export const getMySchedules = async (params?: { startDate?: string; endDate?: st
   return data || [];
 };
 
-export const checkInSchedule = async (id: string) => {
-  const res = await apiPatch<any>(`/api/v1/admin/schedules/check-in/${id}`, {});
-  return res.data;
-};
 
-export const checkOutSchedule = async (id: string) => {
-  const res = await apiPatch<any>(`/api/v1/admin/schedules/check-out/${id}`, {});
-  return res.data;
-};
 
 export const getCalendarData = async (month?: number, year?: number) => {
   const query = `?month=${month}&year=${year}`;

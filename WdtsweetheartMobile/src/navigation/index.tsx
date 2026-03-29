@@ -52,11 +52,10 @@ import StaffCagesScreen from '../screens/staff/boarding/StaffCagesScreen';
 import StaffWorkScheduleScreen from '../screens/staff/schedule/StaffWorkScheduleScreen';
 import StaffScheduleCalendarScreen from '../screens/staff/schedule/StaffScheduleCalendarScreen';
 import StaffShiftListScreen from '../screens/staff/schedule/StaffShiftListScreen';
-import PetCareTemplateScreen from '../screens/staff/boarding/PetCareTemplateScreen';
 import StaffBoardingBookingListScreen from '../screens/staff/boarding/StaffBoardingBookingListScreen';
 import StaffBoardingBookingCreateScreen from '../screens/staff/boarding/StaffBoardingBookingCreateScreen';
+import PetCareTemplateScreen from '../screens/staff/boarding/PetCareTemplateScreen';
 import StaffReviewListScreen from '../screens/staff/review/StaffReviewListScreen';
-import StaffChatScreen from '../screens/staff/review/StaffChatScreen';
 import DepartmentListScreen from '../screens/staff/department/DepartmentListScreen';
 import StaffProfileScreen from '../screens/staff/home/StaffProfileScreen';
 import { colors } from '../theme/colors';
@@ -137,7 +136,6 @@ const RootNavigator = () => {
               options={animatedScreenOptions}
             />
             <Stack.Screen name="StaffShiftList" component={StaffShiftListScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="PetCareTemplate" component={PetCareTemplateScreen} options={animatedScreenOptions} />
             <Stack.Screen
               name="StaffBoardingBookingList"
               component={StaffBoardingBookingListScreen}
@@ -148,8 +146,8 @@ const RootNavigator = () => {
               component={StaffBoardingBookingCreateScreen}
               options={animatedScreenOptions}
             />
+            <Stack.Screen name="PetCareTemplate" component={PetCareTemplateScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffReviewList" component={StaffReviewListScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="StaffChat" component={StaffChatScreen} options={animatedScreenOptions} />
             <Stack.Screen name="DepartmentList" component={DepartmentListScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffProfile" component={StaffProfileScreen} options={animatedScreenOptions} />
           </Stack.Navigator>

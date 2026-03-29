@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, Clock } from 'lucide-react-native';
+import { ArrowLeft, Wallet, ShoppingBag, Scissors, Home, TrendingUp, TrendingDown, Clock, ChevronRight } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { getTransactionHistory } from '../../services/api/dashboard';
 import { Toast } from '../../components/common';
@@ -59,30 +59,101 @@ const TransactionHistoryScreen = () => {
     });
   };
 
+  const getPaymentMethodText = (method: string) => {
+    const map: any = {
+      "cod": "COD",
+      "money": "Tiền mặt",
+      "vnpay": "VNPay",
+      "momo": "Momo",
+      "zalopay": "ZaloPay",
+      "paypal": "PayPal",
+      "prepaid": "Trả trước",
+      "pay_at_site": "Thanh toán tại quầy"
+    };
+    return map[method?.toLowerCase()] || method || "Tiền mặt";
+  };
+
+  const getStatusConfig = (status: string) => {
+    if (status === 'completed' || status === 'paid') {
+      return { text: 'Thành công', bg: '#E8F5E9', color: '#2E7D32' };
+    }
+    if (status === 'cancelled') {
+      return { text: 'Đã hủy', bg: '#FFEBEE', color: '#C62828' };
+    }
+    return { text: 'Chưa thanh toán', bg: '#FFF3E0', color: '#EF6C00' };
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const isIncome = item.type === 'deposit' || item.type === 'refund';
-    const amountColor = isIncome ? '#05A845' : '#FF4D4D';
-    const Icon = isIncome ? TrendingUp : TrendingDown;
+    
+    let Icon = isIncome ? TrendingUp : TrendingDown;
+    let iconBg = isIncome ? '#E8F6EF' : '#FFEBEA';
+    
+    if (item.type === 'order') {
+      Icon = ShoppingBag;
+      iconBg = '#EEF2FF';
+    } else if (item.type === 'booking') {
+      Icon = Scissors;
+      iconBg = '#FFF7ED';
+    } else if (item.type === 'boarding') {
+      Icon = Home;
+      iconBg = '#F5F3FF';
+    }
+
+    const iconColor = item.type === 'order' ? '#4F46E5' : 
+                     item.type === 'booking' ? '#EA580C' : 
+                     item.type === 'boarding' ? '#7C3AED' : (isIncome ? '#05A845' : '#FF4D4D');
+
+    const handlePress = () => {
+      if (item.type === 'order') {
+        navigation.navigate('OrderDetail', { orderId: item._id });
+      } else if (item.type === 'booking') {
+        navigation.navigate('BookingDetail', { bookingId: item._id });
+      } else if (item.type === 'boarding') {
+        navigation.navigate('BoardingBookingDetail', { bookingId: item._id });
+      }
+    };
+
+    const statusConfig = getStatusConfig(item.status);
 
     return (
-      <View style={styles.card}>
-        <View style={[styles.iconWrap, { backgroundColor: isIncome ? '#E8F6EF' : '#FFEBEA' }]}>
-          <Icon size={20} color={amountColor} />
+      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
+        {/* Left Side: Icon */}
+        <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+          <Icon size={20} color={iconColor} />
         </View>
+
+        {/* Middle: Details */}
         <View style={styles.info}>
-          <Text style={styles.title}>{item.description || 'Giao dịch hệ thống'}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {item.description || 'Giao dịch hệ thống'}
+          </Text>
+          <Text style={styles.methodText}>
+            HT: <Text style={{ fontStyle: 'italic' }}>{getPaymentMethodText(item.method)}</Text>
+          </Text>
           <View style={styles.timeBox}>
             <Clock size={12} color="#999" />
             <Text style={styles.time}>{formatDate(item.createdAt)}</Text>
           </View>
         </View>
+
+        {/* Right Side: Amounts & Status Badge */}
         <View style={styles.amountBox}>
-          <Text style={[styles.amount, { color: amountColor }]}>
-            {isIncome ? '+' : '-'}{formatCurrency(item.amount)}
+          <Text style={[styles.amount, { color: isIncome ? '#05A845' : '#FF6B6B' }]}>
+            {formatCurrency(item.amount)}
           </Text>
-          <Text style={styles.status}>{item.status === 'completed' ? 'Thành công' : 'Đang xử lý'}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+            <Text style={[styles.statusText, { color: statusConfig.color }]}>
+              {statusConfig.text}
+            </Text>
+          </View>
         </View>
-      </View>
+
+        {/* Arrow to detail */}
+        <View style={styles.arrowWrap}>
+          <ChevronRight size={18} color="#ccc" />
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -142,23 +213,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  iconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  info: { flex: 1, marginLeft: 16 },
-  title: { fontSize: 15, fontWeight: '700', color: colors.secondary, marginBottom: 4 },
+  iconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1, marginLeft: 14, marginRight: 8 },
+  title: { fontSize: 14, fontWeight: '700', color: colors.secondary, marginBottom: 4, lineHeight: 20 },
+  methodText: { fontSize: 13, color: '#888', marginBottom: 6 },
   timeBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   time: { fontSize: 12, color: '#999' },
-  amountBox: { alignItems: 'flex-end' },
-  amount: { fontSize: 16, fontWeight: '800' },
-  status: { fontSize: 11, color: '#999', marginTop: 2, fontWeight: '600' },
+  amountBox: { alignItems: 'flex-end', justifyContent: 'center' },
+  amount: { fontSize: 15, fontWeight: '800', marginBottom: 6 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  arrowWrap: { marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
   empty: { alignItems: 'center', justifyContent: 'center', marginTop: 150, gap: 16 },
   emptyText: { fontSize: 16, color: '#aaa', fontWeight: '500' },
 });

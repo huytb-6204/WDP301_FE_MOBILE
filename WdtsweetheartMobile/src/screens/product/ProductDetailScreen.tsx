@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { ArrowLeft, Heart, ShoppingCart, Star } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, ShoppingCart, Star } from 'lucide-react-native';
 import { useCart } from '../../context/CartContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { colors } from '../../theme/colors';
@@ -342,6 +342,35 @@ const ProductDetailScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.imageContainer}>
             <Image source={{ uri: activeImage || product.primaryImage }} style={styles.mainImage} />
+            
+            {(product.images?.length || 0) > 1 && (
+              <>
+                {product.images?.indexOf(activeImage || product.primaryImage) !== 0 && (
+                  <TouchableOpacity 
+                    style={[styles.navArrow, styles.navArrowLeft]} 
+                    onPress={() => {
+                        const idx = product.images!.indexOf(activeImage || product.primaryImage);
+                        if (idx > 0) setActiveImage(product.images![idx - 1]);
+                    }}
+                  >
+                    <ChevronLeft size={28} color="rgba(255,255,255,0.9)" />
+                  </TouchableOpacity>
+                )}
+                
+                {product.images?.indexOf(activeImage || product.primaryImage) !== (product.images?.length || 0) - 1 && (
+                  <TouchableOpacity 
+                    style={[styles.navArrow, styles.navArrowRight]}
+                    onPress={() => {
+                        const idx = product.images!.indexOf(activeImage || product.primaryImage);
+                        if (idx < product.images!.length - 1) setActiveImage(product.images![idx + 1]);
+                    }}
+                  >
+                    <ChevronRight size={28} color="rgba(255,255,255,0.9)" />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+
             {product.isSale && (
               <View style={styles.saleBadge}>
                 <Text style={styles.saleBadgeText}>SALE</Text>
@@ -577,6 +606,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F9F9',
   },
   mainImage: { width: '100%', height: '100%', resizeMode: 'contain' },
+  navArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  navArrowLeft: {
+    left: 12,
+  },
+  navArrowRight: {
+    right: 12,
+  },
   saleBadge: {
     position: 'absolute',
     top: 16,

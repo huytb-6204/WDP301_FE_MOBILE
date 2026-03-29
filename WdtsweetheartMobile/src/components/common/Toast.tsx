@@ -39,32 +39,24 @@ const Toast = ({ visible, message, type = 'info', onHide }: ToastProps) => {
     switch (type) {
       case 'success':
         return {
-          bg: '#E7F5EF',
-          border: '#007B55',
-          icon: <CheckCircle2 size={20} color="#007B55" />,
-          color: '#007B55'
+          icon: <CheckCircle2 size={20} color={colors.success} />,
+          color: colors.success
         };
       case 'error':
         return {
-          bg: '#FFE7E6',
-          border: '#FF4842',
-          icon: <XCircle size={20} color="#FF4842" />,
-          color: '#B72136'
+          icon: <XCircle size={20} color={colors.danger} />,
+          color: colors.danger
         };
       case 'warning':
         return {
-          bg: '#FFF7CD',
-          border: '#B78103',
-          icon: <AlertCircle size={20} color="#B78103" />,
-          color: '#7A4100'
+          icon: <AlertCircle size={20} color={colors.warning} />,
+          color: colors.warning
         };
       case 'info':
       default:
         return {
-          bg: '#E0F2FE',
-          border: '#1890FF',
-          icon: <Info size={20} color="#1890FF" />,
-          color: '#04297A'
+          icon: <Info size={20} color="#38BDF8" />, // A nice light blue for info
+          color: '#38BDF8'
         };
     }
   };
@@ -77,6 +69,7 @@ const Toast = ({ visible, message, type = 'info', onHide }: ToastProps) => {
       style={[styles.toast, { opacity, transform: [{ translateY }] }]}
     >
       <View style={styles.toastInner}>
+        {config.icon}
         <Text style={styles.toastText}>{message}</Text>
       </View>
     </Animated.View>
@@ -86,41 +79,35 @@ const Toast = ({ visible, message, type = 'info', onHide }: ToastProps) => {
 const styles = StyleSheet.create({
   toast: {
     position: 'absolute',
-    left: 20,
-    right: 20,
-    bottom: 24,
-    zIndex: 20,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
   },
   toastInner: {
-    backgroundColor: colors.secondary,
-    borderRadius: 14,
+    backgroundColor: 'rgba(33, 43, 54, 0.92)',
+    borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 20,
+    maxWidth: width * 0.85,
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  toastGlow: {
-    position: 'absolute',
-    top: -12,
-    right: -8,
-    width: 72,
-    height: 72,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   toastText: {
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  closeArea: {
-    marginLeft: 8,
-    opacity: 0.6
-  }
 });
 
 export default Toast;

@@ -26,7 +26,7 @@ const StaffProfileScreen = () => {
               await logout();
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'Welcome' } as any],
+                routes: [{ name: 'WelcomeChoice' } as any],
               });
             } catch (error) {
               console.error('Logout failed', error);

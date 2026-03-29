@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -43,6 +44,8 @@ const PetFormScreen = () => {
   const [uploading, setUploading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [successPopupVisible, setSuccessPopupVisible] = useState(false);
+  const [successPopupMessage, setSuccessPopupMessage] = useState('');
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -158,14 +161,15 @@ const PetFormScreen = () => {
     try {
       if (isEdit) {
         await updateMyPet(pet._id, form);
-        showToast('Cập nhật thú cưng thành công');
+        setSuccessPopupMessage('Cập nhật thú cưng thành công!');
+        setSuccessPopupVisible(true);
       } else {
         await createMyPet(form);
-        showToast('Đã thêm thú cưng mới');
+        setSuccessPopupMessage('Đã thêm thú cưng mới thành công!');
+        setSuccessPopupVisible(true);
       }
-      setTimeout(() => navigation.goBack(), 900);
     } catch {
-      showToast('Lỗi khi lưu thông tin thú cưng');
+      Alert.alert('Lỗi', 'Lỗi khi lưu thông tin thú cưng');
     } finally {
       setLoading(false);
     }
@@ -328,6 +332,35 @@ const PetFormScreen = () => {
         </View>
       </ScrollView>
 
+      <Modal 
+        visible={successPopupVisible} 
+        animationType="fade" 
+        transparent 
+        onRequestClose={() => { 
+          setSuccessPopupVisible(false); 
+          navigation.goBack(); 
+        }}
+      >
+        <View style={styles.successModalBackdrop}>
+          <View style={styles.successModalCard}>
+            <View style={styles.successIconWrap}>
+              <Check size={32} color="#fff" />
+            </View>
+            <Text style={styles.successModalTitle}>Thành công</Text>
+            <Text style={styles.successModalMessage}>{successPopupMessage}</Text>
+            <TouchableOpacity 
+              style={styles.successModalButton} 
+              onPress={() => { 
+                setSuccessPopupVisible(false); 
+                navigation.goBack(); 
+              }}
+            >
+              <Text style={styles.successModalButtonText}>Tuyệt vời</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Toast visible={toastVisible} message={toastMessage} />
     </SafeAreaView>
   );
@@ -440,6 +473,61 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   mainSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  successModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  successModalCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  successIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#34C759',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  successModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.secondary,
+    marginBottom: 8,
+  },
+  successModalMessage: {
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  successModalButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: colors.primaryDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successModalButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });
 
 export default PetFormScreen;

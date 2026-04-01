@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -45,9 +45,13 @@ type ProfileActionRoute =
   | 'OrderList'
   | 'MyBookings'
   | 'MyBoardingBookings'
+  | 'BoardingCages'
+  | 'TransactionHistory'
   | 'PetList'
   | 'PersonalInfo'
+  | 'AddressList'
   | 'FavoriteList'
+  | 'ReviewList'
   | 'ChangePassword'
   | 'AccountFeature';
 
@@ -72,35 +76,36 @@ type TabItem = {
 };
 
 const tabs: TabItem[] = [
-  { key: 'home', label: 'Trang chủ', icon: House },
-  { key: 'product', label: 'Sản phẩm', icon: ShoppingBag },
-  { key: 'service', label: 'Dịch vụ', icon: PawPrint },
-  { key: 'blog', label: 'Bài viết', icon: BookOpen },
-  { key: 'profile', label: 'Tài khoản', icon: UserRound },
+  { key: 'home', label: 'Trang chá»§', icon: House },
+  { key: 'product', label: 'Sáº£n pháº©m', icon: ShoppingBag },
+  { key: 'service', label: 'Dá»‹ch vá»¥', icon: PawPrint },
+  { key: 'blog', label: 'BÃ i viáº¿t', icon: BookOpen },
+  { key: 'profile', label: 'TÃ i khoáº£n', icon: UserRound },
 ];
 
 const PROFILE_SECTIONS: ProfileSection[] = [
   {
     key: 'overview',
-    title: 'Tổng quan & lịch sử',
+    title: 'Tá»•ng quan & lá»‹ch sá»­',
     items: [
-      { key: 'ov', label: 'Bảng điều khiển', icon: ClipboardList, route: 'Overview' },
-      { key: 'orders', label: 'Đơn hàng của tôi', icon: Package, route: 'OrderList' },
-      { key: 'services', label: 'Lịch sử dịch vụ', icon: PawPrint, route: 'MyBookings' },
-      { key: 'boarding', label: 'Booking khách sạn', icon: House, route: 'MyBoardingBookings' },
-      { key: 'transactions', label: 'Lịch sử giao dịch', icon: ShoppingBag, route: 'TransactionHistory' as any },
+      { key: 'ov', label: 'Báº£ng Ä‘iá»u khiá»ƒn', icon: ClipboardList, route: 'Overview' },
+      { key: 'orders', label: 'ÄÆ¡n hÃ ng cá»§a tÃ´i', icon: Package, route: 'OrderList' },
+      { key: 'services', label: 'Lá»‹ch sá»­ dá»‹ch vá»¥', icon: PawPrint, route: 'MyBookings' },
+      { key: 'boarding', label: 'Booking khÃ¡ch sáº¡n', icon: House, route: 'MyBoardingBookings' },
+      { key: 'transactions', label: 'Lá»‹ch sá»­ giao dá»‹ch', icon: ShoppingBag, route: 'TransactionHistory' },
+      { key: 'cages', label: 'Chuồng thú cưng', icon: House, route: 'BoardingCages' },
     ],
   },
   {
     key: 'account',
-    title: 'Tài khoản & cá nhân hóa',
+    title: 'TÃ i khoáº£n & cÃ¡ nhÃ¢n hÃ³a',
     items: [
-      { key: 'p-info', label: 'Thông tin cá nhân', icon: User, route: 'PersonalInfo' },
-      { key: 'address', label: 'Sổ địa chỉ', icon: MapPin, route: 'AddressList' as any },
-      { key: 'pets', label: 'Thú cưng của tôi', icon: Heart, route: 'PetList' },
-      { key: 'favorites', label: 'Sản phẩm yêu thích', icon: ShoppingCart, route: 'FavoriteList' },
-      { key: 'reviews', label: 'Đánh giá của tôi', icon: MessageSquare, route: 'ReviewList' as any },
-      { key: 'pwd', label: 'Đổi mật khẩu', icon: Key, route: 'ChangePassword' },
+      { key: 'p-info', label: 'ThÃ´ng tin cÃ¡ nhÃ¢n', icon: User, route: 'PersonalInfo' },
+      { key: 'address', label: 'Sá»• Ä‘á»‹a chá»‰', icon: MapPin, route: 'AddressList' },
+      { key: 'pets', label: 'ThÃº cÆ°ng cá»§a tÃ´i', icon: Heart, route: 'PetList' },
+      { key: 'favorites', label: 'Sáº£n pháº©m yÃªu thÃ­ch', icon: ShoppingCart, route: 'FavoriteList' },
+      { key: 'reviews', label: 'ÄÃ¡nh giÃ¡ cá»§a tÃ´i', icon: MessageSquare, route: 'ReviewList' },
+      { key: 'pwd', label: 'Äá»•i máº­t kháº©u', icon: Key, route: 'ChangePassword' },
     ],
   },
 ];
@@ -137,7 +142,7 @@ const ProfileScreen = () => {
 
   const displayUser = useMemo(
     () => ({
-      fullName: profile?.fullName || user?.fullName || 'Khách hàng',
+      fullName: profile?.fullName || user?.fullName || 'KhÃ¡ch hÃ ng',
       email: profile?.email || user?.email || 'teddy-pet@fpt.edu.vn',
       avatar: profile?.avatar || user?.avatar || 'https://i.pravatar.cc/150',
     }),
@@ -145,10 +150,10 @@ const ProfileScreen = () => {
   );
 
   const handleLogout = async () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn thoát khỏi phiên làm việc này?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert('ÄÄƒng xuáº¥t', 'Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n thoÃ¡t khá»i phiÃªn lÃ m viá»‡c nÃ y?', [
+      { text: 'Há»§y', style: 'cancel' },
       {
-        text: 'Đăng xuất',
+        text: 'ÄÄƒng xuáº¥t',
         style: 'destructive',
         onPress: () => {
           void (async () => {
@@ -202,7 +207,7 @@ const ProfileScreen = () => {
             <Text style={styles.userName}>{displayUser.fullName}</Text>
             <Text style={styles.userEmail}>{displayUser.email}</Text>
             <TouchableOpacity style={styles.editProfileBtn} onPress={() => navigation.navigate('PersonalInfo')}>
-              <Text style={styles.editProfileText}>Chỉnh sửa hồ sơ</Text>
+              <Text style={styles.editProfileText}>Chá»‰nh sá»­a há»“ sÆ¡</Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -210,7 +215,7 @@ const ProfileScreen = () => {
         {loading ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.loadingText}>Đang tải thông tin tài khoản...</Text>
+            <Text style={styles.loadingText}>Äang táº£i thÃ´ng tin tÃ i khoáº£n...</Text>
           </View>
         ) : null}
 
@@ -254,11 +259,11 @@ const ProfileScreen = () => {
             style={[styles.logoutBtnInner, isLoggingOut && styles.logoutBtnDisabled]}
           >
             {isLoggingOut ? <ActivityIndicator color={colors.danger} /> : <LogOut size={18} color={colors.danger} />}
-            <Text style={styles.logoutBtnText}>Đăng xuất tài khoản</Text>
+            <Text style={styles.logoutBtnText}>ÄÄƒng xuáº¥t tÃ i khoáº£n</Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Phiên bản 1.0.4</Text>
+        <Text style={styles.versionText}>PhiÃªn báº£n 1.0.4</Text>
       </ScrollView>
 
       <View style={styles.tabBarShell}>
@@ -472,3 +477,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+

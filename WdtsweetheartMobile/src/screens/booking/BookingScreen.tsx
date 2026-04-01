@@ -135,6 +135,7 @@ const BookingScreen = () => {
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState<'dog' | 'cat'>('dog');
   const [petWeight, setPetWeight] = useState('');
+  const [petAge, setPetAge] = useState('');
   const [petBreed, setPetBreed] = useState('');
   const [petColor, setPetColor] = useState('');
   const [petNotes, setPetNotes] = useState('');
@@ -656,6 +657,15 @@ const BookingScreen = () => {
       showToast('Vui lòng nhập cân nặng hợp lệ');
       return;
     }
+    let normalizedAge: number | undefined;
+    if (petAge.trim()) {
+      const parsedAge = Number(petAge.trim());
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        showToast('Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       const res = await createPet({
@@ -663,6 +673,7 @@ const BookingScreen = () => {
         type: petType,
         breed: petBreed.trim() || undefined,
         weight: Number(petWeight),
+        age: normalizedAge,
         color: petColor.trim() || undefined,
         gender: petGender,
         notes: petNotes.trim() || undefined,
@@ -672,6 +683,7 @@ const BookingScreen = () => {
       setSelectedPetIds((prev) => [...prev, res.data._id]);
       setPetName('');
       setPetWeight('');
+      setPetAge('');
       setPetBreed('');
       setPetColor('');
       setPetNotes('');
@@ -1609,6 +1621,13 @@ const BookingScreen = () => {
               keyboardType="numeric"
               value={petWeight}
               onChangeText={setPetWeight}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tuổi (tháng) - VD: 12"
+              keyboardType="numeric"
+              value={petAge}
+              onChangeText={setPetAge}
             />
             <TextInput style={styles.input} placeholder="Màu lông" value={petColor} onChangeText={setPetColor} />
             <TextInput

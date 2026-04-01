@@ -88,6 +88,7 @@ const PetListScreen = () => {
         </View>
         <Text style={styles.petMeta}>Giống: {item.breed || 'Chưa rõ'}</Text>
         <Text style={styles.petMeta}>Cân nặng: {item.weight ? `${item.weight} kg` : '?'}</Text>
+        <Text style={styles.petMeta}>Tuổi: {item.age && item.age > 0 ? `${item.age} tháng` : 'Chưa cập nhật'}</Text>
         
         <View style={styles.actionRow}>
           <TouchableOpacity 

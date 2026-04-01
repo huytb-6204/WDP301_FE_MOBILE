@@ -6,6 +6,7 @@ import {
   Image,
   Linking,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -92,6 +93,11 @@ const getStayDays = (checkInDate: string, checkOutDate: string) => {
 };
 
 const formatCurrency = (value: number) => `${Math.max(0, value || 0).toLocaleString('vi-VN')}đ`;
+const formatAgeMonths = (age?: number) => {
+  const months = Number(age ?? 0);
+  if (!Number.isFinite(months) || months <= 0) return 'Chưa rõ tháng tuổi';
+  return `${Math.floor(months)} tháng tuổi`;
+};
 
 const formatRoomTypeLabel = (value?: string) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -372,6 +378,8 @@ const BoardingHotelScreen = () => {
 
     const normalizedName = detailPetName.trim();
     const normalizedWeight = Number(detailPetWeight);
+    const normalizedAgeInput = detailPetAge.trim();
+    let normalizedAge: number | undefined;
 
     if (!normalizedName) {
       Alert.alert('Lỗi', 'Vui lòng nhập tên thú cưng');
@@ -382,6 +390,14 @@ const BoardingHotelScreen = () => {
       Alert.alert('Lỗi', 'Cân nặng phải lớn hơn 0');
       return;
     }
+    if (normalizedAgeInput) {
+      const parsedAge = Number(normalizedAgeInput);
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        Alert.alert('Lỗi', 'Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       setSavingDetailPet(true);
@@ -390,7 +406,7 @@ const BoardingHotelScreen = () => {
         type: detailPetType,
         gender: detailPetGender,
         weight: normalizedWeight,
-        age: detailPetAge ? Number(detailPetAge) : undefined,
+        age: normalizedAge,
         breed: detailPetBreed.trim() || undefined,
         color: detailPetColor.trim() || undefined,
         notes: detailPetNotes.trim() || undefined,
@@ -467,6 +483,16 @@ const BoardingHotelScreen = () => {
       showToast('Vui lòng nhập cân nặng hợp lệ');
       return;
     }
+    const normalizedAgeInput = petAge.trim();
+    let normalizedAge: number | undefined;
+    if (normalizedAgeInput) {
+      const parsedAge = Number(normalizedAgeInput);
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        showToast('Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       const res = await createPet({
@@ -475,7 +501,7 @@ const BoardingHotelScreen = () => {
         gender: petGender,
         breed: petBreed.trim() || undefined,
         weight: Number(petWeight),
-        age: petAge ? Number(petAge) : undefined,
+        age: normalizedAge,
         color: petColor.trim() || undefined,
         notes: petNotes.trim() || undefined,
         avatar: petAvatar || undefined,
@@ -848,9 +874,11 @@ const BoardingHotelScreen = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPetModal && !detailPet} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+      {showPetModal && !detailPet ? (
+        <View style={styles.inlineOverlay}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowPetModal(false)} />
+            <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Chọn thú cưng</Text>
             {loadingPets ? (
               <ActivityIndicator color={colors.primary} />
@@ -868,7 +896,7 @@ const BoardingHotelScreen = () => {
                           activeOpacity={0.7}
                         >
                           <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
-                            {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
+                            {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg | {formatAgeMonths(pet.age)}
                           </Text>
                           <Text style={styles.petRowMeta}>
                             {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
@@ -921,9 +949,10 @@ const BoardingHotelScreen = () => {
             <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPetModal(false)}>
               <Text style={styles.primaryButtonText}>Xong</Text>
             </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </Modal>
+      ) : null}
       <Modal visible={showDatePickerModal} animationType="fade" transparent onRequestClose={() => setShowDatePickerModal(false)}>
         <View style={styles.centerModalBackdrop}>
           <View style={styles.calendarModalCard}>
@@ -1040,8 +1069,8 @@ const BoardingHotelScreen = () => {
                   <TextInput style={[styles.input, { marginTop: 6 }]} value={petWeight} onChangeText={setPetWeight} placeholder="0.0" keyboardType="numeric" />
                 </View>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>Tuổi</Text>
-                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petAge} onChangeText={setPetAge} placeholder="0" keyboardType="numeric" />
+                  <Text style={styles.label}>Tuổi (tháng)</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petAge} onChangeText={setPetAge} placeholder="VD: 12" keyboardType="numeric" />
                 </View>
               </View>
 
@@ -1185,8 +1214,8 @@ const BoardingHotelScreen = () => {
                     <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetWeight} onChangeText={setDetailPetWeight} placeholder="0.0" keyboardType="numeric" />
                   </View>
                   <View style={styles.fieldHalf}>
-                    <Text style={styles.label}>Tuổi</Text>
-                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetAge} onChangeText={setDetailPetAge} placeholder="0" keyboardType="numeric" />
+                    <Text style={styles.label}>Tuổi (tháng)</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetAge} onChangeText={setDetailPetAge} placeholder="VD: 12" keyboardType="numeric" />
                   </View>
                 </View>
 
@@ -1294,6 +1323,11 @@ const BoardingHotelScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  inlineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    elevation: 40,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

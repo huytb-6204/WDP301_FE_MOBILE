@@ -1,8 +1,10 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,12 +17,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Check, LogOut, MapPin, Package, Search, TicketPercent, Truck, User, Wallet } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { WebView } from 'react-native-webview';
 import { colors } from '../../theme/colors';
 import { formatPrice } from '../../utils';
 import { useCart } from '../../context/CartContext';
-import { createOrder } from '../../services/api/order';
+import { createOrder, getOrderSuccess } from '../../services/api/order';
 import { env } from '../../config';
-import { geocodeAddress, searchAddressSuggestions, type GeocodeSuggestion } from '../../services/api/geocode';
+import {
+  geocodeAddress,
+  reverseGeocodeCoords,
+  resolveSuggestionToCoords,
+  searchAddressSuggestions,
+  type GeocodeSuggestion,
+} from '../../services/api/geocode';
 import { getAddresses, getProfile, type ProfileUser, type SavedAddress } from '../../services/api/dashboard';
 import { logout as logoutApi } from '../../services/api/auth';
 import { tokenStorage } from '../../services/auth/token';
@@ -100,7 +109,7 @@ const CheckoutScreen = () => {
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'money' | 'zalopay' | 'vnpay'>('money');
+  const [paymentMethod, setPaymentMethod] = useState<'money' | 'vnpay'>('money');
   const [shippingMethod, setShippingMethod] = useState('');
   const [booting, setBooting] = useState(true);
   const [loadingShip, setLoadingShip] = useState(false);
@@ -121,6 +130,16 @@ const CheckoutScreen = () => {
   const [shippingCalculated, setShippingCalculated] = useState(false);
   const [resolvedShippingOptions, setResolvedShippingOptions] = useState<ShippingOption[]>([]);
   const [shippingDebug, setShippingDebug] = useState('');
+  const [mapVisible, setMapVisible] = useState(false);
+  const [mapError, setMapError] = useState('');
+  const [mapSearchKeyword, setMapSearchKeyword] = useState('');
+  const [mapSuggestions, setMapSuggestions] = useState<GeocodeSuggestion[]>([]);
+  const [mapSearching, setMapSearching] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const pendingPaymentRef = React.useRef<{ orderCode: string; phone: string } | null>(null);
+  const checkingPaymentRef = React.useRef(false);
+  const mapWebRef = React.useRef<WebView>(null);
+  const pendingMapTargetRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
 
   const shippingTyped = useMemo(() => {
     if (resolvedShippingOptions.length > 0) return resolvedShippingOptions;
@@ -219,6 +238,35 @@ const CheckoutScreen = () => {
 
     return () => clearTimeout(timer);
   }, [searchKeyword, selectedAddressId]);
+
+  useEffect(() => {
+    if (!mapVisible) {
+      setMapSuggestions([]);
+      setMapSearching(false);
+      setMapSearchKeyword('');
+      setMapReady(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const keyword = mapSearchKeyword.trim();
+      if (keyword.length < 3) {
+        setMapSuggestions([]);
+        return;
+      }
+      try {
+        setMapSearching(true);
+        const next = await searchAddressSuggestions(keyword, 8);
+        setMapSuggestions(next);
+      } catch {
+        setMapSuggestions([]);
+      } finally {
+        setMapSearching(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [mapSearchKeyword, mapVisible]);
 
   const syncCartExtras = (response: Awaited<ReturnType<typeof fetchCartDetail>>) => {
     if (!response) return;
@@ -333,6 +381,38 @@ const CheckoutScreen = () => {
     }
   }, [checkedCartItems.length, navigation]);
 
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const checkPendingPaymentResult = async () => {
+    const pending = pendingPaymentRef.current;
+    if (!pending || checkingPaymentRef.current) return;
+
+    checkingPaymentRef.current = true;
+    try {
+      for (let i = 0; i < 6; i += 1) {
+        const result = await getOrderSuccess(pending.orderCode, pending.phone).catch(() => null);
+        const status = String((result as any)?.order?.paymentStatus || '').toLowerCase();
+        if (status === 'paid' || status === 'partial' || status === 'partially_paid') {
+          pendingPaymentRef.current = null;
+          navigation.replace('OrderSuccess', { orderCode: pending.orderCode, phone: pending.phone });
+          return;
+        }
+        await wait(1200);
+      }
+    } finally {
+      checkingPaymentRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void checkPendingPaymentResult();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await logoutApi();
@@ -380,17 +460,199 @@ const CheckoutScreen = () => {
     setCouponError('');
   };
 
-  const handleSelectSuggestion = (suggestion: GeocodeSuggestion) => {
-    setCoords(normalizeCoords({ latitude: suggestion.latitude, longitude: suggestion.longitude }));
-    setSelectedSuggestionLabel(suggestion.displayName);
-    setSearchKeyword(suggestion.displayName);
-    setSuggestions([]);
-    setResolvedShippingOptions([]);
-    setShippingMethod('');
-    setShippingCalculated(false);
-    setTimeout(() => {
-      calculateShipping(true);
-    }, 0);
+  const handleSelectSuggestion = async (suggestion: GeocodeSuggestion) => {
+    try {
+      setSearchingAddress(true);
+      const resolved = await resolveSuggestionToCoords(suggestion);
+      setCoords(normalizeCoords(resolved));
+      setSelectedSuggestionLabel(suggestion.displayName);
+      setSearchKeyword(suggestion.displayName);
+      setSuggestions([]);
+      setResolvedShippingOptions([]);
+      setShippingMethod('');
+      setShippingCalculated(false);
+      setTimeout(() => {
+        calculateShipping(true);
+      }, 0);
+    } catch {
+      Alert.alert('Khong the lay vi tri', 'Vui long chon goi y khac hoac nhap dia chi chi tiet hon.');
+    } finally {
+      setSearchingAddress(false);
+    }
+  };
+
+  const mapCenter = useMemo(() => {
+    const picked = normalizeCoords(coords);
+    if (picked) return picked;
+    const selected = normalizeCoords(currentAddress || null);
+    if (selected) return selected;
+    return { latitude: 10.7410688, longitude: 106.7164031 };
+  }, [coords, currentAddress]);
+
+  const mapHtml = useMemo(() => {
+    const tileUrl = env.goongApiKey
+      ? `https://tiles.goong.io/tile/{z}/{x}/{y}.png?api_key=${encodeURIComponent(env.goongApiKey)}`
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+    .hint { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1000; background: rgba(255,255,255,.95); border-radius: 10px; padding: 8px 10px; font: 12px Arial; }
+  </style>
+</head>
+<body>
+  <div class="hint">Chạm vào bản đồ để chọn vị trí giao hàng</div>
+  <div id="map"></div>
+  <script>
+    window.onerror = function(message, source, lineno, colno) {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'map_error', message: String(message || 'unknown'), source: String(source || ''), line: lineno || 0, col: colno || 0 }));
+      } catch (e) {}
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var lat = ${mapCenter.latitude};
+    var lng = ${mapCenter.longitude};
+    var map = L.map('map').setView([lat, lng], 16);
+    var primaryTiles = L.tileLayer('${tileUrl}', { maxZoom: 20, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    var fallbackTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OpenStreetMap' });
+    var switched = false;
+    primaryTiles.on('tileerror', function() {
+      if (switched) return;
+      switched = true;
+      map.removeLayer(primaryTiles);
+      fallbackTiles.addTo(map);
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'map_warn', message: 'primary_tile_error_fallback_to_osm' }));
+      } catch (e) {}
+    });
+    var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    marker.bindPopup('Đang lấy tên vị trí...');
+    function notify(lat, lng) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'picked', latitude: lat, longitude: lng }));
+    }
+    window.setPopupLabel = function(text) {
+      var label = String(text || '').trim();
+      marker.bindPopup(label || 'Vị trí đã chọn');
+      marker.openPopup();
+    };
+    window.setMarkerFromApp = function(nextLat, nextLng) {
+      if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) return;
+      marker.setLatLng([nextLat, nextLng]);
+      map.setView([nextLat, nextLng], 17);
+      marker.bindPopup('Đang lấy tên vị trí...');
+      marker.openPopup();
+      notify(nextLat, nextLng);
+    };
+    marker.on('dragend', function(e) {
+      var p = e.target.getLatLng();
+      marker.bindPopup('Đang lấy tên vị trí...');
+      marker.openPopup();
+      notify(p.lat, p.lng);
+    });
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      marker.bindPopup('Đang lấy tên vị trí...');
+      marker.openPopup();
+      notify(e.latlng.lat, e.latlng.lng);
+    });
+    try {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'map_ready' }));
+    } catch (e) {}
+  </script>
+</body>
+</html>`;
+  }, [mapCenter.latitude, mapCenter.longitude]);
+
+  const handleMapMessage = async (event: any) => {
+    try {
+      const payload = JSON.parse(event?.nativeEvent?.data || '{}');
+      if (payload?.type === 'map_error') {
+        setMapError('Không tải được bản đồ. Hệ thống đã thử fallback.');
+        return;
+      }
+      if (payload?.type === 'map_warn') {
+        setMapError('Đã chuyển sang bản đồ dự phòng (OSM).');
+        return;
+      }
+      if (payload?.type === 'map_ready') {
+        setMapReady(true);
+        setMapError('');
+        if (pendingMapTargetRef.current) {
+          const { latitude, longitude } = pendingMapTargetRef.current;
+          pendingMapTargetRef.current = null;
+          const js = `window.setMarkerFromApp && window.setMarkerFromApp(${latitude}, ${longitude}); true;`;
+          mapWebRef.current?.injectJavaScript(js);
+        }
+        return;
+      }
+      if (payload?.type !== 'picked') return;
+      const latitude = Number(payload.latitude);
+      const longitude = Number(payload.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+      setSelectedAddressId('new');
+      setCoords({ latitude, longitude });
+      setResolvedShippingOptions([]);
+      setShippingMethod('');
+      setShippingCalculated(false);
+
+      const reversed = await reverseGeocodeCoords(latitude, longitude).catch(() => null);
+      const fallbackLabel = `Vi tri da chon (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
+      const displayLabel = reversed?.address?.trim() || fallbackLabel;
+
+      if (reversed?.address) {
+        setAddress(reversed.address);
+        setSearchKeyword(reversed.address);
+        setSelectedSuggestionLabel(reversed.address);
+        setMapSearchKeyword(reversed.address);
+      } else {
+        setSelectedSuggestionLabel(displayLabel);
+      }
+
+      const safeLabel = JSON.stringify(displayLabel);
+      mapWebRef.current?.injectJavaScript(`window.setPopupLabel && window.setPopupLabel(${safeLabel}); true;`);
+    } catch {
+      // ignore map payload errors
+    }
+  };
+
+  const handleSelectMapSuggestion = async (suggestion: GeocodeSuggestion) => {
+    try {
+      setMapSearching(true);
+      const resolved = await resolveSuggestionToCoords(suggestion);
+      const latitude = Number(resolved.latitude);
+      const longitude = Number(resolved.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+      setSelectedAddressId('new');
+      setCoords({ latitude, longitude });
+      setResolvedShippingOptions([]);
+      setShippingMethod('');
+      setShippingCalculated(false);
+      setMapSearchKeyword(suggestion.displayName);
+      setMapSuggestions([]);
+      setAddress(suggestion.displayName);
+      setSearchKeyword(suggestion.displayName);
+      setSelectedSuggestionLabel(suggestion.displayName);
+
+      if (mapReady) {
+        const js = `window.setMarkerFromApp && window.setMarkerFromApp(${latitude}, ${longitude}); true;`;
+        mapWebRef.current?.injectJavaScript(js);
+      } else {
+        pendingMapTargetRef.current = { latitude, longitude };
+      }
+    } catch {
+      setMapError('Không thể lấy tọa độ từ gợi ý này.');
+    } finally {
+      setMapSearching(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -469,10 +731,15 @@ const CheckoutScreen = () => {
 
       clearCart();
 
-      if (paymentMethod === 'zalopay' || paymentMethod === 'vnpay') {
-        const path = paymentMethod === 'zalopay' ? 'payment-zalopay' : 'payment-vnpay';
+      if (paymentMethod === 'vnpay') {
+        const path = 'payment-vnpay';
+        pendingPaymentRef.current = { orderCode: res.orderCode, phone: res.phone };
         await Linking.openURL(
-          `${env.apiBaseUrl}/api/v1/client/order/${path}?orderCode=${res.orderCode}&phone=${res.phone}`
+          `${env.apiBaseUrl}/api/v1/client/order/${path}?orderCode=${res.orderCode}&phone=${res.phone}&source=mobile`
+        );
+        Alert.alert(
+          'Dang cho xac nhan thanh toan',
+          'Sau khi thanh toan xong, quay lai app. He thong se tu dong cap nhat ket qua.'
         );
         return;
       }
@@ -581,7 +848,16 @@ const CheckoutScreen = () => {
 
           {selectedAddressId === 'new' ? (
             <View style={styles.formBlock}>
-              <TextInput value={fullName} onChangeText={setFullName} placeholder={'H\u1ecd v\u00e0 t\u00ean'} style={styles.input} />
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder={'H\u1ecd v\u00e0 t\u00ean'}
+                style={styles.input}
+                keyboardType="default"
+                autoCapitalize="words"
+                autoCorrect={false}
+                spellCheck={false}
+              />
               <TextInput
                 value={phone}
                 onChangeText={setPhone}
@@ -605,6 +881,10 @@ const CheckoutScreen = () => {
                   }}
                   placeholder={'T\u00ecm nhanh \u0111\u1ecba ch\u1ec9'}
                   style={styles.searchInput}
+                  keyboardType="default"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
                 />
               </View>
               <Text style={styles.helperText}>{'Bạn có thể nhập trực tiếp địa chỉ hoặc chọn từ gợi ý để hệ thống lấy vị trí giao hàng.'}</Text>
@@ -629,10 +909,18 @@ const CheckoutScreen = () => {
                 placeholder={'S\u1ed1 nh\u00e0, t\u00f2a nh\u00e0, ghi ch\u00fa giao h\u00e0ng'}
                 multiline
                 style={[styles.input, styles.textarea]}
+                keyboardType="default"
+                autoCapitalize="sentences"
+                autoCorrect={false}
+                spellCheck={false}
               />
               <Text style={styles.helperText}>
                 {'Vui lòng ghi đầy đủ số nhà, tên đường, hẻm, tầng hoặc mốc giao hàng để shipper giao chính xác hơn.'}
               </Text>
+              <TouchableOpacity style={styles.mapBtn} onPress={() => setMapVisible(true)}>
+                <MapPin size={16} color="#fff" />
+                <Text style={styles.mapBtnText}>{'Chọn vị trí trên bản đồ'}</Text>
+              </TouchableOpacity>
               <View style={[styles.statusPill, coords ? styles.statusPillReady : styles.statusPillPending]}>
                 <Text style={[styles.statusPillText, coords ? styles.statusPillTextReady : styles.statusPillTextPending]}>
                   {coords
@@ -749,14 +1037,13 @@ const CheckoutScreen = () => {
           </View>
           {[
             { key: 'money', label: 'Thanh to\u00e1n khi nh\u1eadn h\u00e0ng (COD)' },
-            { key: 'zalopay', label: 'V\u00ed \u0111i\u1ec7n t\u1eed ZaloPay' },
             { key: 'vnpay', label: 'C\u1ed5ng thanh to\u00e1n VNPAY' },
           ].map((option) => {
             const active = paymentMethod === option.key;
             return (
               <TouchableOpacity
                 key={option.key}
-                onPress={() => setPaymentMethod(option.key as 'money' | 'zalopay' | 'vnpay')}
+                onPress={() => setPaymentMethod(option.key as 'money' | 'vnpay')}
                 style={[styles.option, active && styles.optionActive]}
               >
                 <Text style={styles.optionTitle}>{option.label}</Text>
@@ -844,6 +1131,10 @@ const CheckoutScreen = () => {
               placeholder={'V\u00ed d\u1ee5: g\u1ecdi tr\u01b0\u1edbc khi giao...'}
               multiline
               style={[styles.input, styles.textarea, styles.noteInput]}
+              keyboardType="default"
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              spellCheck={false}
             />
           ) : null}
         </View>
@@ -862,6 +1153,67 @@ const CheckoutScreen = () => {
           <Text style={styles.submitText}>{submitting ? '\u0110ang x\u1eed l\u00fd...' : '\u0110\u1eb7t h\u00e0ng ngay'}</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={mapVisible} transparent animationType="slide" onRequestClose={() => setMapVisible(false)}>
+        <View style={styles.mapModalOverlay}>
+          <View style={styles.mapModalCard}>
+            <View style={styles.mapModalHeader}>
+              <Text style={styles.mapModalTitle}>{'Chọn vị trí giao hàng'}</Text>
+              <TouchableOpacity style={styles.mapCloseBtn} onPress={() => setMapVisible(false)}>
+                <Text style={styles.mapCloseText}>{'Đóng'}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.mapSearchWrap}>
+              <Search size={16} color="#8A8A8A" />
+              <TextInput
+                value={mapSearchKeyword}
+                onChangeText={setMapSearchKeyword}
+                placeholder={'Tìm địa chỉ trên bản đồ'}
+                style={styles.mapSearchInput}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+              />
+            </View>
+            {mapSearching ? <Text style={styles.mapSearchingText}>{'Đang tìm gợi ý địa chỉ...'}</Text> : null}
+            {mapSuggestions.length > 0 ? (
+              <View style={styles.mapSuggestionList}>
+                {mapSuggestions.map((item, index) => (
+                  <Pressable
+                    key={`${item.displayName}-${index}-map`}
+                    style={styles.mapSuggestionItem}
+                    onPress={() => handleSelectMapSuggestion(item)}
+                  >
+                    <Text style={styles.mapSuggestionText} numberOfLines={2}>
+                      {item.displayName}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {mapError ? (
+              <View style={styles.mapErrorBanner}>
+                <Text style={styles.mapErrorText}>{mapError}</Text>
+              </View>
+            ) : null}
+            <View style={styles.mapContainer}>
+              <WebView
+                ref={mapWebRef}
+                originWhitelist={['*']}
+                javaScriptEnabled
+                domStorageEnabled
+                mixedContentMode="always"
+                startInLoadingState
+                source={{ html: mapHtml }}
+                onMessage={handleMapMessage}
+                onError={() => setMapError('WebView map bị lỗi tải.')}
+                onHttpError={() => setMapError('HTTP lỗi khi tải bản đồ.')}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1008,6 +1360,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
+  mapBtn: {
+    marginTop: 2,
+    backgroundColor: colors.secondary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mapBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: {
     width: 20,
@@ -1112,6 +1475,59 @@ const styles = StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  mapModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  mapModalCard: {
+    height: '78%',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    overflow: 'hidden',
+  },
+  mapModalHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  mapModalTitle: { fontSize: 16, fontWeight: '800', color: colors.secondary },
+  mapCloseBtn: { backgroundColor: '#FFF1F1', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  mapCloseText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  mapSearchWrap: {
+    margin: 10,
+    borderWidth: 1,
+    borderColor: '#EADDDD',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFCFC',
+  },
+  mapSearchInput: { flex: 1, fontSize: 14, color: colors.text, paddingVertical: 8 },
+  mapSearchingText: { marginHorizontal: 12, marginTop: -2, marginBottom: 6, fontSize: 12, color: '#8A7A7A' },
+  mapSuggestionList: {
+    marginHorizontal: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F0E6E6',
+    borderRadius: 12,
+    overflow: 'hidden',
+    maxHeight: 140,
+    backgroundColor: '#fff',
+  },
+  mapSuggestionItem: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F7ECEC' },
+  mapSuggestionText: { fontSize: 12, color: colors.text, lineHeight: 18 },
+  mapErrorBanner: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#FFF4F2', borderBottomWidth: 1, borderBottomColor: '#F3D4CF' },
+  mapErrorText: { color: '#B45309', fontSize: 12, fontWeight: '600' },
+  mapContainer: { flex: 1 },
 });
 
 export default CheckoutScreen;

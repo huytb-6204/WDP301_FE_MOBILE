@@ -25,6 +25,10 @@ type CreatePetPayload = {
   avatar?: string;
 };
 
+type BookingConfig = {
+  depositPercentage?: number;
+};
+
 const assertSuccess = <T>(res: CodeResponse<T>) => {
   if (res.code !== 200 && res.code !== 201) {
     throw new Error(res.message || 'Request failed');
@@ -41,6 +45,11 @@ export const getServices = async (params?: { petType?: 'DOG' | 'CAT' | 'ALL' }) 
   const res = await apiGetRaw<CodeResponse<ServiceItem[]>>(
     `/api/v1/client/booking/services${query ? `?${query}` : ''}`
   );
+  return assertSuccess(res);
+};
+
+export const getBookingConfig = async () => {
+  const res = await apiGetRaw<CodeResponse<BookingConfig>>('/api/v1/client/booking/config');
   return assertSuccess(res);
 };
 

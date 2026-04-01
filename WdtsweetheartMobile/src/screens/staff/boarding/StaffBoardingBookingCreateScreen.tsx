@@ -28,7 +28,7 @@ import dayjs from 'dayjs';
 type PickerType = 'pet' | 'cage' | null;
 
 type BoardingStatus = 'pending' | 'held' | 'confirmed' | 'checked-in';
-type PaymentMethod = 'pay_at_site' | 'money' | 'zalopay' | 'vnpay' | 'prepaid';
+type PaymentMethod = 'pay_at_site' | 'money' | 'vnpay' | 'prepaid';
 type PaymentStatus = 'unpaid' | 'partial' | 'paid';
 
 const BOARDING_STATUS_OPTIONS: Array<{ value: BoardingStatus; label: string }> = [
@@ -41,7 +41,6 @@ const BOARDING_STATUS_OPTIONS: Array<{ value: BoardingStatus; label: string }> =
 const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentMethod; label: string }> = [
   { value: 'pay_at_site', label: 'Thanh toan tai quay' },
   { value: 'money', label: 'Tien mat' },
-  { value: 'zalopay', label: 'ZaloPay' },
   { value: 'vnpay', label: 'VNPay' },
   { value: 'prepaid', label: 'Tra truoc' },
 ];

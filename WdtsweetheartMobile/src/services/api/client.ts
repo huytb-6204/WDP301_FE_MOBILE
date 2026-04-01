@@ -23,13 +23,15 @@ const buildHeaders = async () => {
 };
 
 const getBaseUrls = () => {
+  const candidates = env.apiCandidateBaseUrls;
+  if (Array.isArray(candidates) && candidates.length > 0) {
+    return candidates;
+  }
+
   const primary = env.apiBaseUrl;
   const local = env.localApiBaseUrl;
 
-  if (!local || local === primary) {
-    return [primary];
-  }
-
+  if (!local || local === primary) return [primary];
   return [primary, local];
 };
 

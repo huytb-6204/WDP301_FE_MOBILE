@@ -108,7 +108,7 @@ export const env = {
   googleClientId: GOOGLE_CLIENT_ID,
   facebookAppId: FACEBOOK_APP_ID,
   openMapKey: OPENMAP_KEY,
-  goongApiKey: OPENMAP_KEY,
+  goongApiKey: (OPENMAP_KEY || '').trim(),
   zalopayAppId: ZALOPAY_APPID,
   zalopayDomain: ZALOPAY_DOMAIN,
   vnpayTmnCode: VNPAY_TMN_CODE,

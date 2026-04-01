@@ -133,6 +133,10 @@ const AddressFormScreen = () => {
               placeholder="Nhap ten nguoi nhan"
               value={form.fullName}
               onChangeText={(val) => setForm({ ...form, fullName: val })}
+              keyboardType="default"
+              autoCapitalize="words"
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
 
@@ -161,6 +165,10 @@ const AddressFormScreen = () => {
                     setForm((prev) => ({ ...prev, latitude: 0, longitude: 0 }));
                   }
                 }}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
             </View>
             {searchingAddress ? <Text style={styles.muted}>Dang tim goi y dia chi...</Text> : null}
@@ -191,6 +199,10 @@ const AddressFormScreen = () => {
                 setForm({ ...form, address: val });
                 setSearchKeyword(val);
               }}
+              keyboardType="default"
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              spellCheck={false}
             />
             <Text style={styles.helperText}>Nen chon tu goi y de he thong lay dung toa do giao hang.</Text>
           </View>

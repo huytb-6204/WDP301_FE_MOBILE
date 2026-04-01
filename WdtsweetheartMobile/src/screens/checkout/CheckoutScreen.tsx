@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Linking,
   Pressable,
@@ -18,9 +19,14 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { formatPrice } from '../../utils';
 import { useCart } from '../../context/CartContext';
-import { createOrder } from '../../services/api/order';
+import { createOrder, getOrderSuccess } from '../../services/api/order';
 import { env } from '../../config';
-import { geocodeAddress, searchAddressSuggestions, type GeocodeSuggestion } from '../../services/api/geocode';
+import {
+  geocodeAddress,
+  resolveSuggestionToCoords,
+  searchAddressSuggestions,
+  type GeocodeSuggestion,
+} from '../../services/api/geocode';
 import { getAddresses, getProfile, type ProfileUser, type SavedAddress } from '../../services/api/dashboard';
 import { logout as logoutApi } from '../../services/api/auth';
 import { tokenStorage } from '../../services/auth/token';
@@ -100,7 +106,7 @@ const CheckoutScreen = () => {
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'money' | 'zalopay' | 'vnpay'>('money');
+  const [paymentMethod, setPaymentMethod] = useState<'money' | 'vnpay'>('money');
   const [shippingMethod, setShippingMethod] = useState('');
   const [booting, setBooting] = useState(true);
   const [loadingShip, setLoadingShip] = useState(false);
@@ -121,6 +127,8 @@ const CheckoutScreen = () => {
   const [shippingCalculated, setShippingCalculated] = useState(false);
   const [resolvedShippingOptions, setResolvedShippingOptions] = useState<ShippingOption[]>([]);
   const [shippingDebug, setShippingDebug] = useState('');
+  const pendingPaymentRef = React.useRef<{ orderCode: string; phone: string } | null>(null);
+  const checkingPaymentRef = React.useRef(false);
 
   const shippingTyped = useMemo(() => {
     if (resolvedShippingOptions.length > 0) return resolvedShippingOptions;
@@ -333,6 +341,38 @@ const CheckoutScreen = () => {
     }
   }, [checkedCartItems.length, navigation]);
 
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const checkPendingPaymentResult = async () => {
+    const pending = pendingPaymentRef.current;
+    if (!pending || checkingPaymentRef.current) return;
+
+    checkingPaymentRef.current = true;
+    try {
+      for (let i = 0; i < 6; i += 1) {
+        const result = await getOrderSuccess(pending.orderCode, pending.phone).catch(() => null);
+        const status = String((result as any)?.order?.paymentStatus || '').toLowerCase();
+        if (status === 'paid' || status === 'partial' || status === 'partially_paid') {
+          pendingPaymentRef.current = null;
+          navigation.replace('OrderSuccess', { orderCode: pending.orderCode, phone: pending.phone });
+          return;
+        }
+        await wait(1200);
+      }
+    } finally {
+      checkingPaymentRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void checkPendingPaymentResult();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await logoutApi();
@@ -380,17 +420,25 @@ const CheckoutScreen = () => {
     setCouponError('');
   };
 
-  const handleSelectSuggestion = (suggestion: GeocodeSuggestion) => {
-    setCoords(normalizeCoords({ latitude: suggestion.latitude, longitude: suggestion.longitude }));
-    setSelectedSuggestionLabel(suggestion.displayName);
-    setSearchKeyword(suggestion.displayName);
-    setSuggestions([]);
-    setResolvedShippingOptions([]);
-    setShippingMethod('');
-    setShippingCalculated(false);
-    setTimeout(() => {
-      calculateShipping(true);
-    }, 0);
+  const handleSelectSuggestion = async (suggestion: GeocodeSuggestion) => {
+    try {
+      setSearchingAddress(true);
+      const resolved = await resolveSuggestionToCoords(suggestion);
+      setCoords(normalizeCoords(resolved));
+      setSelectedSuggestionLabel(suggestion.displayName);
+      setSearchKeyword(suggestion.displayName);
+      setSuggestions([]);
+      setResolvedShippingOptions([]);
+      setShippingMethod('');
+      setShippingCalculated(false);
+      setTimeout(() => {
+        calculateShipping(true);
+      }, 0);
+    } catch {
+      Alert.alert('Khong the lay vi tri', 'Vui long chon goi y khac hoac nhap dia chi chi tiet hon.');
+    } finally {
+      setSearchingAddress(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -469,10 +517,15 @@ const CheckoutScreen = () => {
 
       clearCart();
 
-      if (paymentMethod === 'zalopay' || paymentMethod === 'vnpay') {
-        const path = paymentMethod === 'zalopay' ? 'payment-zalopay' : 'payment-vnpay';
+      if (paymentMethod === 'vnpay') {
+        const path = 'payment-vnpay';
+        pendingPaymentRef.current = { orderCode: res.orderCode, phone: res.phone };
         await Linking.openURL(
-          `${env.apiBaseUrl}/api/v1/client/order/${path}?orderCode=${res.orderCode}&phone=${res.phone}`
+          `${env.apiBaseUrl}/api/v1/client/order/${path}?orderCode=${res.orderCode}&phone=${res.phone}&source=mobile`
+        );
+        Alert.alert(
+          'Dang cho xac nhan thanh toan',
+          'Sau khi thanh toan xong, quay lai app. He thong se tu dong cap nhat ket qua.'
         );
         return;
       }
@@ -749,14 +802,13 @@ const CheckoutScreen = () => {
           </View>
           {[
             { key: 'money', label: 'Thanh to\u00e1n khi nh\u1eadn h\u00e0ng (COD)' },
-            { key: 'zalopay', label: 'V\u00ed \u0111i\u1ec7n t\u1eed ZaloPay' },
             { key: 'vnpay', label: 'C\u1ed5ng thanh to\u00e1n VNPAY' },
           ].map((option) => {
             const active = paymentMethod === option.key;
             return (
               <TouchableOpacity
                 key={option.key}
-                onPress={() => setPaymentMethod(option.key as 'money' | 'zalopay' | 'vnpay')}
+                onPress={() => setPaymentMethod(option.key as 'money' | 'vnpay')}
                 style={[styles.option, active && styles.optionActive]}
               >
                 <Text style={styles.optionTitle}>{option.label}</Text>

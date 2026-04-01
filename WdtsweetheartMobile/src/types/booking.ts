@@ -85,4 +85,5 @@ export type CreateBookingPayload = {
   customerPhone: string;
   customerEmail?: string;
   notes?: string;
+  paymentMethod?: 'money' | 'vnpay' | 'zalopay';
 };

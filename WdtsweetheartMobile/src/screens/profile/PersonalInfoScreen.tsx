@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, Save, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifier } from '../../context/NotifierContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getProfile, updateProfile } from '../../services/api/dashboard';
 import { colors } from '../../theme/colors';
@@ -28,6 +28,7 @@ const phoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])[0-9]{7
 const PersonalInfoScreen = () => {
   const navigation = useNavigation<Navigation>();
   const { user, updateUser } = useAuth();
+  const { showToast, showAlert } = useNotifier();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -56,17 +57,17 @@ const PersonalInfoScreen = () => {
 
   const handleSave = async () => {
     if (!fullName.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ và tên.');
+      showAlert('Thiếu thông tin', 'Vui lòng nhập họ và tên.', 'warning');
       return;
     }
 
     if (fullName.trim().length < 5) {
-      Alert.alert('Thiếu thông tin', 'Họ và tên phải có ít nhất 5 ký tự.');
+      showAlert('Thiếu thông tin', 'Họ và tên phải có ít nhất 5 ký tự.', 'warning');
       return;
     }
 
     if (phone.trim() && !phoneRegex.test(phone.trim())) {
-      Alert.alert('Thiếu thông tin', 'Số điện thoại không hợp lệ.');
+      showAlert('Thiếu thông tin', 'Số điện thoại không hợp lệ.', 'warning');
       return;
     }
 
@@ -79,17 +80,16 @@ const PersonalInfoScreen = () => {
       });
 
       await updateUser({
-        fullName: profile.fullName,
-        email: profile.email,
-        phone: profile.phone,
+        fullName: profile.fullName || fullName.trim(),
+        email: profile.email || email.trim(),
+        phone: profile.phone || phone.trim() || undefined,
         avatar: profile.avatar,
       });
 
-      Alert.alert('Thành công', 'Đã cập nhật thông tin cá nhân.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Đã lưu thay đổi', 'success');
+      setTimeout(() => navigation.goBack(), 700);
     } catch (error) {
-      Alert.alert('Lỗi', error instanceof Error ? error.message : 'Không thể cập nhật thông tin cá nhân.');
+      showAlert('Lỗi', error instanceof Error ? error.message : 'Không thể cập nhật thông tin cá nhân.', 'error');
     } finally {
       setSaving(false);
     }

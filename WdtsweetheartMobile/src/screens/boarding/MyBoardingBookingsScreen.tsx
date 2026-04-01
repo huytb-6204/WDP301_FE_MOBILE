@@ -77,7 +77,7 @@ const MyBoardingBookingsScreen = () => {
   const [filter, setFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [paymentGateway, setPaymentGateway] = useState<BoardingGateway>('vnpay');
+  const [paymentGateway] = useState<BoardingGateway>('vnpay');
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -132,7 +132,7 @@ const MyBoardingBookingsScreen = () => {
   const handlePay = async (booking: BoardingBooking) => {
     setProcessingId(booking._id);
     try {
-      const res = await initiateBoardingPayment(booking._id, paymentGateway);
+      const res = await initiateBoardingPayment(booking._id, paymentGateway, 'mobile');
       if (res.paymentUrl) {
         await Linking.openURL(res.paymentUrl);
       }
@@ -288,15 +288,9 @@ const MyBoardingBookingsScreen = () => {
       <View style={styles.gatewayBar}>
           <Text style={styles.gatewayLabel}>Cổng thanh toán:</Text>
           <View style={styles.gatewayRow}>
-            {(['vnpay', 'zalopay'] as BoardingGateway[]).map((gw) => (
-               <TouchableOpacity 
-                key={gw} 
-                style={[styles.gwBtn, paymentGateway === gw && styles.gwBtnActive]}
-                onPress={() => setPaymentGateway(gw)}
-               >
-                 <Text style={[styles.gwText, paymentGateway === gw && styles.gwTextActive]}>{gw.toUpperCase()}</Text>
-               </TouchableOpacity>
-            ))}
+            <View style={[styles.gwBtn, styles.gwBtnActive]}>
+              <Text style={[styles.gwText, styles.gwTextActive]}>VNPAY</Text>
+            </View>
           </View>
       </View>
 

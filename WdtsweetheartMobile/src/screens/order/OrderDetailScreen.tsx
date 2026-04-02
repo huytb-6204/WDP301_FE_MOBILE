@@ -17,7 +17,7 @@ import { getOrderDetail } from '../../services/api/dashboard';
 import { cancelOrder, confirmReceipt } from '../../services/api/order';
 import { env } from '../../config';
 import Toast, { ToastType } from '../../components/common/Toast';
-import AppAlert from '../../components/common/AppAlert';
+import CancelReasonModal from '../../components/common/CancelReasonModal';
 
 type OrderLike = {
   _id: string;
@@ -123,7 +123,7 @@ const OrderDetailScreen = () => {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('info');
-  const [confirmCancelVisible, setConfirmCancelVisible] = useState(false);
+  const [cancelReasonVisible, setCancelReasonVisible] = useState(false);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
 
   const showToast = (message: string, type: ToastType = 'info') => {
@@ -194,11 +194,11 @@ const OrderDetailScreen = () => {
     }
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrder = async (reason: string) => {
     if (!order?._id) return;
     try {
       setProcessing(true);
-      const res = await cancelOrder(order._id, 'Khách hàng hủy đơn trên ứng dụng');
+      const res = await cancelOrder(order._id, reason);
       if (res?.code === 'success') {
         showToast(res.message || 'Đã hủy đơn hàng', 'success');
         await fetchDetail();
@@ -209,7 +209,7 @@ const OrderDetailScreen = () => {
       showToast(error?.message || 'Không thể hủy đơn', 'error');
     } finally {
       setProcessing(false);
-      setConfirmCancelVisible(false);
+      setCancelReasonVisible(false);
     }
   };
 
@@ -301,6 +301,7 @@ const OrderDetailScreen = () => {
           <View style={styles.specialBox}>
             <Text style={styles.specialText}>{isCancelled ? 'Đã hủy đơn' : 'Đã trả hàng'}</Text>
             <Text style={styles.specialTime}>{formatStepTime(order.cancelledAt || order.returnedAt)}</Text>
+            {!!order.cancelledReason && <Text style={styles.specialReason}>Lý do: {order.cancelledReason}</Text>}
           </View>
         )}
 
@@ -354,7 +355,7 @@ const OrderDetailScreen = () => {
               {(order.orderStatus === 'pending' || order.orderStatus === 'confirmed') && (
                 <TouchableOpacity
                   style={[styles.actionBtnPrimary, styles.cancelBtn]}
-                  onPress={() => setConfirmCancelVisible(true)}
+                  onPress={() => setCancelReasonVisible(true)}
                   disabled={processing}
                 >
                   <Text style={styles.actionBtnText}>{processing ? 'Đang xử lý...' : 'Hủy đơn hàng'}</Text>
@@ -395,15 +396,12 @@ const OrderDetailScreen = () => {
         </View>
       </ScrollView>
       <Toast visible={toastVisible} message={toastMessage} type={toastType} onHide={() => setToastVisible(false)} />
-      <AppAlert
-        visible={confirmCancelVisible}
-        type="confirm"
-        title="Xác nhận hủy đơn"
-        message="Bạn chắc chắn muốn hủy đơn hàng này?"
-        confirmText={processing ? 'Đang xử lý...' : 'Hủy đơn'}
-        cancelText="Để sau"
-        onClose={() => !processing && setConfirmCancelVisible(false)}
-        onConfirm={processing ? undefined : handleCancelOrder}
+      <CancelReasonModal
+        visible={cancelReasonVisible}
+        processing={processing}
+        paymentStatus={order.paymentStatus}
+        onClose={() => !processing && setCancelReasonVisible(false)}
+        onConfirm={handleCancelOrder}
       />
     </SafeAreaView>
   );
@@ -458,6 +456,7 @@ const styles = StyleSheet.create({
   specialBox: { backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#FFDCDC', borderRadius: 10, padding: 10 },
   specialText: { color: '#DC2626', fontWeight: '800', fontSize: 12 },
   specialTime: { marginTop: 3, color: '#EF4444', fontSize: 11 },
+  specialReason: { marginTop: 6, color: '#7F1D1D', fontSize: 12, lineHeight: 18, fontWeight: '600' },
 
   invoiceCard: {
     backgroundColor: '#fff',

@@ -32,7 +32,7 @@ const StaffBoardingBookingListScreen = () => {
       setBookings(data || []);
     } catch (error) {
       console.error('Failed to fetch boarding bookings', error);
-      Alert.alert('Lỗi', 'Không thể tải danh sách đặt chỗ');
+      Alert.alert('Lỗi', 'Không thể tải danh sách đơn khách sạn');
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ const StaffBoardingBookingListScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Đặt chỗ khách sạn</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Danh sách đơn khách sạn</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate('StaffBoardingBookingCreate')}

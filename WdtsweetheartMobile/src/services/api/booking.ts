@@ -27,6 +27,7 @@ type CreatePetPayload = {
 
 type BookingConfig = {
   depositPercentage?: number;
+  refundCancellationHours?: number;
 };
 
 const assertSuccess = <T>(res: CodeResponse<T>) => {

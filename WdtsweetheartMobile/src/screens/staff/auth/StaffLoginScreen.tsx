@@ -28,6 +28,8 @@ const StaffLoginScreen = () => {
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
+        if (loading) return;
+
         if (!email || !password) {
           showToast('Vui lòng nhập đầy đủ thông tin!', 'warning');
           return;

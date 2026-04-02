@@ -115,7 +115,7 @@ const StaffCagesScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Chuồng nội trú</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Quản lý chuồng</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -138,7 +138,7 @@ const StaffCagesScreen = () => {
         <View style={[styles.searchBar, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}> 
           <Search size={18} color={staffTheme.textSoft} />
           <TextInput
-            placeholder="Tìm theo mã chuồng..."
+              placeholder="Tìm theo mã chuồng khách sạn..."
             placeholderTextColor={staffTheme.textSoft}
             style={[styles.searchInput, { color: staffTheme.text }]}
             value={searchQuery}

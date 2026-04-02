@@ -149,7 +149,7 @@ const PetCareTemplateScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerIcon, { backgroundColor: staffTheme.iconSurface }]}>
           <ArrowLeft size={20} color={staffTheme.textStrong} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: staffTheme.textStrong }]}>Mẫu chăm sóc</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.textStrong }]}>Danh mục Thức ăn & Vận động</Text>
         <View style={styles.headerGhost} />
       </View>
 
@@ -160,7 +160,7 @@ const PetCareTemplateScreen = () => {
               <Sparkles size={18} color={sectionAccent.tint} />
             </View>
             <View style={styles.heroTextWrap}>
-              <Text style={[styles.heroTitle, { color: staffTheme.textStrong }]}>Bộ mẫu thao tác nhanh</Text>
+              <Text style={[styles.heroTitle, { color: staffTheme.textStrong }]}>Danh mục thao tác nhanh</Text>
               <Text style={[styles.heroSubtitle, { color: staffTheme.textMuted }]}>
                 Tra cứu nhanh chế độ ăn và lịch vận động theo từng nhóm thú cưng.
               </Text>

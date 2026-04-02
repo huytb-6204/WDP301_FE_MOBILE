@@ -14,8 +14,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
 import type { RootStackParamList } from '../../navigation/types';
-import { cancelBooking, getMyBookings } from '../../services/api/booking';
+import { cancelBooking, getBookingConfig, getMyBookings } from '../../services/api/booking';
 import { StatusMessage, Toast } from '../../components/common';
+import CancelReasonModal from '../../components/common/CancelReasonModal';
 import type { Booking } from '../../types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, 'MyBookings'>;
@@ -25,6 +26,7 @@ const statusOptions = [
   { key: 'pending', label: 'Đang chờ' },
   { key: 'confirmed', label: 'Đã xác nhận' },
   { key: 'completed', label: 'Hoàn thành' },
+  { key: 'request_cancel', label: 'Chờ duyệt hủy' },
   { key: 'cancelled', label: 'Đã hủy' },
 ];
 
@@ -33,6 +35,7 @@ const statusMap: Record<string, string> = {
   confirmed: 'Đã xác nhận',
   'in-progress': 'Đang thực hiện',
   completed: 'Hoàn thành',
+  request_cancel: 'Chờ duyệt hủy',
   cancelled: 'Đã hủy',
   delayed: 'Trễ hẹn',
 };
@@ -42,6 +45,7 @@ const statusColor: Record<string, string> = {
   confirmed: '#2D7DFA',
   'in-progress': '#FFAA00',
   completed: '#23A86D',
+  request_cancel: '#DC2626',
   cancelled: '#FF4D4D',
   delayed: '#A855F7',
 };
@@ -68,8 +72,10 @@ const MyBookingsScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [refundCancellationHours, setRefundCancellationHours] = useState(0);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -96,18 +102,42 @@ const MyBookingsScreen = () => {
     void fetchBookings();
   }, [statusFilter]);
 
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await getBookingConfig();
+        setRefundCancellationHours(Number(res.data?.refundCancellationHours || 0));
+      } catch (error) {
+        console.error('Failed to fetch booking config', error);
+      }
+    };
+
+    void fetchConfig();
+  }, []);
+
   const canCancel = (status: string) => ['pending', 'confirmed'].includes(status);
 
-  const handleCancel = async (item: Booking) => {
-    setCancellingId(item._id);
+  const handleCancel = async (reason: string) => {
+    if (!cancelTarget?._id) return;
+    setCancellingId(cancelTarget._id);
+    setCancelTarget(null);
     try {
-      await cancelBooking(item._id, 'Khách hàng hủy lịch trên ứng dụng');
+      const res = await cancelBooking(cancelTarget._id, reason);
+      const updated = res.data;
       setBookings((prev) =>
         prev.map((booking) =>
-          booking._id === item._id ? { ...booking, bookingStatus: 'cancelled', status: 'cancelled' } : booking
+          booking._id === cancelTarget._id
+            ? {
+                ...booking,
+                ...(updated || {}),
+                bookingStatus: updated?.bookingStatus || updated?.status || booking.bookingStatus,
+                status: updated?.status || updated?.bookingStatus || booking.status,
+                cancelledReason: updated?.cancelledReason || reason,
+              }
+            : booking
         )
       );
-      showToast('Đã hủy lịch đặt thành công');
+      showToast(res.message || 'Đã hủy lịch đặt thành công');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể hủy lịch');
     } finally {
@@ -184,7 +214,7 @@ const MyBookingsScreen = () => {
           {canCancel(statusKey) && (
             <TouchableOpacity 
               style={[styles.actionBtn, styles.cancelBtn]}
-              onPress={() => handleCancel(item)}
+              onPress={() => setCancelTarget(item)}
               disabled={cancellingId === item._id}
             >
               <Text style={[styles.actionBtnText, styles.cancelBtnText]}>
@@ -269,6 +299,20 @@ const MyBookingsScreen = () => {
       )}
 
       <Toast visible={toastVisible} message={toastMessage} />
+      <CancelReasonModal
+        visible={!!cancelTarget}
+        processing={!!cancelTarget && cancellingId === cancelTarget._id}
+        title="Lý do hủy lịch"
+        confirmText="Xác nhận hủy lịch"
+        isBooking
+        paymentStatus={cancelTarget?.paymentStatus}
+        refundCancellationHours={refundCancellationHours}
+        startTime={cancelTarget?.start}
+        onClose={() => {
+          if (!cancellingId) setCancelTarget(null);
+        }}
+        onConfirm={handleCancel}
+      />
     </SafeAreaView>
   );
 };

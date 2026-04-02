@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CartProvider } from '../context/CartContext';
 import { FavoritesProvider } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import HomeScreen from '../screens/home/HomeScreen';
 import ProductListScreen from '../screens/product/ProductListScreen';
 import ProductDetailScreen from '../screens/product/ProductDetailScreen';
@@ -46,6 +47,7 @@ import BoardingCagesScreen from '../screens/boarding/BoardingCagesScreen';
 import StaffLoginScreen from '../screens/staff/auth/StaffLoginScreen';
 import StaffHomeScreen from '../screens/staff/home/StaffHomeScreen';
 import StaffTaskListScreen from '../screens/staff/task/StaffTaskListScreen';
+import StaffServiceTaskDetailScreen from '../screens/staff/task/StaffServiceTaskDetailScreen';
 import StaffCareDetailScreen from '../screens/staff/boarding/StaffCareDetailScreen';
 import StaffCustomerListScreen from '../screens/staff/customer/StaffCustomerListScreen';
 import StaffCagesScreen from '../screens/staff/boarding/StaffCagesScreen';
@@ -58,8 +60,11 @@ import PetCareTemplateScreen from '../screens/staff/boarding/PetCareTemplateScre
 import StaffReviewListScreen from '../screens/staff/review/StaffReviewListScreen';
 import DepartmentListScreen from '../screens/staff/department/DepartmentListScreen';
 import StaffProfileScreen from '../screens/staff/home/StaffProfileScreen';
+import StaffFeatureInfoScreen from '../screens/staff/common/StaffFeatureInfoScreen';
+import StaffPermissionScreen from '../components/common/StaffPermissionScreen';
 import { colors } from '../theme/colors';
 import type { RootStackParamList } from './types';
+import { hasPermission, STAFF_SCREEN_PERMISSIONS } from '../utils/staffPermissions';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -70,6 +75,19 @@ const animatedScreenOptions = {
 };
 
 const RootNavigator = () => {
+  const { user } = useAuth();
+  const permissions = ((user as any)?.permissions || []) as string[];
+
+  const withPermission = (Component: React.ComponentType<any>, permission?: string, label?: string) => {
+    if (hasPermission(permissions, permission)) return Component;
+
+    return () => (
+      <StaffPermissionScreen
+        message={`Tài khoản của bạn chưa được cấp quyền để mở màn ${label || 'này'}.`}
+      />
+    );
+  };
+
   return (
     <CartProvider>
       <FavoritesProvider>
@@ -126,29 +144,59 @@ const RootNavigator = () => {
             <Stack.Screen name="StaffLogin" component={StaffLoginScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffHome" component={StaffHomeScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffTaskList" component={StaffTaskListScreen} options={animatedScreenOptions} />
+            <Stack.Screen name="StaffServiceTaskDetail" component={StaffServiceTaskDetailScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffCareDetail" component={StaffCareDetailScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="StaffCustomerList" component={StaffCustomerListScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="StaffCages" component={StaffCagesScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="StaffWorkSchedule" component={StaffWorkScheduleScreen} options={animatedScreenOptions} />
             <Stack.Screen
-              name="StaffScheduleCalendar"
-              component={StaffScheduleCalendarScreen}
+              name="StaffCustomerList"
+              component={withPermission(StaffCustomerListScreen, STAFF_SCREEN_PERMISSIONS.StaffCustomerList, 'Khách hàng của tôi')}
               options={animatedScreenOptions}
             />
-            <Stack.Screen name="StaffShiftList" component={StaffShiftListScreen} options={animatedScreenOptions} />
+            <Stack.Screen
+              name="StaffCages"
+              component={withPermission(StaffCagesScreen, STAFF_SCREEN_PERMISSIONS.StaffCages, 'Quản lý chuồng')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen
+              name="StaffWorkSchedule"
+              component={withPermission(StaffWorkScheduleScreen, STAFF_SCREEN_PERMISSIONS.StaffWorkSchedule, 'Lịch làm việc')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen
+              name="StaffScheduleCalendar"
+              component={withPermission(StaffScheduleCalendarScreen, STAFF_SCREEN_PERMISSIONS.StaffScheduleCalendar, 'Lịch chung')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen
+              name="StaffShiftList"
+              component={withPermission(StaffShiftListScreen, STAFF_SCREEN_PERMISSIONS.StaffShiftList, 'Lịch trực')}
+              options={animatedScreenOptions}
+            />
             <Stack.Screen
               name="StaffBoardingBookingList"
-              component={StaffBoardingBookingListScreen}
+              component={withPermission(StaffBoardingBookingListScreen, STAFF_SCREEN_PERMISSIONS.StaffBoardingBookingList, 'Danh sách đơn khách sạn')}
               options={animatedScreenOptions}
             />
             <Stack.Screen
               name="StaffBoardingBookingCreate"
-              component={StaffBoardingBookingCreateScreen}
+              component={withPermission(StaffBoardingBookingCreateScreen, STAFF_SCREEN_PERMISSIONS.StaffBoardingBookingCreate, 'Tạo đơn khách sạn')}
               options={animatedScreenOptions}
             />
-            <Stack.Screen name="PetCareTemplate" component={PetCareTemplateScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="StaffReviewList" component={StaffReviewListScreen} options={animatedScreenOptions} />
-            <Stack.Screen name="DepartmentList" component={DepartmentListScreen} options={animatedScreenOptions} />
+            <Stack.Screen
+              name="PetCareTemplate"
+              component={withPermission(PetCareTemplateScreen, STAFF_SCREEN_PERMISSIONS.PetCareTemplate, 'Danh mục Thức ăn & Vận động')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen
+              name="StaffReviewList"
+              component={withPermission(StaffReviewListScreen, STAFF_SCREEN_PERMISSIONS.StaffReviewList, 'Đánh giá')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen
+              name="DepartmentList"
+              component={withPermission(DepartmentListScreen, STAFF_SCREEN_PERMISSIONS.DepartmentList, 'Nhân sự')}
+              options={animatedScreenOptions}
+            />
+            <Stack.Screen name="StaffFeatureInfo" component={StaffFeatureInfoScreen} options={animatedScreenOptions} />
             <Stack.Screen name="StaffProfile" component={StaffProfileScreen} options={animatedScreenOptions} />
           </Stack.Navigator>
         </NavigationContainer>

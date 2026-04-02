@@ -5,16 +5,21 @@ import { ArrowLeft, Search, Clock, Plus, Building2, MapPin } from 'lucide-react-
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../../theme/colors';
 import { getShifts, Shift } from '../../../services/api/shift';
+import { useAuth } from '../../../context/AuthContext';
 
 const StaffShiftListScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const permissions = (user as any)?.permissions || [];
+  const canViewShifts = permissions.includes('shift_view');
 
   useEffect(() => {
+    if (!canViewShifts) return;
     fetchShifts();
-  }, []);
+  }, [canViewShifts]);
 
   const fetchShifts = async () => {
     setLoading(true);
@@ -85,10 +90,16 @@ const StaffShiftListScreen = () => {
           style={styles.searchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          editable={canViewShifts}
         />
       </View>
 
-      {loading ? (
+      {!canViewShifts ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Tài khoản này không có quyền xem danh sách ca trực.</Text>
+          <Text style={styles.helperText}>Bạn vẫn có thể xem lịch làm việc cá nhân ở mục "Lịch làm việc".</Text>
+        </View>
+      ) : loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -139,7 +150,8 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 14, color: '#637381', marginLeft: 8, fontWeight: '500' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { padding: 40, alignItems: 'center' },
-  emptyText: { color: '#919EAB', fontSize: 15, fontWeight: '600' }
+  emptyText: { color: '#919EAB', fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  helperText: { marginTop: 8, color: '#637381', fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 19 }
 });
 
 export default StaffShiftListScreen;

@@ -57,7 +57,7 @@ export type Booking = {
   subTotal?: number;
   total?: number;
   originalStart?: string;
-  bookingStatus?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'delayed';
+  bookingStatus?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'request_cancel' | 'delayed';
   status?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'request_cancel' | 'delayed';
   paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'partially_paid' | 'refunded';
   paymentMethod?: 'money' | 'vnpay' | 'zalopay' | string;

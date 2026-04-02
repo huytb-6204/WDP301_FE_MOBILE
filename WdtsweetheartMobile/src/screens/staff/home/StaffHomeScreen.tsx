@@ -41,6 +41,9 @@ import {
 import NotificationModal from '../../../components/common/NotificationModal';
 import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
 import dayjs from 'dayjs';
+import { hasPermission, STAFF_SCREEN_PERMISSIONS } from '../../../utils/staffPermissions';
+import { isServiceDepartment } from '../../../utils/staffDepartment';
+import ServiceStaffHomeScreen from './StaffServiceHomeScreen';
 
 type MenuItemProps = {
   title: string;
@@ -65,6 +68,8 @@ const StaffHomeScreen = () => {
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
   const staffTheme = getStaffThemeColors(isDarkMode);
+  const permissions = ((user as any)?.permissions || []) as string[];
+  const roles = ((user as any)?.roles || []) as any[];
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -170,6 +175,15 @@ const StaffHomeScreen = () => {
   }, []);
 
   const unreadCount = notifications.filter((item) => item.status === 'unread').length;
+  const canViewCustomers = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffCustomerList);
+  const canViewDepartments = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.DepartmentList);
+  const canViewShifts = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffShiftList);
+  const canViewBoardingList = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffBoardingBookingList);
+  const canCreateBoarding = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffBoardingBookingCreate);
+  const canViewCages = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffCages);
+  const canViewTemplates = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.PetCareTemplate);
+  const canViewScheduleCalendar = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffScheduleCalendar);
+  const canViewReviews = hasPermission(permissions, STAFF_SCREEN_PERMISSIONS.StaffReviewList);
 
   const handleMarkAllRead = async () => {
     try {
@@ -234,6 +248,10 @@ const StaffHomeScreen = () => {
       <Text style={[styles.shortcutSubtitle, { color: staffTheme.textMuted }]} numberOfLines={2}>{subtitle}</Text>
     </TouchableOpacity>
   );
+
+  if (isServiceDepartment(roles)) {
+    return <ServiceStaffHomeScreen />;
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: staffTheme.screen }]}> 
@@ -374,27 +392,47 @@ const StaffHomeScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.sectionHeader, { color: staffTheme.textSoft }]}>TIỆN ÍCH PHỤ TRỢ</Text>
           <View style={[styles.cardWrapper, { backgroundColor: staffTheme.surface, shadowOpacity: isDarkMode ? 0 : 0.05 }]}>
+            <MenuItem title="Công việc của tôi" icon={ClipboardList} screen="StaffTaskList" color="#00A76F" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
             <MenuItem title="Lịch làm việc" icon={Calendar} screen="StaffWorkSchedule" color="#1890FF" staffTheme={staffTheme} isDarkMode={isDarkMode} />
-            <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
-            <MenuItem title="Khách hàng của tôi" icon={Users} screen="StaffCustomerList" color="#7A4100" staffTheme={staffTheme} isDarkMode={isDarkMode} />
-            <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
-            <MenuItem title="Đội ngũ nhân sự" icon={Building2} screen="DepartmentList" color="#542DB1" staffTheme={staffTheme} isDarkMode={isDarkMode} />
-            <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
-            <MenuItem title="Lịch trực" icon={Clock} screen="StaffShiftList" color="#FFAB00" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            {canViewCustomers && <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />}
+            {canViewCustomers && (
+              <MenuItem title="Khách hàng của tôi" icon={Users} screen="StaffCustomerList" color="#7A4100" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            )}
+            {canViewDepartments && <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />}
+            {canViewDepartments && (
+              <MenuItem title="Nhân sự" icon={Building2} screen="DepartmentList" color="#542DB1" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            )}
+            {canViewShifts && <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />}
+            {canViewShifts && (
+              <MenuItem title="Lịch trực" icon={Clock} screen="StaffShiftList" color="#FFAB00" staffTheme={staffTheme} isDarkMode={isDarkMode} />
+            )}
             <View style={[styles.divider, { backgroundColor: staffTheme.border }]} />
             <MenuItem title="Ho so nhan vien" icon={Settings} screen="StaffProfile" color="#637381" staffTheme={staffTheme} isDarkMode={isDarkMode} />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionHeader, { color: staffTheme.textSoft }]}>QUẢN LÝ NỘI TRÚ</Text>
+          <Text style={[styles.sectionHeader, { color: staffTheme.textSoft }]}>KHÁCH SẠN</Text>
           <View style={styles.shortcutGrid}>
-            <ShortcutItem title="Danh sách đặt chỗ" subtitle="Xem toàn bộ booking nội trú" icon={ClipboardList} screen="StaffBoardingBookingList" color="#0C53B7" staffTheme={staffTheme} />
-            <ShortcutItem title="Tạo đặt chỗ" subtitle="Lập booking tại quầy" icon={PlusCircle} screen="StaffBoardingBookingCreate" color={colors.primary} staffTheme={staffTheme} />
-            <ShortcutItem title="Chuồng nội trú" subtitle="Theo dõi trạng thái chuồng" icon={LayoutGrid} screen="StaffCages" color="#007B55" staffTheme={staffTheme} />
-            <ShortcutItem title="Mẫu chăm sóc" subtitle="Tra cứu đồ ăn và vận động" icon={Settings} screen="PetCareTemplate" color="#7A4100" staffTheme={staffTheme} />
-            <ShortcutItem title="Lịch chung" subtitle="Xem lịch theo tháng" icon={CalendarDays} screen="StaffScheduleCalendar" color="#FFAB00" staffTheme={staffTheme} />
-            <ShortcutItem title="Đánh giá" subtitle="Kiểm duyệt phản hồi khách" icon={Star} screen="StaffReviewList" color="#B78103" staffTheme={staffTheme} />
+            {canViewBoardingList && (
+              <ShortcutItem title="Danh sách đơn khách sạn" subtitle="Xem toàn bộ đơn khách sạn" icon={ClipboardList} screen="StaffBoardingBookingList" color="#0C53B7" staffTheme={staffTheme} />
+            )}
+            {canCreateBoarding && (
+              <ShortcutItem title="Tạo đơn khách sạn" subtitle="Lập đơn khách sạn tại quầy" icon={PlusCircle} screen="StaffBoardingBookingCreate" color={colors.primary} staffTheme={staffTheme} />
+            )}
+            {canViewCages && (
+              <ShortcutItem title="Quản lý chuồng" subtitle="Theo dõi trạng thái chuồng khách sạn" icon={LayoutGrid} screen="StaffCages" color="#007B55" staffTheme={staffTheme} />
+            )}
+            {canViewTemplates && (
+              <ShortcutItem title="Danh mục Thức ăn & Vận động" subtitle="Tra cứu khẩu phần ăn và lịch vận động" icon={Settings} screen="PetCareTemplate" color="#7A4100" staffTheme={staffTheme} />
+            )}
+            {canViewScheduleCalendar && (
+              <ShortcutItem title="Lịch chung" subtitle="Xem lịch theo tháng" icon={CalendarDays} screen="StaffScheduleCalendar" color="#FFAB00" staffTheme={staffTheme} />
+            )}
+            {canViewReviews && (
+              <ShortcutItem title="Đánh giá" subtitle="Kiểm duyệt phản hồi khách" icon={Star} screen="StaffReviewList" color="#B78103" staffTheme={staffTheme} />
+            )}
           </View>
         </View>
 

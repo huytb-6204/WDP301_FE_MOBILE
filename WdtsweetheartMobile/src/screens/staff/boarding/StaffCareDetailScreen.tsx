@@ -107,7 +107,7 @@ const StaffCareDetailScreen = () => {
       const records = await getBoardingPetDiaries({ bookingId, petId });
       setDiaryRecords(records);
     } catch (error: any) {
-      showAlert('Lỗi tải nhật ký', error.message || 'Không thể tải nhật ký nội trú.', 'error');
+      showAlert('Lỗi tải nhật ký', error.message || 'Không thể tải nhật ký khách sạn.', 'error');
     } finally {
       setDiaryLoading(false);
     }
@@ -529,7 +529,7 @@ const StaffCareDetailScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
           <ArrowLeft size={24} color={staffTheme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Chi tiết chăm sóc</Text>
+        <Text style={[styles.headerTitle, { color: staffTheme.text }]}>Chi tiết lịch chăm sóc</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -652,7 +652,7 @@ const StaffCareDetailScreen = () => {
             </View>
 
             <View style={[styles.infoSection, { backgroundColor: staffTheme.surface, borderColor: staffTheme.border }]}> 
-              <Text style={[styles.sectionTitle, { color: staffTheme.textStrong }]}>Thông tin đặt chỗ</Text>
+              <Text style={[styles.sectionTitle, { color: staffTheme.textStrong }]}>Thông tin đơn khách sạn</Text>
               <View style={styles.detailRow}><Text style={[styles.detailLabel, { color: staffTheme.textMuted }]}>Mã đơn</Text><Text style={[styles.detailValue, { color: staffTheme.textStrong }]}>#{booking.code}</Text></View>
               <View style={styles.detailRow}><Text style={[styles.detailLabel, { color: staffTheme.textMuted }]}>Nhận chuồng</Text><Text style={[styles.detailValue, { color: staffTheme.textStrong }]}>{dayjs(booking.checkInDate).format('DD/MM/YYYY')}</Text></View>
               <View style={styles.detailRow}><Text style={[styles.detailLabel, { color: staffTheme.textMuted }]}>Trả chuồng</Text><Text style={[styles.detailValue, { color: staffTheme.textStrong }]}>{dayjs(booking.checkOutDate).format('DD/MM/YYYY')}</Text></View>

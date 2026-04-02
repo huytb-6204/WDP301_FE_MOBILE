@@ -1,23 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CircleAlert, CircleDot, X } from 'lucide-react-native';
+import dayjs from 'dayjs';
 
-const DEFAULT_CANCEL_REASONS = [
+const ORDER_CANCEL_REASONS = [
   'Tôi muốn cập nhật địa chỉ hoặc số điện thoại nhận hàng.',
   'Tôi muốn thêm hoặc thay đổi mã giảm giá.',
   'Tôi muốn thay đổi sản phẩm, phân loại hoặc số lượng.',
   'Thủ tục thanh toán đang gây bất tiện.',
   'Tôi tìm thấy nơi mua khác phù hợp hơn.',
   'Tôi hiện không còn nhu cầu mua nữa.',
-  'Tôi không tìm thấy lý do phù hợp.',
+  'Tôi không tìm thấy lý do hủy phù hợp.',
+  'Lý do khác',
+];
+
+const BOOKING_CANCEL_REASONS = [
+  'Tôi bận việc đột xuất không thể đến đúng hẹn.',
+  'Tôi muốn thay đổi dịch vụ hoặc bé cưng.',
+  'Tôi muốn đổi sang khung giờ hoặc ngày khác.',
+  'Tôi tìm thấy nơi khác có dịch vụ tốt hơn hoặc rẻ hơn.',
+  'Thủ tục đặt lịch và cọc đang gây bất tiện.',
+  'Tôi không còn nhu cầu sử dụng dịch vụ nữa.',
+  'Tôi không tìm thấy lý do hủy phù hợp.',
   'Lý do khác',
 ];
 
@@ -26,7 +30,11 @@ type CancelReasonModalProps = {
   processing?: boolean;
   paymentStatus?: string;
   title?: string;
+  confirmText?: string;
   reasons?: string[];
+  isBooking?: boolean;
+  refundCancellationHours?: number;
+  startTime?: string;
   onClose: () => void;
   onConfirm: (reason: string) => void;
 };
@@ -35,13 +43,22 @@ const CancelReasonModal = ({
   visible,
   processing = false,
   paymentStatus,
-  title = 'Lý do hủy đơn',
-  reasons = DEFAULT_CANCEL_REASONS,
+  title,
+  confirmText,
+  reasons,
+  isBooking = false,
+  refundCancellationHours = 0,
+  startTime,
   onClose,
   onConfirm,
 }: CancelReasonModalProps) => {
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
+
+  const paymentStatusKey = String(paymentStatus || '').toLowerCase();
+  const resolvedReasons = reasons || (isBooking ? BOOKING_CANCEL_REASONS : ORDER_CANCEL_REASONS);
+  const modalTitle = title || (isBooking ? 'Lý do hủy lịch' : 'Lý do hủy đơn');
+  const actionText = confirmText || (isBooking ? 'Xác nhận hủy lịch' : 'Xác nhận hủy');
 
   useEffect(() => {
     if (!visible) return;
@@ -56,6 +73,13 @@ const CancelReasonModal = ({
     return selectedReason;
   }, [customReason, isOtherReason, selectedReason]);
 
+  const isRefundable = useMemo(() => {
+    if (!isBooking) return false;
+    if (!['paid', 'partially_paid', 'partial'].includes(paymentStatusKey)) return false;
+    if (!refundCancellationHours || !startTime) return false;
+    return dayjs().add(refundCancellationHours, 'hour').isBefore(dayjs(startTime));
+  }, [isBooking, paymentStatusKey, refundCancellationHours, startTime]);
+
   const handleConfirm = () => {
     if (!finalReason) return;
     onConfirm(finalReason);
@@ -67,9 +91,9 @@ const CancelReasonModal = ({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.title}>{modalTitle}</Text>
               <Text style={styles.subtitle}>
-                Chọn lý do phù hợp nhất để gửi yêu cầu hủy đơn hàng.
+                Chọn lý do phù hợp nhất để gửi yêu cầu hủy {isBooking ? 'lịch đặt' : 'đơn hàng'}.
               </Text>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} disabled={processing}>
@@ -80,11 +104,24 @@ const CancelReasonModal = ({
           <View style={styles.noticeBox}>
             <CircleAlert size={18} color="#B45309" />
             <Text style={styles.noticeText}>
-              Nếu bạn xác nhận hủy, đơn hàng sẽ được cập nhật theo yêu cầu này.
+              Nếu bạn xác nhận hủy, toàn bộ {isBooking ? 'lịch đặt' : 'đơn hàng'} sẽ được cập nhật theo yêu cầu này.
             </Text>
           </View>
 
-          {String(paymentStatus || '').toLowerCase() === 'paid' && (
+          {isBooking && ['paid', 'partially_paid', 'partial'].includes(paymentStatusKey) && refundCancellationHours > 0 && startTime && (
+            <View style={[styles.refundBox, isRefundable ? styles.refundBoxSuccess : styles.refundBoxDanger]}>
+              <Text style={[styles.refundTitle, isRefundable ? styles.refundTitleSuccess : styles.refundTitleDanger]}>
+                {isRefundable ? 'Đủ điều kiện hoàn tiền' : 'Quá hạn hoàn tiền'}
+              </Text>
+              <Text style={[styles.refundText, isRefundable ? styles.refundTextSuccess : styles.refundTextDanger]}>
+                {isRefundable
+                  ? `Bạn có thể nhận lại ${paymentStatusKey === 'paid' ? '100% số tiền đã thanh toán' : 'tiền cọc'} nếu hủy ngay lúc này.`
+                  : `Hiện đã quá hạn quy định hoàn tiền (${refundCancellationHours} giờ trước hẹn). Bạn vẫn có thể hủy lịch nhưng sẽ không được hoàn trả tiền cọc.`}
+              </Text>
+            </View>
+          )}
+
+          {!isBooking && paymentStatusKey === 'paid' && (
             <Text style={styles.paymentHint}>
               Đơn đã thanh toán sẽ chuyển sang yêu cầu hủy để admin kiểm tra và xử lý hoàn tiền.
             </Text>
@@ -95,7 +132,7 @@ const CancelReasonModal = ({
             contentContainerStyle={styles.reasonListContent}
             showsVerticalScrollIndicator={false}
           >
-            {reasons.map((reason) => {
+            {resolvedReasons.map((reason) => {
               const selected = selectedReason === reason;
               return (
                 <TouchableOpacity
@@ -135,7 +172,7 @@ const CancelReasonModal = ({
               onPress={handleConfirm}
               disabled={!finalReason || processing}
             >
-              <Text style={styles.primaryBtnText}>{processing ? 'Đang xử lý...' : 'Xác nhận hủy'}</Text>
+              <Text style={styles.primaryBtnText}>{processing ? 'Đang xử lý...' : actionText}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -203,6 +240,35 @@ const styles = StyleSheet.create({
     color: '#9A3412',
     fontWeight: '500',
   },
+  refundBox: {
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+  },
+  refundBoxSuccess: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  refundBoxDanger: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  refundTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  refundTitleSuccess: { color: '#047857' },
+  refundTitleDanger: { color: '#B91C1C' },
+  refundText: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  refundTextSuccess: { color: '#065F46' },
+  refundTextDanger: { color: '#991B1B' },
   paymentHint: {
     marginTop: 10,
     fontSize: 12,

@@ -27,6 +27,8 @@ import { getStaffBoardingBookings } from '../../../services/api/staffBoarding';
 import type { StaffStackParamList } from '../../../navigation/StaffNavigator';
 import StaffDatePickerModal from '../../../components/common/StaffDatePickerModal';
 import { useNotifier } from '../../../context/NotifierContext';
+import { isServiceDepartment } from '../../../utils/staffDepartment';
+import StaffServiceTaskListScreen from './StaffServiceTaskListScreen';
 
 const StaffTaskListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<StaffStackParamList>>();
@@ -35,6 +37,11 @@ const StaffTaskListScreen = () => {
   const { showAlert } = useNotifier();
   const { isDarkMode } = useTheme();
   const staffTheme = getStaffThemeColors(isDarkMode);
+  const roles = ((user as any)?.roles || []) as any[];
+
+  if (isServiceDepartment(roles)) {
+    return <StaffServiceTaskListScreen />;
+  }
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);

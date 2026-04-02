@@ -50,6 +50,7 @@ export type RootStackParamList = {
   StaffHome: undefined;
   StaffTaskList: { date?: string } | undefined;
   StaffCareDetail: { bookingId: string; booking: any };
+  StaffServiceTaskDetail: { bookingId: string };
   StaffCustomerList: undefined;
   StaffCages: undefined;
   StaffProfile: undefined;
@@ -61,4 +62,5 @@ export type RootStackParamList = {
   PetCareTemplate: undefined;
   StaffReviewList: undefined;
   DepartmentList: undefined;
+  StaffFeatureInfo: { title: string; description: string };
 };

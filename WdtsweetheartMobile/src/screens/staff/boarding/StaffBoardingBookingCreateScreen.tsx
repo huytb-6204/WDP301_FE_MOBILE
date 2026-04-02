@@ -357,7 +357,7 @@ const StaffBoardingBookingCreateScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tao dat cho</Text>
+        <Text style={styles.headerTitle}>Tạo đơn khách sạn</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleSubmit} disabled={submitting}>
           {submitting ? <ActivityIndicator size="small" color={colors.primary} /> : <Save size={24} color={colors.primary} />}
         </TouchableOpacity>
@@ -365,9 +365,9 @@ const StaffBoardingBookingCreateScreen = () => {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thong tin luu tru</Text>
+          <Text style={styles.sectionTitle}>Thông tin khách sạn</Text>
 
-          <Text style={styles.label}>Khach hang *</Text>
+          <Text style={styles.label}>Khách hàng *</Text>
           <View style={styles.customerSearchWrap}>
             <View style={[styles.selectBox, showUserSuggestions && styles.selectBoxActive]}>
               <Search size={18} color="#637381" />
@@ -476,21 +476,21 @@ const StaffBoardingBookingCreateScreen = () => {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thong tin nguoi nhan</Text>
+          <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
           <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Ho va ten" placeholderTextColor="#919EAB" />
           <TextInput style={[styles.input, styles.formGap]} value={phone} onChangeText={setPhone} placeholder="So dien thoai" keyboardType="phone-pad" placeholderTextColor="#919EAB" />
           <TextInput style={[styles.input, styles.formGap]} value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#919EAB" />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Trang thai don</Text>
-          <OptionChips title="Trang thai luu tru" options={BOARDING_STATUS_OPTIONS} value={boardingStatus} onChange={setBoardingStatus} />
-          <OptionChips title="Phuong thuc thanh toan" options={PAYMENT_METHOD_OPTIONS} value={paymentMethod} onChange={setPaymentMethod} />
-          <OptionChips title="Trang thai thanh toan" options={PAYMENT_STATUS_OPTIONS} value={paymentStatus} onChange={setPaymentStatus} />
+          <Text style={styles.sectionTitle}>Trạng thái đơn</Text>
+          <OptionChips title="Trạng thái khách sạn" options={BOARDING_STATUS_OPTIONS} value={boardingStatus} onChange={setBoardingStatus} />
+          <OptionChips title="Phương thức thanh toán" options={PAYMENT_METHOD_OPTIONS} value={paymentMethod} onChange={setPaymentMethod} />
+          <OptionChips title="Trạng thái thanh toán" options={PAYMENT_STATUS_OPTIONS} value={paymentStatus} onChange={setPaymentStatus} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Chi phi va ghi chu</Text>
+          <Text style={styles.sectionTitle}>Chi phí và ghi chú</Text>
           <TextInput
             style={styles.input}
             value={discount}
@@ -523,7 +523,7 @@ const StaffBoardingBookingCreateScreen = () => {
         </View>
 
         <TouchableOpacity style={[styles.submitBtn, submitting && styles.disabledField]} onPress={handleSubmit} disabled={submitting}>
-          <Text style={styles.submitBtnText}>{submitting ? 'Dang tao...' : 'Xac nhan tao dat cho'}</Text>
+          <Text style={styles.submitBtnText}>{submitting ? 'Đang tạo...' : 'Xác nhận tạo đơn khách sạn'}</Text>
         </TouchableOpacity>
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -561,7 +561,7 @@ const StaffBoardingBookingCreateScreen = () => {
         date={checkInDate}
         onClose={() => setShowCheckInPicker(false)}
         onSelect={handleSelectCheckIn}
-        title="Chon ngay nhan chuong"
+        title="Chọn ngày nhận phòng"
         todayLabel="Chon hom nay"
       />
       <StaffDatePickerModal
@@ -569,7 +569,7 @@ const StaffBoardingBookingCreateScreen = () => {
         date={checkOutDate}
         onClose={() => setShowCheckOutPicker(false)}
         onSelect={handleSelectCheckOut}
-        title="Chon ngay tra chuong"
+        title="Chọn ngày trả phòng"
         minDate={checkInDate.add(1, 'day')}
         todayLabel="Chon ngay gan nhat"
       />

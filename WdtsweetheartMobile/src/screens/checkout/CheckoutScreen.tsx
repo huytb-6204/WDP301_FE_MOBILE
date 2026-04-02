@@ -1,7 +1,8 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Linking,
   Pressable,
   ScrollView,
@@ -18,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { formatPrice } from '../../utils';
 import { useCart } from '../../context/CartContext';
-import { createOrder } from '../../services/api/order';
+import { createOrder, getOrderSuccess } from '../../services/api/order';
 import { env } from '../../config';
 import { geocodeAddress, searchAddressSuggestions, type GeocodeSuggestion } from '../../services/api/geocode';
 import { getAddresses, getProfile, type ProfileUser, type SavedAddress } from '../../services/api/dashboard';
@@ -121,6 +122,59 @@ const CheckoutScreen = () => {
   const [shippingCalculated, setShippingCalculated] = useState(false);
   const [resolvedShippingOptions, setResolvedShippingOptions] = useState<ShippingOption[]>([]);
   const [shippingDebug, setShippingDebug] = useState('');
+
+  // Ref để lưu thông tin đơn hàng đang chờ thanh toán online
+  const pendingPaymentRef = useRef<{ orderCode: string; phone: string } | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  // Lắng nghe khi user quay lại app từ browser thanh toán
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        pendingPaymentRef.current
+      ) {
+        const { orderCode, phone: orderPhone } = pendingPaymentRef.current;
+        pendingPaymentRef.current = null;
+
+        try {
+          // Đợi backend xử lý xong callback từ VNPay
+          await new Promise((r) => setTimeout(r, 2000));
+          const res = await getOrderSuccess(orderCode, orderPhone);
+
+          if (res.code === 'success' && res.order) {
+            const isPaid = (res.order as any).paymentStatus === 'paid';
+            if (isPaid) {
+              clearCart();
+              navigation.replace('OrderSuccess', { orderCode, phone: orderPhone });
+            } else {
+              Alert.alert(
+                'Thanh toán chưa hoàn tất',
+                'Đơn hàng chưa được thanh toán. Vui lòng kiểm tra lại trong lịch sử đơn hàng.',
+                [{ text: 'Về trang chủ', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }]
+              );
+            }
+          } else {
+            Alert.alert(
+              'Thanh toán thất bại',
+              'Đơn hàng không thành công hoặc đã bị hủy.',
+              [{ text: 'Về trang chủ', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }]
+            );
+          }
+        } catch {
+          Alert.alert(
+            'Không thể kiểm tra',
+            'Không thể kiểm tra trạng thái thanh toán. Vui lòng kiểm tra trong lịch sử đơn hàng.',
+            [{ text: 'Về trang chủ', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }]
+          );
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [clearCart, navigation]);
 
   const shippingTyped = useMemo(() => {
     if (resolvedShippingOptions.length > 0) return resolvedShippingOptions;
@@ -467,16 +521,17 @@ const CheckoutScreen = () => {
         return;
       }
 
-      clearCart();
-
       if (paymentMethod === 'zalopay' || paymentMethod === 'vnpay') {
         const path = paymentMethod === 'zalopay' ? 'payment-zalopay' : 'payment-vnpay';
+        // Lưu thông tin đơn hàng để kiểm tra khi quay lại từ browser
+        pendingPaymentRef.current = { orderCode: res.orderCode, phone: res.phone };
         await Linking.openURL(
           `${env.apiBaseUrl}/api/v1/client/order/${path}?orderCode=${res.orderCode}&phone=${res.phone}`
         );
         return;
       }
 
+      clearCart();
       navigation.replace('OrderSuccess', { orderCode: res.orderCode, phone: res.phone });
     } catch (error) {
       Alert.alert('L\u1ed7i \u0111\u1eb7t h\u00e0ng', error instanceof Error ? error.message : 'Vui l\u00f2ng th\u1eed l\u1ea1i.');

@@ -45,6 +45,8 @@ export type OrderSuccessData = {
   usedPoint?: number;
   coupon?: string;
   paymentMethod: string;
+  paymentStatus?: string;
+  orderStatus?: string;
   fullName: string;
   phone: string;
   address: string;

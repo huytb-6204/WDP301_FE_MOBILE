@@ -346,12 +346,6 @@ const OrderDetailScreen = () => {
                 <Text style={styles.actionBtnText}>{exporting ? 'Đang mở...' : 'Xuất hóa đơn'}</Text>
               </TouchableOpacity>
 
-              {order.orderStatus === 'shipped' && (
-                <TouchableOpacity style={[styles.actionBtnPrimary, styles.receiptBtn]} onPress={handleConfirmReceipt} disabled={processing}>
-                  <Text style={styles.actionBtnText}>{processing ? 'Đang xử lý...' : 'Đã nhận hàng'}</Text>
-                </TouchableOpacity>
-              )}
-
               {(order.orderStatus === 'pending' || order.orderStatus === 'confirmed') && (
                 <TouchableOpacity
                   style={[styles.actionBtnPrimary, styles.cancelBtn]}

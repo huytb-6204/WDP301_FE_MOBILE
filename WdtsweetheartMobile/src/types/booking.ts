@@ -56,12 +56,20 @@ export type Booking = {
   totalPrice?: number;
   subTotal?: number;
   total?: number;
+  originalStart?: string;
   bookingStatus?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'delayed';
-  status?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
+  status?: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'request_cancel' | 'delayed';
   paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'partially_paid' | 'refunded';
   paymentMethod?: 'money' | 'vnpay' | 'zalopay' | string;
+  depositMethod?: string;
   depositAmount?: number;
   remainingAmount?: number;
+  cancelledReason?: string;
+  statusHistory?: Array<{
+    status?: string;
+    at?: string;
+    by?: string;
+  }>;
   petStaffMap?: Array<{
     petId: any;
     staffId?: any;
@@ -85,4 +93,5 @@ export type CreateBookingPayload = {
   customerPhone: string;
   customerEmail?: string;
   notes?: string;
+  paymentMethod?: 'money' | 'vnpay' | 'zalopay';
 };

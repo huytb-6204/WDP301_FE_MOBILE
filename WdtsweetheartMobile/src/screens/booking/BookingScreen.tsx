@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   ImageBackground,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -33,11 +35,14 @@ import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react-
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
+import { env } from '../../config';
 import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
 import {
   createBooking,
   createPet,
+  getBookingConfig,
+  getMyBooking,
   getMyBookings,
   getMyPets,
   getServices,
@@ -106,6 +111,9 @@ const BookingScreen = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'money' | 'vnpay'>('money');
+  const [depositGateway, setDepositGateway] = useState<'vnpay'>('vnpay');
+  const [depositPercentage, setDepositPercentage] = useState(0);
   const [profile, setProfile] = useState<ProfileUser | null>(null);
 
   const [showPetModal, setShowPetModal] = useState(false);
@@ -127,6 +135,7 @@ const BookingScreen = () => {
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState<'dog' | 'cat'>('dog');
   const [petWeight, setPetWeight] = useState('');
+  const [petAge, setPetAge] = useState('');
   const [petBreed, setPetBreed] = useState('');
   const [petColor, setPetColor] = useState('');
   const [petNotes, setPetNotes] = useState('');
@@ -141,6 +150,8 @@ const BookingScreen = () => {
   const scrollRef = React.useRef<ScrollView | null>(null);
   const petSectionY = React.useRef(0);
   const dateSectionY = React.useRef(0);
+  const pendingPaymentRef = React.useRef<{ bookingId: string } | null>(null);
+  const checkingPaymentRef = React.useRef(false);
 
   const preselectedService = route.params?.service;
   const selectedService = useMemo(() => {
@@ -165,13 +176,41 @@ const BookingScreen = () => {
     setCurrentImageIndex(0);
   }, [serviceId, serviceImages.length]);
 
+  const serviceMinAgeMonths = useMemo(() => {
+    const value = Number((selectedService as any)?.minAgeMonths || 0);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }, [selectedService]);
+
+  const getPetAgeMonths = (pet: Pet) => {
+    const value = Number(pet.age ?? 0);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+
+  const formatPetAge = (pet: Pet) => {
+    const months = getPetAgeMonths(pet);
+    if (months <= 0) return 'Chưa cập nhật tuổi';
+    return `${months} tháng tuổi`;
+  };
+
+  const isPetEligibleByAge = (pet: Pet) => {
+    if (serviceMinAgeMonths <= 0) return true;
+    return getPetAgeMonths(pet) >= serviceMinAgeMonths;
+  };
+
+  const selectedPetList = useMemo(
+    () => pets.filter((pet) => selectedPetIds.includes(pet._id)),
+    [pets, selectedPetIds]
+  );
+
+  const eligibleSelectedPetIds = useMemo(
+    () => selectedPetList.filter((pet) => isPetEligibleByAge(pet)).map((pet) => pet._id),
+    [selectedPetList, serviceMinAgeMonths]
+  );
+
   const selectedPetsLabel = useMemo(() => {
-    if (selectedPetIds.length === 0) return 'Chưa chọn thú cưng';
-    return pets
-      .filter((pet) => selectedPetIds.includes(pet._id))
-      .map((pet) => pet.name)
-      .join(', ');
-  }, [pets, selectedPetIds]);
+    if (selectedPetList.length === 0) return 'Chưa chọn thú cưng';
+    return selectedPetList.map((pet) => pet.name).join(', ');
+  }, [selectedPetList]);
 
   const monthMeta = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -290,11 +329,11 @@ const BookingScreen = () => {
   }, [groupedSlots, activeHour, date]);
 
   const pricingBreakdown = useMemo(() => {
-    if (!selectedService || selectedPetIds.length === 0) return { total: 0, items: [] as any[] };
-    const selectedPetList = pets.filter((pet) => selectedPetIds.includes(pet._id));
+    if (!selectedService || eligibleSelectedPetIds.length === 0) return { total: 0, items: [] as any[] };
+    const selectedEligiblePets = pets.filter((pet) => eligibleSelectedPetIds.includes(pet._id));
     if ((selectedService as any).pricingType === 'by-weight') {
       const list = ((selectedService as any).priceList || []).slice();
-      const items = selectedPetList.map((pet) => {
+      const items = selectedEligiblePets.map((pet) => {
         const weight = pet.weight || 0;
         let matched = list.find((item: any) => {
           const label = item.label || '';
@@ -318,20 +357,32 @@ const BookingScreen = () => {
       return { total, items };
     }
     const basePrice = (selectedService as any).basePrice || 0;
-    const items = selectedPetList.map((pet) => ({
+    const items = selectedEligiblePets.map((pet) => ({
       name: pet.name,
       weight: pet.weight,
       label: 'Giá cố định',
       price: basePrice,
     }));
     return { total: basePrice * items.length, items };
-  }, [selectedService, selectedPetIds, pets]);
+  }, [selectedService, eligibleSelectedPetIds, pets]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 1600);
   };
+
+  useEffect(() => {
+    if (selectedPetIds.length === 0 || serviceMinAgeMonths <= 0) return;
+    const allowedIds = new Set(pets.filter((pet) => isPetEligibleByAge(pet)).map((pet) => pet._id));
+    const filtered = selectedPetIds.filter((id) => allowedIds.has(id));
+    if (filtered.length !== selectedPetIds.length) {
+      setSelectedPetIds(filtered);
+      setSelectedTimeSlot(null);
+      setBookingPreview(null);
+      showToast(`Đã bỏ chọn thú cưng chưa đủ ${serviceMinAgeMonths} tháng tuổi`);
+    }
+  }, [serviceMinAgeMonths, pets, selectedPetIds]);
 
   const fetchServices = async () => {
     setLoadingServices(true);
@@ -432,6 +483,24 @@ const BookingScreen = () => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    const loadBookingConfig = async () => {
+      try {
+        const res = await getBookingConfig();
+        if (!isMounted) return;
+        setDepositPercentage(Number(res.data?.depositPercentage || 0));
+      } catch {
+        if (!isMounted) return;
+        setDepositPercentage(0);
+      }
+    };
+    void loadBookingConfig();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (route.params?.serviceId) {
       setServiceId(route.params.serviceId);
     }
@@ -462,9 +531,9 @@ const BookingScreen = () => {
 
   useEffect(() => {
     if (serviceId && date) {
-      fetchSlots(serviceId, date, selectedPetIds);
+      fetchSlots(serviceId, date, eligibleSelectedPetIds);
     }
-  }, [serviceId, date, selectedPetIds]);
+  }, [serviceId, date, eligibleSelectedPetIds]);
 
   useEffect(() => {
     const today = formatDateInput(new Date());
@@ -475,9 +544,9 @@ const BookingScreen = () => {
 
   useEffect(() => {
     if (showTimeModal && serviceId && date) {
-      fetchSlots(serviceId, date, selectedPetIds);
+      fetchSlots(serviceId, date, eligibleSelectedPetIds);
     }
-  }, [showTimeModal, serviceId, date, selectedPetIds]);
+  }, [showTimeModal, serviceId, date, eligibleSelectedPetIds]);
 
   useEffect(() => {
     if (showTimeModal) {
@@ -509,12 +578,50 @@ const BookingScreen = () => {
   }, [showTimeModal, date]);
 
   useEffect(() => {
-    if (showTimeModal && selectedTimeSlot && selectedPetIds.length > 0 && !bookingPreview) {
+    if (showTimeModal && selectedTimeSlot && eligibleSelectedPetIds.length > 0 && !bookingPreview) {
       handleVerifySchedule();
     }
-  }, [showTimeModal, selectedTimeSlot, selectedPetIds.length]);
+  }, [showTimeModal, selectedTimeSlot, eligibleSelectedPetIds.length]);
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const checkPendingPaymentResult = async () => {
+    const pending = pendingPaymentRef.current;
+    if (!pending || checkingPaymentRef.current) return;
+
+    checkingPaymentRef.current = true;
+    try {
+      for (let i = 0; i < 6; i += 1) {
+        const result = await getMyBooking(pending.bookingId).catch(() => null);
+        const status = String((result as any)?.data?.paymentStatus || '').toLowerCase();
+        if (status === 'paid' || status === 'partial' || status === 'partially_paid') {
+          pendingPaymentRef.current = null;
+          showToast('Thanh toán thành công');
+          navigation.navigate('MyBookings');
+          return;
+        }
+        await wait(1200);
+      }
+    } finally {
+      checkingPaymentRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void checkPendingPaymentResult();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const togglePet = (id: string) => {
+    const pet = pets.find((item) => item._id === id);
+    if (pet && !selectedPetIds.includes(id) && !isPetEligibleByAge(pet)) {
+      showToast(`Bé ${pet.name} chưa đủ ${serviceMinAgeMonths} tháng tuổi cho dịch vụ này`);
+      return;
+    }
     setSelectedPetIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -526,6 +633,13 @@ const BookingScreen = () => {
     if (!date) return 'Vui lòng chọn ngày';
     if (!selectedTimeSlot?.time) return 'Vui lòng chọn khung giờ';
     if (selectedPetIds.length === 0) return 'Vui lòng chọn ít nhất một thú cưng';
+    const underAgePets = selectedPetList
+      .filter((pet) => !isPetEligibleByAge(pet))
+      .map((pet) => pet.name);
+    if (underAgePets.length > 0) {
+      return `${underAgePets.join(', ')} chưa đủ ${serviceMinAgeMonths} tháng tuổi`;
+    }
+    if (eligibleSelectedPetIds.length === 0) return 'Không có thú cưng phù hợp điều kiện độ tuổi';
     if (!customerName.trim()) return 'Vui lòng nhập tên khách hàng';
     if (!customerPhone.trim()) return 'Vui lòng nhập số điện thoại';
     if (!phoneRegex.test(customerPhone.trim())) return 'Số điện thoại không đúng định dạng';
@@ -543,6 +657,15 @@ const BookingScreen = () => {
       showToast('Vui lòng nhập cân nặng hợp lệ');
       return;
     }
+    let normalizedAge: number | undefined;
+    if (petAge.trim()) {
+      const parsedAge = Number(petAge.trim());
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        showToast('Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       const res = await createPet({
@@ -550,6 +673,7 @@ const BookingScreen = () => {
         type: petType,
         breed: petBreed.trim() || undefined,
         weight: Number(petWeight),
+        age: normalizedAge,
         color: petColor.trim() || undefined,
         gender: petGender,
         notes: petNotes.trim() || undefined,
@@ -559,6 +683,7 @@ const BookingScreen = () => {
       setSelectedPetIds((prev) => [...prev, res.data._id]);
       setPetName('');
       setPetWeight('');
+      setPetAge('');
       setPetBreed('');
       setPetColor('');
       setPetNotes('');
@@ -656,13 +781,13 @@ const BookingScreen = () => {
   };
 
   const handleVerifySchedule = () => {
-    if (!selectedTimeSlot || selectedPetIds.length === 0 || !selectedService) return;
+    if (!selectedTimeSlot || eligibleSelectedPetIds.length === 0 || !selectedService) return;
     setIsVerifying(true);
     setTimeout(() => {
       const duration = (selectedService as any).duration || 30;
       const freeStaff = selectedTimeSlot.freeStaff || 1;
-      const petCount = selectedPetIds.length;
-      const petNames = selectedPetIds.map((id) => pets.find((p) => p._id === id)?.name || 'Thú cưng');
+      const petCount = eligibleSelectedPetIds.length;
+      const petNames = eligibleSelectedPetIds.map((id) => pets.find((p) => p._id === id)?.name || 'Thú cưng');
 
       const timeline: Array<{ startTime: string; endTime: string; pets: string[] }> = [];
       const [h, m] = selectedTimeSlot.time.split(':').map((v) => Number(v));
@@ -699,18 +824,41 @@ const BookingScreen = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await createBooking({
+      const created = await createBooking({
         serviceId,
-        petIds: selectedPetIds,
+        petIds: eligibleSelectedPetIds,
         startTime: `${date}T${selectedTimeSlot?.time || '00:00'}:00`,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail.trim() || undefined,
         notes: notes.trim() || undefined,
+        paymentMethod,
       });
+
+      const bookingCode = String(created.data?.code || created.data?.bookingCode || '');
+      const phone = customerPhone.trim();
+      const gateway = paymentMethod === 'money' && depositPercentage > 0 ? depositGateway : paymentMethod;
+      const shouldGoOnlinePayment = bookingCode && phone && gateway === 'vnpay';
+
+      if (shouldGoOnlinePayment) {
+        const path = 'payment-vnpay';
+        const paymentUrl = `${env.apiBaseUrl}/api/v1/client/order/${path}?bookingCode=${encodeURIComponent(
+          bookingCode
+        )}&phone=${encodeURIComponent(phone)}&source=mobile`;
+        pendingPaymentRef.current = { bookingId: String(created.data?._id || '') };
+        await Linking.openURL(paymentUrl);
+        showToast('Đang chuyển đến trang thanh toán...');
+        Alert.alert(
+          'Dang cho xac nhan thanh toan',
+          'Sau khi thanh toan xong, quay lai app. He thong se tu dong cap nhat ket qua.'
+        );
+        return;
+      }
+
       showToast('Đặt lịch thành công');
+
       if (serviceId && date) {
-        fetchSlots(serviceId, date, selectedPetIds);
+        fetchSlots(serviceId, date, eligibleSelectedPetIds);
       }
       setSelectedTimeSlot(null);
       setSelectedPetIds([]);
@@ -724,7 +872,7 @@ const BookingScreen = () => {
   };
 
   const handleContinueFromDate = () => {
-    if (selectedPetIds.length === 0) {
+    if (eligibleSelectedPetIds.length === 0) {
       showToast('Vui lòng chọn thú cưng');
       return;
     }
@@ -792,7 +940,7 @@ const BookingScreen = () => {
         <View style={styles.stepRow}>
           {[
             { key: 'service', label: '1 Dịch vụ', active: !!serviceId },
-            { key: 'pet', label: '2 Thú cưng', active: selectedPetIds.length > 0 },
+            { key: 'pet', label: '2 Thú cưng', active: eligibleSelectedPetIds.length > 0 },
             { key: 'time', label: '3 Ngày & giờ', active: !!selectedTimeSlot?.time },
             { key: 'info', label: '4 Thông tin', active: !!customerName.trim() && !!customerPhone.trim() },
           ].map((step) => (
@@ -894,6 +1042,18 @@ const BookingScreen = () => {
                       : 'Liên hệ'}
                 </Text>
               </View>
+              <View style={styles.infoBadgeRow}>
+                {serviceMinAgeMonths > 0 ? (
+                  <View style={styles.infoBadge}>
+                    <Text style={styles.infoBadgeText}>Yêu cầu độ tuổi: từ {serviceMinAgeMonths} tháng</Text>
+                  </View>
+                ) : null}
+                {selectedService.duration ? (
+                  <View style={styles.infoBadge}>
+                    <Text style={styles.infoBadgeText}>Thời gian dự tính: ~{selectedService.duration} phút / bé</Text>
+                  </View>
+                ) : null}
+              </View>
 
               {(selectedService as any).description ? (
                 <View style={styles.detailSection}>
@@ -941,6 +1101,9 @@ const BookingScreen = () => {
                 {isFromServiceDetail ? '2. Chọn thú cưng' : '2. Chọn thú cưng'}
               </Text>
               <Text style={styles.selectedPets}>{selectedPetsLabel}</Text>
+              {serviceMinAgeMonths > 0 ? (
+                <Text style={styles.helperText}>Chỉ nhận thú cưng từ {serviceMinAgeMonths} tháng tuổi trở lên.</Text>
+              ) : null}
               <View style={styles.row}>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowPetModal(true)}>
                   <Text style={styles.secondaryBtnText}>Chọn thú cưng</Text>
@@ -980,7 +1143,7 @@ const BookingScreen = () => {
                   <TouchableOpacity
                     style={styles.triggerButton}
                     onPress={() => {
-                      if (selectedPetIds.length === 0) {
+                      if (eligibleSelectedPetIds.length === 0) {
                         showToast('Vui lòng chọn thú cưng trước');
                         return;
                       }
@@ -1002,13 +1165,13 @@ const BookingScreen = () => {
               </View>
             </View>
 
-            {selectedPetIds.length > 0 && selectedService ? (
+            {eligibleSelectedPetIds.length > 0 && selectedService ? (
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>Bảng giá dự kiến</Text>
                 {pricingBreakdown.items.map((item) => (
                   <View key={`${item.name}-${item.weight}`} style={styles.priceRow}>
                     <Text style={styles.priceLabel}>
-                      {item.name} ({item.weight}kg) • {item.label}
+                      {item.name} ({item.weight}kg) | {item.label}
                     </Text>
                     <Text style={styles.priceValue}>{Number(item.price).toLocaleString()}đ</Text>
                   </View>
@@ -1053,7 +1216,47 @@ const BookingScreen = () => {
                 multiline
               />
             </View>
-
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>5. Phương thức thanh toán</Text>
+              <View style={styles.row}>
+                {([
+                  { key: 'money', label: 'Tiền mặt' },
+                  { key: 'vnpay', label: 'VNPay' },
+                ] as const).map((item) => {
+                  const active = paymentMethod === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setPaymentMethod(item.key)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {paymentMethod === 'money' && depositPercentage > 0 ? (
+                <>
+                  <Text style={styles.helperText}>Thanh toán tại quầy cần cọc trước {depositPercentage}% qua cổng online.</Text>
+                  <View style={styles.row}>
+                    {([
+                      { key: 'vnpay', label: 'Cọc qua VNPay' },
+                    ] as const).map((item) => {
+                      const active = depositGateway === item.key;
+                      return (
+                        <TouchableOpacity
+                          key={item.key}
+                          style={[styles.chip, active && styles.chipActive]}
+                          onPress={() => setDepositGateway(item.key)}
+                        >
+                          <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+            </View>
             <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateBooking} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Xác nhận đặt lịch</Text>}
             </TouchableOpacity>
@@ -1286,19 +1489,44 @@ const BookingScreen = () => {
               <ScrollView style={styles.modalList}>
                 {pets.map((pet) => {
                   const active = selectedPetIds.includes(pet._id);
+                  const ageEligible = isPetEligibleByAge(pet);
                   return (
                     <TouchableOpacity
                       key={pet._id}
-                      style={[styles.selectItem, active && styles.selectItemActive]}
+                      style={[
+                        styles.selectItem,
+                        active && styles.selectItemActive,
+                        !ageEligible && styles.selectItemDisabled,
+                      ]}
                       onPress={() => togglePet(pet._id)}
                     >
                       <View style={styles.selectMain}>
-                        <Text style={[styles.selectTitle, active && styles.selectTitleActive]}>
+                        <Text
+                          style={[
+                            styles.selectTitle,
+                            active && styles.selectTitleActive,
+                            !ageEligible && styles.selectTitleDisabled,
+                          ]}
+                        >
                           {pet.name} ({pet.type === 'dog' ? 'Chó' : 'Mèo'})
                         </Text>
                         <Text style={styles.selectDesc}>
-                          {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
+                          {[formatPetAge(pet), pet.breed, pet.color].filter(Boolean).join(' | ')}
                         </Text>
+                        <View style={styles.petBadgesRow}>
+                          <View
+                            style={[styles.petAgeBadge, !ageEligible && styles.petAgeBadgeInvalid]}
+                          >
+                            <Text
+                              style={[
+                                styles.petAgeBadgeText,
+                                !ageEligible && styles.petAgeBadgeInvalidText,
+                              ]}
+                            >
+                              {ageEligible ? 'ĐỦ TUỔI' : 'CHƯA ĐỦ TUỔI'}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );
@@ -1393,6 +1621,13 @@ const BookingScreen = () => {
               keyboardType="numeric"
               value={petWeight}
               onChangeText={setPetWeight}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tuổi (tháng) - VD: 12"
+              keyboardType="numeric"
+              value={petAge}
+              onChangeText={setPetAge}
             />
             <TextInput style={styles.input} placeholder="Màu lông" value={petColor} onChangeText={setPetColor} />
             <TextInput
@@ -1639,6 +1874,24 @@ const styles = StyleSheet.create({
   serviceSummaryTitle: { color: colors.secondary, fontWeight: '700', fontSize: 14 },
   serviceSummaryDesc: { color: colors.text, fontSize: 12, marginTop: 4 },
   serviceSummaryPrice: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  infoBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  infoBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#f3f8ff',
+  },
+  infoBadgeText: {
+    color: '#2d5ca8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   imageCarousel: {
     marginTop: 6,
     width: '100%',
@@ -1744,6 +1997,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   sectionTitle: { fontWeight: '700', color: colors.secondary, fontSize: 14 },
+  helperText: { color: colors.text, fontSize: 12, lineHeight: 18 },
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -1769,10 +2023,40 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: '#fff9f9',
   },
+  selectItemDisabled: {
+    backgroundColor: '#fbfbfb',
+    borderColor: colors.lightGray,
+  },
   selectMain: { flex: 1 },
   selectTitle: { color: colors.secondary, fontWeight: '600', fontSize: 13 },
   selectTitleActive: { color: colors.primary },
+  selectTitleDisabled: { color: colors.textLight },
   selectDesc: { color: colors.text, fontSize: 12, marginTop: 4 },
+  petBadgesRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  petAgeBadge: {
+    borderRadius: 999,
+    backgroundColor: '#ecfff3',
+    borderWidth: 1,
+    borderColor: '#a7dfbd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  petAgeBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#20864a',
+  },
+  petAgeBadgeInvalid: {
+    backgroundColor: '#fff1f3',
+    borderColor: '#ffc3ca',
+  },
+  petAgeBadgeInvalidText: {
+    color: '#d14e63',
+  },
   selectPrice: { color: colors.primary, fontWeight: '700', fontSize: 12 },
   pickerPanel: {
     borderRadius: 12,
@@ -2198,5 +2482,6 @@ const styles = StyleSheet.create({
 });
 
 export default BookingScreen;
+
 
 

@@ -20,6 +20,11 @@ type PaymentResponse = {
   paymentStatus?: string;
 };
 
+type BoardingConfigResponse = {
+  depositPercentage?: number;
+  minDaysForDeposit?: number;
+};
+
 const readMessage = (payload: unknown, fallback: string) => {
   if (typeof payload === 'object' && payload && 'message' in payload) {
     const message = (payload as MessageResponse).message;
@@ -114,10 +119,10 @@ export const cancelBoardingBooking = async (id: string, reason?: string) => {
   };
 };
 
-export const initiateBoardingPayment = async (id: string, gateway: BoardingGateway) => {
-  const res = await apiPostRaw<PaymentResponse, { gateway: BoardingGateway }>(
+export const initiateBoardingPayment = async (id: string, gateway: BoardingGateway, source?: 'mobile' | 'web') => {
+  const res = await apiPostRaw<PaymentResponse, { gateway: BoardingGateway; source?: string }>(
     `${CLIENT_BOARDING_BASE}/boarding-bookings/${id}/pay`,
-    { gateway }
+    { gateway, source }
   );
 
   if (!res?.paymentUrl) {
@@ -135,6 +140,15 @@ export const checkBoardingPaymentStatus = async (id: string) => {
         ? 'success'
         : 'pending',
     paymentStatus: res.booking?.paymentStatus || 'unpaid',
+  };
+};
+
+export const getBoardingConfig = async () => {
+  const res = await apiGetRaw<unknown>(`${CLIENT_BOARDING_BASE}/config`);
+  const data = readObject<BoardingConfigResponse>(res);
+  return {
+    depositPercentage: Number(data?.depositPercentage || 20),
+    minDaysForDeposit: Number(data?.minDaysForDeposit || 2),
   };
 };
 

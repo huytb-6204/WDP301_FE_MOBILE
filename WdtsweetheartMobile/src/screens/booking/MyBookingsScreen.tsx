@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -125,6 +125,9 @@ const MyBookingsScreen = () => {
     const timeSource = item.start || item.createdAt;
     const totalAmount = Number(item.total ?? item.subTotal ?? item.totalPrice ?? 0);
     const depositAmount = Number(item.depositAmount || 0);
+    const paymentStatus = String(item.paymentStatus || '').toLowerCase();
+    const remainingAmount =
+      Number(item.remainingAmount ?? (paymentStatus === 'partially_paid' ? Math.max(totalAmount - depositAmount, 0) : 0));
     
     return (
       <View style={styles.card}>
@@ -158,6 +161,10 @@ const MyBookingsScreen = () => {
             <View>
               <Text style={styles.priceLabel}>Tổng cộng</Text>
               <Text style={styles.priceValue}>{totalAmount.toLocaleString()} đ</Text>
+              {paymentStatus === 'paid' && <Text style={styles.paidText}>Đã thanh toán</Text>}
+              {paymentStatus === 'partially_paid' && depositAmount > 0 && (
+                <Text style={styles.remainingText}>Còn lại {remainingAmount.toLocaleString()} đ</Text>
+              )}
             </View>
             {depositAmount > 0 && (
               <View style={styles.depositBadge}>
@@ -187,7 +194,7 @@ const MyBookingsScreen = () => {
           )}
           <TouchableOpacity 
             style={[styles.actionBtn, styles.detailBtn]}
-            onPress={() => {}}
+            onPress={() => navigation.navigate('BookingDetail', { bookingId: item._id })}
           >
             <Text style={[styles.actionBtnText, styles.detailBtnText]}>Chi tiết</Text>
           </TouchableOpacity>
@@ -340,6 +347,8 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
   depositBadge: { backgroundColor: '#E7F7EE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   depositText: { fontSize: 11, fontWeight: '700', color: '#05A845' },
+  paidText: { marginTop: 4, fontSize: 12, fontWeight: '700', color: '#05A845' },
+  remainingText: { marginTop: 4, fontSize: 12, fontWeight: '700', color: '#FF5630' },
   cardFooter: {
     flexDirection: 'row',
     marginTop: 16,

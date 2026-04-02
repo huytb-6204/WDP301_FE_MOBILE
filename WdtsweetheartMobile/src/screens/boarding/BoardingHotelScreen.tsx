@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   Linking,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,8 +24,10 @@ import type { RootStackParamList } from '../../navigation/types';
 import { StatusMessage, Toast } from '../../components/common';
 import { createPet, deleteMyPet, getMyPets, updateMyPet } from '../../services/api/booking';
 import {
+  checkBoardingPaymentStatus,
   createBoardingBooking,
   getAvailableBoardingCages,
+  getBoardingConfig,
   initiateBoardingPayment,
 } from '../../services/api/boarding';
 import { getProfile } from '../../services/api/dashboard';
@@ -89,6 +93,11 @@ const getStayDays = (checkInDate: string, checkOutDate: string) => {
 };
 
 const formatCurrency = (value: number) => `${Math.max(0, value || 0).toLocaleString('vi-VN')}đ`;
+const formatAgeMonths = (age?: number) => {
+  const months = Number(age ?? 0);
+  if (!Number.isFinite(months) || months <= 0) return 'Chưa rõ tháng tuổi';
+  return `${Math.floor(months)} tháng tuổi`;
+};
 
 const formatRoomTypeLabel = (value?: string) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -149,7 +158,9 @@ const BoardingHotelScreen = () => {
   const [notes, setNotes] = useState('');
   const [specialCare, setSpecialCare] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<BoardingPaymentMethod>('pay_at_site');
-  const [paymentGateway, setPaymentGateway] = useState<BoardingGateway>('vnpay');
+  const [paymentGateway] = useState<BoardingGateway>('vnpay');
+  const [depositPercentage, setDepositPercentage] = useState(20);
+  const [minDaysForDeposit, setMinDaysForDeposit] = useState(2);
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState<'dog' | 'cat'>('dog');
   const [petGender, setPetGender] = useState<'male' | 'female'>('male');
@@ -164,6 +175,8 @@ const BoardingHotelScreen = () => {
   const [toastVisible, setToastVisible] = useState(false);
   const [successPopupVisible, setSuccessPopupVisible] = useState(false);
   const [successPopupMessage, setSuccessPopupMessage] = useState('');
+  const pendingPaymentRef = React.useRef<{ bookingId: string } | null>(null);
+  const checkingPaymentRef = React.useRef(false);
 
   const stayDays = useMemo(() => getStayDays(checkInDate, checkOutDate), [checkInDate, checkOutDate]);
   const monthMeta = useMemo(() => {
@@ -200,15 +213,49 @@ const BoardingHotelScreen = () => {
     return pricePerDay * stayDays * selectedPetIds.length;
   }, [selectedCage?.dailyPrice, selectedPetIds.length, stayDays]);
   const estimatedDeposit = useMemo(() => {
-    if (paymentMethod !== 'pay_at_site' || stayDays < 2) return 0;
-    return Math.round(estimatedTotal * 0.2);
-  }, [estimatedTotal, paymentMethod, stayDays]);
+    if (paymentMethod !== 'pay_at_site' || stayDays < minDaysForDeposit) return 0;
+    return Math.round((estimatedTotal * depositPercentage) / 100);
+  }, [estimatedTotal, paymentMethod, stayDays, minDaysForDeposit, depositPercentage]);
   const requiresOnlinePayment = paymentMethod === 'prepaid' || estimatedDeposit > 0;
 
   const showToast = (message: string) => {
     setToastMessage(message);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 1800);
+  };
+
+  const isPaymentCompleted = (status?: string) => ['paid', 'partial'].includes(String(status || '').toLowerCase());
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const checkPendingPaymentResult = async () => {
+    const pending = pendingPaymentRef.current;
+    if (!pending || checkingPaymentRef.current) return;
+
+    checkingPaymentRef.current = true;
+    try {
+      for (let i = 0; i < 6; i += 1) {
+        const result = await checkBoardingPaymentStatus(pending.bookingId).catch(() => null);
+        if (isPaymentCompleted((result as any)?.paymentStatus)) {
+          pendingPaymentRef.current = null;
+          showToast('Thanh toán thành công, đặt phòng thành công');
+          navigation.navigate('MyBoardingBookings');
+          return;
+        }
+        await wait(1200);
+      }
+    } finally {
+      checkingPaymentRef.current = false;
+    }
+  };
+
+  const openPaymentLink = async (bookingId: string) => {
+    const payment = await initiateBoardingPayment(bookingId, paymentGateway, 'mobile');
+    if (payment.paymentUrl) {
+      await Linking.openURL(payment.paymentUrl);
+      return;
+    }
+    throw new Error('Không tạo được liên kết thanh toán');
   };
 
   const fetchPets = async () => {
@@ -263,6 +310,35 @@ const BoardingHotelScreen = () => {
   }, []);
 
   useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void checkPendingPaymentResult();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadConfig = async () => {
+      try {
+        const config = await getBoardingConfig();
+        if (!mounted) return;
+        setDepositPercentage(Number(config.depositPercentage || 20));
+        setMinDaysForDeposit(Number(config.minDaysForDeposit || 2));
+      } catch {
+        if (!mounted) return;
+        setDepositPercentage(20);
+        setMinDaysForDeposit(2);
+      }
+    };
+    void loadConfig();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     fetchAvailableCages();
   }, []);
 
@@ -302,6 +378,8 @@ const BoardingHotelScreen = () => {
 
     const normalizedName = detailPetName.trim();
     const normalizedWeight = Number(detailPetWeight);
+    const normalizedAgeInput = detailPetAge.trim();
+    let normalizedAge: number | undefined;
 
     if (!normalizedName) {
       Alert.alert('Lỗi', 'Vui lòng nhập tên thú cưng');
@@ -312,6 +390,14 @@ const BoardingHotelScreen = () => {
       Alert.alert('Lỗi', 'Cân nặng phải lớn hơn 0');
       return;
     }
+    if (normalizedAgeInput) {
+      const parsedAge = Number(normalizedAgeInput);
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        Alert.alert('Lỗi', 'Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       setSavingDetailPet(true);
@@ -320,7 +406,7 @@ const BoardingHotelScreen = () => {
         type: detailPetType,
         gender: detailPetGender,
         weight: normalizedWeight,
-        age: detailPetAge ? Number(detailPetAge) : undefined,
+        age: normalizedAge,
         breed: detailPetBreed.trim() || undefined,
         color: detailPetColor.trim() || undefined,
         notes: detailPetNotes.trim() || undefined,
@@ -329,8 +415,12 @@ const BoardingHotelScreen = () => {
 
       setPets((prev) => prev.map((item) => (item._id === detailPet._id ? res.data : item)));
       setDetailPet(res.data);
-      setSuccessPopupMessage('Cập nhật thú cưng thành công!');
-      setSuccessPopupVisible(true);
+      closePetDetail();
+      setTimeout(() => {
+        setSuccessPopupMessage('Cập nhật thú cưng thành công!');
+        setSuccessPopupVisible(true);
+      }, 120);
+      showToast('Đã lưu thay đổi');
     } catch (err) {
       Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể cập nhật thú cưng');
     } finally {
@@ -393,6 +483,16 @@ const BoardingHotelScreen = () => {
       showToast('Vui lòng nhập cân nặng hợp lệ');
       return;
     }
+    const normalizedAgeInput = petAge.trim();
+    let normalizedAge: number | undefined;
+    if (normalizedAgeInput) {
+      const parsedAge = Number(normalizedAgeInput);
+      if (!Number.isInteger(parsedAge) || parsedAge < 0) {
+        showToast('Tuổi phải là số tháng nguyên lớn hơn hoặc bằng 0');
+        return;
+      }
+      normalizedAge = parsedAge;
+    }
 
     try {
       const res = await createPet({
@@ -401,7 +501,7 @@ const BoardingHotelScreen = () => {
         gender: petGender,
         breed: petBreed.trim() || undefined,
         weight: Number(petWeight),
-        age: petAge ? Number(petAge) : undefined,
+        age: normalizedAge,
         color: petColor.trim() || undefined,
         notes: petNotes.trim() || undefined,
         avatar: petAvatar || undefined,
@@ -418,8 +518,10 @@ const BoardingHotelScreen = () => {
       setPetNotes('');
       setPetAvatar('');
       setShowCreatePetModal(false);
-      setSuccessPopupMessage('Đã lưu thú cưng thành công!');
-      setSuccessPopupVisible(true);
+      setTimeout(() => {
+        setSuccessPopupMessage('Đã lưu thú cưng thành công!');
+        setSuccessPopupVisible(true);
+      }, 120);
     } catch (err) {
       Alert.alert('Lỗi', err instanceof Error ? err.message : 'Không thể tạo thú cưng');
     }
@@ -554,15 +656,32 @@ const BoardingHotelScreen = () => {
       });
 
       if (created.data.boardingStatus === 'held' || requiresOnlinePayment) {
-        const payment = await initiateBoardingPayment(created.data._id, paymentGateway);
-        if (payment.paymentUrl) {
-          await Linking.openURL(payment.paymentUrl);
-        }
-        showToast('Đã tạo booking. Vui lòng hoàn tất thanh toán');
-      } else {
-        showToast('Đặt phòng thành công');
+        pendingPaymentRef.current = { bookingId: created.data._id };
+        await openPaymentLink(created.data._id);
+        showToast('Đang chuyển đến trang thanh toán...');
+        await wait(1500);
+        await checkPendingPaymentResult();
+
+        Alert.alert(
+          'Chưa hoàn tất thanh toán',
+          'Đơn của bạn đang giữ chỗ tạm thời. Vui lòng thanh toán để xác nhận booking.',
+          [
+            {
+              text: 'Thanh toán lại',
+              onPress: () => {
+                void openPaymentLink(created.data._id);
+              },
+            },
+            {
+              text: 'Đơn của tôi',
+              onPress: () => navigation.navigate('MyBoardingBookings'),
+            },
+          ]
+        );
+        return;
       }
 
+      showToast('Đặt phòng thành công');
       navigation.navigate('MyBoardingBookings');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tạo booking khách sạn');
@@ -733,15 +852,13 @@ const BoardingHotelScreen = () => {
                 <Text style={styles.noticeText}>
                   {paymentMethod === 'prepaid'
                     ? 'Đơn này sẽ được giữ phòng và chuyển sang cổng thanh toán online.'
-                    : 'Lưu trú từ 2 ngày trở lên và thanh toán tại quầy sẽ cần đặt cọc 20% trước khi nhận phòng.'}
+                    : `Lưu trú từ ${minDaysForDeposit} ngày trở lên và thanh toán tại quầy sẽ cần đặt cọc ${depositPercentage}% trước khi nhận phòng.`}
                 </Text>
               </View>
               <View style={styles.toggleRow}>
-                {(['vnpay', 'zalopay'] as BoardingGateway[]).map((item) => (
-                  <TouchableOpacity key={item} style={[styles.toggleButton, paymentGateway === item && styles.toggleButtonActive]} onPress={() => setPaymentGateway(item)}>
-                    <Text style={[styles.toggleText, paymentGateway === item && styles.toggleTextActive]}>{item.toUpperCase()}</Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={[styles.toggleButton, styles.toggleButtonActive]}>
+                  <Text style={[styles.toggleText, styles.toggleTextActive]}>VNPAY</Text>
+                </View>
               </View>
             </>
           ) : null}
@@ -757,9 +874,11 @@ const BoardingHotelScreen = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPetModal && !detailPet} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+      {showPetModal && !detailPet ? (
+        <View style={styles.inlineOverlay}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowPetModal(false)} />
+            <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Chọn thú cưng</Text>
             {loadingPets ? (
               <ActivityIndicator color={colors.primary} />
@@ -777,7 +896,7 @@ const BoardingHotelScreen = () => {
                           activeOpacity={0.7}
                         >
                           <Text style={[styles.petRowText, active && styles.petRowTextActive]}>
-                            {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg
+                            {pet.name} | {pet.type === 'dog' ? 'Chó' : 'Mèo'} | {pet.weight}kg | {formatAgeMonths(pet.age)}
                           </Text>
                           <Text style={styles.petRowMeta}>
                             {[pet.breed, pet.color].filter(Boolean).join(' | ') || 'Chưa có thêm thông tin'}
@@ -830,9 +949,10 @@ const BoardingHotelScreen = () => {
             <TouchableOpacity style={styles.primaryButton} onPress={() => setShowPetModal(false)}>
               <Text style={styles.primaryButtonText}>Xong</Text>
             </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </Modal>
+      ) : null}
       <Modal visible={showDatePickerModal} animationType="fade" transparent onRequestClose={() => setShowDatePickerModal(false)}>
         <View style={styles.centerModalBackdrop}>
           <View style={styles.calendarModalCard}>
@@ -949,8 +1069,8 @@ const BoardingHotelScreen = () => {
                   <TextInput style={[styles.input, { marginTop: 6 }]} value={petWeight} onChangeText={setPetWeight} placeholder="0.0" keyboardType="numeric" />
                 </View>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>Tuổi</Text>
-                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petAge} onChangeText={setPetAge} placeholder="0" keyboardType="numeric" />
+                  <Text style={styles.label}>Tuổi (tháng)</Text>
+                  <TextInput style={[styles.input, { marginTop: 6 }]} value={petAge} onChangeText={setPetAge} placeholder="VD: 12" keyboardType="numeric" />
                 </View>
               </View>
 
@@ -1094,8 +1214,8 @@ const BoardingHotelScreen = () => {
                     <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetWeight} onChangeText={setDetailPetWeight} placeholder="0.0" keyboardType="numeric" />
                   </View>
                   <View style={styles.fieldHalf}>
-                    <Text style={styles.label}>Tuổi</Text>
-                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetAge} onChangeText={setDetailPetAge} placeholder="0" keyboardType="numeric" />
+                    <Text style={styles.label}>Tuổi (tháng)</Text>
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={detailPetAge} onChangeText={setDetailPetAge} placeholder="VD: 12" keyboardType="numeric" />
                   </View>
                 </View>
 
@@ -1179,13 +1299,18 @@ const BoardingHotelScreen = () => {
       <Modal visible={successPopupVisible} animationType="fade" transparent onRequestClose={() => setSuccessPopupVisible(false)}>
         <View style={styles.successModalBackdrop}>
           <View style={styles.successModalCard}>
+            <View style={styles.successAccent} />
             <View style={styles.successIconWrap}>
-              <Check size={32} color="#fff" />
+              <View style={styles.successIconInner}>
+                <Check size={30} color="#fff" />
+              </View>
             </View>
-            <Text style={styles.successModalTitle}>Thành công</Text>
-            <Text style={styles.successModalMessage}>{successPopupMessage}</Text>
+            <Text style={styles.successModalTitle}>Lưu thành công</Text>
+            <Text style={styles.successModalMessage}>
+              {successPopupMessage || 'Thông tin đã được cập nhật.'}
+            </Text>
             <TouchableOpacity style={styles.successModalButton} onPress={() => setSuccessPopupVisible(false)}>
-              <Text style={styles.successModalButtonText}>Tuyệt vời</Text>
+              <Text style={styles.successModalButtonText}>Đã hiểu</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1198,6 +1323,11 @@ const BoardingHotelScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  inlineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    elevation: 40,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1660,54 +1790,86 @@ const styles = StyleSheet.create({
   successModalCard: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: '#FFFDFB',
+    borderRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 26,
+    paddingBottom: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFDCE4',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  successAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 8,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.primary,
   },
   successIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#FFE9EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#FFD0DB',
+  },
+  successIconInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: '#34C759',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
   successModalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: colors.secondary,
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: 0.2,
   },
   successModalMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+    marginBottom: 20,
+    lineHeight: 22,
+    paddingHorizontal: 2,
   },
   successModalButton: {
     width: '100%',
-    height: 48,
+    height: 50,
     borderRadius: 999,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   successModalButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
 
 export default BoardingHotelScreen;
+
 
 
 

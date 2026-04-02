@@ -79,3 +79,10 @@ export const cancelOrder = async (id: string, reason?: string) => {
     { reason }
   );
 };
+
+export const confirmReceipt = async (id: string) => {
+  return apiPatchRaw<{ code?: 'success' | 'error'; message?: string }, Record<string, never>>(
+    `/api/v1/client/order/${id}/confirm-receipt`,
+    {}
+  );
+};

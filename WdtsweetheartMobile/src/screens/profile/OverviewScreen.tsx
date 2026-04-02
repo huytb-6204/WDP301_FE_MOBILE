@@ -41,6 +41,18 @@ type StatItem = {
   icon: any;
 };
 
+type DashboardOverviewData = {
+  stats?: {
+    totalOrders?: number;
+    completedOrders?: number;
+    pendingOrders?: number;
+    cancelledOrders?: number;
+    reviewCount?: number;
+  };
+  recentOrders?: any[];
+  recentReviews?: any[];
+};
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'completed':
@@ -91,7 +103,14 @@ const OverviewScreen = () => {
       ]);
 
       if (profileRes.status === 'fulfilled') setProfile(profileRes.value);
-      if (overviewRes.status === 'fulfilled') setOverviewData((overviewRes.value as any)?.data);
+      if (overviewRes.status === 'fulfilled') {
+        const raw = overviewRes.value as DashboardOverviewData | { data?: DashboardOverviewData };
+        const normalized =
+          raw && typeof raw === 'object' && 'stats' in raw
+            ? (raw as DashboardOverviewData)
+            : (raw as any)?.data || null;
+        setOverviewData(normalized);
+      }
       if (boardingRes.status === 'fulfilled') {
         const data = (boardingRes.value as any)?.data;
         setBoardingBookings(Array.isArray(data) ? data : data?.data || []);

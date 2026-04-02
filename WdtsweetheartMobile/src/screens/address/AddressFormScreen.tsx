@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,9 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Check, Search, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Check, Search } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { createAddress, updateAddress, type SavedAddress } from '../../services/api/dashboard';
+import {
+  resolveSuggestionToCoords,
+  searchAddressSuggestions,
+  type GeocodeSuggestion,
+} from '../../services/api/geocode';
 import { Toast } from '../../components/common';
 
 const AddressFormScreen = () => {
@@ -26,10 +32,13 @@ const AddressFormScreen = () => {
     phone: addressItem?.phone || '',
     address: addressItem?.address || '',
     isDefault: addressItem?.isDefault || false,
-    latitude: addressItem?.latitude || 10.7410688,
-    longitude: addressItem?.longitude || 106.7164031,
+    latitude: Number(addressItem?.latitude) || 10.7410688,
+    longitude: Number(addressItem?.longitude) || 106.7164031,
   });
 
+  const [searchKeyword, setSearchKeyword] = useState(addressItem?.address || '');
+  const [suggestions, setSuggestions] = useState<GeocodeSuggestion[]>([]);
+  const [searchingAddress, setSearchingAddress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -40,9 +49,49 @@ const AddressFormScreen = () => {
     setTimeout(() => setToastVisible(false), 2000);
   };
 
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const keyword = searchKeyword.trim();
+      if (keyword.length < 3) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        setSearchingAddress(true);
+        const next = await searchAddressSuggestions(keyword);
+        setSuggestions(next);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSearchingAddress(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
+
+  const handleSelectSuggestion = async (item: GeocodeSuggestion) => {
+    try {
+      setSearchingAddress(true);
+      const resolved = await resolveSuggestionToCoords(item);
+      setForm((prev) => ({
+        ...prev,
+        address: item.displayName,
+        latitude: resolved.latitude,
+        longitude: resolved.longitude,
+      }));
+      setSearchKeyword(item.displayName);
+      setSuggestions([]);
+    } catch {
+      showToast('Khong lay duoc toa do tu goi y nay');
+    } finally {
+      setSearchingAddress(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.fullName || !form.phone || !form.address) {
-      showToast('Vui lòng nhập đầy đủ thông tin');
+    if (!form.fullName.trim() || !form.phone.trim() || !form.address.trim()) {
+      showToast('Vui long nhap day du thong tin');
       return;
     }
 
@@ -50,14 +99,14 @@ const AddressFormScreen = () => {
     try {
       if (isEdit) {
         await updateAddress(addressItem._id, form);
-        showToast('Cập nhật thành công');
+        showToast('Cap nhat thanh cong');
       } else {
         await createAddress(form);
-        showToast('Đã thêm địa chỉ mới');
+        showToast('Da them dia chi moi');
       }
-      setTimeout(() => navigation.goBack(), 1000);
-    } catch (error) {
-      showToast('Lỗi khi lưu địa chỉ');
+      setTimeout(() => navigation.goBack(), 900);
+    } catch {
+      showToast('Loi khi luu dia chi');
     } finally {
       setLoading(false);
     }
@@ -69,29 +118,33 @@ const AddressFormScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.secondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEdit ? 'Sửa địa chỉ' : 'Thêm địa chỉ'}</Text>
+        <Text style={styles.headerTitle}>{isEdit ? 'Sua dia chi' : 'Them dia chi'}</Text>
         <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
           {loading ? <ActivityIndicator color={colors.primary} /> : <Check size={24} color={colors.primary} />}
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Họ và tên người nhận</Text>
+            <Text style={styles.label}>Ho va ten nguoi nhan</Text>
             <TextInput
               style={styles.input}
-              placeholder="Nhập tên người nhận"
+              placeholder="Nhap ten nguoi nhan"
               value={form.fullName}
               onChangeText={(val) => setForm({ ...form, fullName: val })}
+              keyboardType="default"
+              autoCapitalize="words"
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Số điện thoại</Text>
+            <Text style={styles.label}>So dien thoai</Text>
             <TextInput
               style={styles.input}
-              placeholder="Nhập số điện thoại"
+              placeholder="Nhap so dien thoai"
               keyboardType="phone-pad"
               value={form.phone}
               onChangeText={(val) => setForm({ ...form, phone: val })}
@@ -99,43 +152,77 @@ const AddressFormScreen = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Địa chỉ chi tiết</Text>
-            <View style={styles.addressInputWrapper}>
+            <Text style={styles.label}>Tim dia chi bang Goong</Text>
+            <View style={styles.searchWrap}>
+              <Search size={16} color="#8A8A8A" />
               <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Gõ địa chỉ hoặc chọn trên bản đồ..."
-                multiline
-                numberOfLines={3}
-                value={form.address}
-                onChangeText={(val) => setForm({ ...form, address: val })}
+                style={styles.searchInput}
+                placeholder="Nhap khu vuc, duong, so nha..."
+                value={searchKeyword}
+                onChangeText={(value) => {
+                  setSearchKeyword(value);
+                  if (value.trim() !== form.address.trim()) {
+                    setForm((prev) => ({ ...prev, latitude: 0, longitude: 0 }));
+                  }
+                }}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
               />
-              <TouchableOpacity style={styles.mapIconBtn}>
-                <MapPin size={20} color={colors.primary} />
-              </TouchableOpacity>
             </View>
+            {searchingAddress ? <Text style={styles.muted}>Dang tim goi y dia chi...</Text> : null}
+            {suggestions.length > 0 ? (
+              <View style={styles.suggestionList}>
+                {suggestions.map((item, index) => (
+                  <Pressable
+                    key={`${item.displayName}-${index}`}
+                    style={styles.suggestionItem}
+                    onPress={() => void handleSelectSuggestion(item)}
+                  >
+                    <Text style={styles.suggestionText}>{item.displayName}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
 
-          <View style={styles.mapPlaceholder}>
-             <MapPin size={40} color={colors.primary} style={{ opacity: 0.2 }} />
-             <Text style={styles.mapText}>Tính năng bản đồ đang được phát triển</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Dia chi chi tiet</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="So nha, toa nha, huong dan giao hang..."
+              multiline
+              numberOfLines={3}
+              value={form.address}
+              onChangeText={(val) => {
+                setForm({ ...form, address: val });
+                setSearchKeyword(val);
+              }}
+              keyboardType="default"
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              spellCheck={false}
+            />
+            <Text style={styles.helperText}>Nen chon tu goi y de he thong lay dung toa do giao hang.</Text>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.defaultCheckbox}
             onPress={() => setForm({ ...form, isDefault: !form.isDefault })}
           >
             <View style={[styles.checkbox, form.isDefault && styles.checkboxChecked]}>
               {form.isDefault && <Check size={14} color="#fff" />}
             </View>
-            <Text style={styles.defaultText}>Đặt làm địa chỉ mặc định</Text>
+            <Text style={styles.defaultText}>Dat lam dia chi mac dinh</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.mainBtn}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.mainBtnText}>{isEdit ? 'LƯU THAY ĐỔI' : 'THÊM MỚI ĐỊA CHỈ'}</Text>}
+          <TouchableOpacity style={styles.mainBtn} onPress={handleSave} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.mainBtnText}>{isEdit ? 'LUU THAY DOI' : 'THEM DIA CHI'}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -173,30 +260,51 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.secondary,
   },
-  addressInputWrapper: { position: 'relative' },
-  textArea: { height: 100, textAlignVertical: 'top', paddingRight: 44 },
-  mapIconBtn: { position: 'absolute', right: 12, top: 12, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  mapPlaceholder: {
-    height: 150,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
+  textArea: { height: 100, textAlignVertical: 'top' },
+  searchWrap: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
   },
-  mapText: { fontSize: 12, color: '#999', fontWeight: '500' },
+  searchInput: {
+    flex: 1,
+    color: colors.secondary,
+    fontSize: 14,
+  },
+  suggestionList: {
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F6F6F6',
+    backgroundColor: '#fff',
+  },
+  suggestionText: {
+    color: colors.secondary,
+    fontSize: 13,
+  },
+  helperText: { color: '#6B7280', fontSize: 12, lineHeight: 18 },
+  muted: { color: '#6B7280', fontSize: 12 },
   defaultCheckbox: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   defaultText: { fontSize: 14, fontWeight: '600', color: '#555' },
-  mainBtn: { 
-    backgroundColor: colors.secondary, 
-    paddingVertical: 16, 
-    borderRadius: 16, 
-    alignItems: 'center', 
+  mainBtn: {
+    backgroundColor: colors.secondary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
     marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

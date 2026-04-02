@@ -14,6 +14,10 @@ export type Product = {
   brandSlug?: string;
   stock?: number;
   variants?: ProductVariant[];
+  sku?: string;
+  isFood?: boolean;
+  expiryDate?: string;
+  minAge?: number;
 };
 
 export type ProductVariantOption = {
@@ -173,5 +177,4 @@ export const getProductDetail = async (slug: string): Promise<ProductDetailRespo
   const res = await apiGetRaw<unknown>(`/api/v1/client/product/detail/${slug}`);
   return readProductDetail(res);
 };
-
 

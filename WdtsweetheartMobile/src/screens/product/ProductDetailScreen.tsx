@@ -42,6 +42,10 @@ type UIProduct = {
   description?: string;
   content?: string;
   categorySlug?: string;
+  sku?: string;
+  isFood?: boolean;
+  expiryDate?: string;
+  minAge?: number;
 };
 
 const toAbsoluteUrl = (url?: string) => {
@@ -75,6 +79,10 @@ const mapToUIProduct = (item: Product): UIProduct => {
     description: item.description,
     content: item.content,
     categorySlug: item.categorySlug,
+    sku: item.sku,
+    isFood: item.isFood,
+    expiryDate: item.expiryDate,
+    minAge: item.minAge,
   };
 };
 
@@ -243,6 +251,36 @@ const ProductDetailScreen = () => {
     return `${product?.title || 'Sản phẩm'} là sản phẩm chất lượng cao, được chọn lọc kỹ lưỡng để mang lại những trải nghiệm tốt nhất cho thú cưng của bạn.`;
   }, [product?.content, product?.description, product?.title]);
 
+  const expiryLabel = useMemo(() => {
+    if (!product?.expiryDate) return '';
+    const date = new Date(product.expiryDate);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('vi-VN');
+  }, [product?.expiryDate]);
+
+  const isExpired = useMemo(() => {
+    if (!product?.expiryDate) return false;
+    const date = new Date(product.expiryDate);
+    if (Number.isNaN(date.getTime())) return false;
+    return date < new Date();
+  }, [product?.expiryDate]);
+
+  const minAgeLabel = useMemo(() => {
+    if (product?.minAge === undefined || product?.minAge === null) return '';
+    const months = Number(product.minAge) || 0;
+    if (months === 0) return 'Tất cả mọi lứa tuổi';
+    if (months >= 24) {
+      const years = Math.floor(months / 12);
+      const remMonths = months % 12;
+      return `Từ ${years} năm${remMonths > 0 ? ` ${remMonths} tháng` : ''} tuổi trở lên`;
+    }
+    if (months >= 12) {
+      const remMonths = months % 12;
+      return `Từ 1 năm${remMonths > 0 ? ` ${remMonths} tháng` : ''} tuổi trở lên`;
+    }
+    return `Từ ${months} tháng tuổi trở lên`;
+  }, [product?.minAge]);
+
   const selectedVariant = useMemo(
     () =>
       currentVariant?.attributeValue?.map((item) => ({
@@ -402,7 +440,22 @@ const ProductDetailScreen = () => {
                   ))}
                   <Text style={styles.reviewCount}>({reviews.length} đánh giá từ khách hàng)</Text>
                 </View>
-                <Text style={styles.skuText}>SKU: KDW0NHRZGJ</Text>
+                <Text style={styles.skuText}>SKU: {product.sku || 'N/A'}</Text>
+                {product.isFood && expiryLabel ? (
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>Hạn sử dụng:</Text>
+                    <Text style={[styles.metaValue, isExpired && styles.metaExpired]}>
+                      {expiryLabel}
+                      {isExpired ? ' (Hết hạn)' : ''}
+                    </Text>
+                  </View>
+                ) : null}
+                {product.isFood && minAgeLabel ? (
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>Độ tuổi:</Text>
+                    <Text style={styles.metaValue}>{minAgeLabel}</Text>
+                  </View>
+                ) : null}
               </View>
 
               <View style={styles.priceContainer}>
@@ -422,7 +475,7 @@ const ProductDetailScreen = () => {
                 <View style={styles.promoIconWrap}>
                     <Text style={styles.promoIconText}>%</Text>
                 </View>
-                <Text style={styles.promoText}>Giảm 200.000đ cho đơn hàng từ 999.000đ, miễn phí giao hàng</Text>
+                <Text style={styles.promoText}>Đảm bảo sản phẩm chất lượng cao, an toàn và thân thiện cho thú cưng của bạn.</Text>
               </View>
             </View>
 
@@ -509,7 +562,9 @@ const ProductDetailScreen = () => {
                          <ShoppingCart size={14} color="#FF6F61" />
                     </View>
                     <Text style={styles.deliveryText}>
-                        Chỉ còn <Text style={styles.timeHighlight}>23 giờ 23 phút!</Text> Đặt ngay để nhận hàng sớm.
+                        Hỗ trợ giao hàng tận nơi, đóng gói chuyên nghiệp và nhanh chóng.
+                        {'\n'}
+                        Cam kết đồng hành cùng bạn trong hành trình chăm sóc thú cưng.
                     </Text>
                 </View>
             </View>
@@ -659,6 +714,10 @@ const styles = StyleSheet.create({
   ratingStars: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   reviewCount: { fontSize: 12, color: '#888', marginLeft: 4 },
   skuText: { fontSize: 13, color: '#555', fontWeight: '600' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaLabel: { fontSize: 13, color: '#555', fontWeight: '700' },
+  metaValue: { fontSize: 13, color: '#505050', fontWeight: '500' },
+  metaExpired: { color: '#D64545', fontWeight: '700' },
   priceContainer: { marginTop: 4, flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   currentPrice: { fontSize: 22, fontWeight: '800', color: '#1A1A1A' },
   originalPrice: { fontSize: 16, color: '#999', textDecorationLine: 'line-through' },

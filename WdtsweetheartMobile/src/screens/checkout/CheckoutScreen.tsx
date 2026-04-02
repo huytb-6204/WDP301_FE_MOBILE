@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   AppState,
   Alert,
-  AppState,
   Linking,
   Modal,
   Pressable,
@@ -137,7 +136,6 @@ const CheckoutScreen = () => {
   const [mapSuggestions, setMapSuggestions] = useState<GeocodeSuggestion[]>([]);
   const [mapSearching, setMapSearching] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-  const pendingPaymentRef = React.useRef<{ orderCode: string; phone: string } | null>(null);
   const checkingPaymentRef = React.useRef(false);
   const mapWebRef = React.useRef<WebView>(null);
   const pendingMapTargetRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
@@ -1586,5 +1584,3 @@ const styles = StyleSheet.create({
 });
 
 export default CheckoutScreen;
-
-
